@@ -177,7 +177,7 @@
 
     function loadSettings() {
         const settingsRaw = localStorage.getItem('sysnect_settings');
-        let settings = { notifications: false, defaultView: 'today', autoRefresh: '0', autoRefreshCustom: 10, defaultStatus: '', theme: 'light' };
+        let settings = { notifications: false, defaultView: 'today', autoRefresh: '0', autoRefreshCustom: 10, defaultStatus: '', theme: 'dark' };
 
         const legacyDefaultView = localStorage.getItem('sysnect_setting_defaultView');
         if (!settingsRaw && legacyDefaultView) {
@@ -217,7 +217,7 @@
 
         // Restore theme
         const themeSel = document.getElementById('settingTheme');
-        const savedTheme = settings.theme || localStorage.getItem('sysnectTheme') || 'light';
+        const savedTheme = settings.theme || localStorage.getItem('sysnectTheme') || 'dark';
         if (themeSel) themeSel.value = savedTheme;
         document.documentElement.setAttribute('data-theme', savedTheme);
         localStorage.setItem('sysnectTheme', savedTheme);
@@ -1300,6 +1300,7 @@
 
                         renderTicketList(currentStatus);
                         updateChartLegendActive();
+                        updateStatBarActive(currentStatus);
                     }
                 }
             });
@@ -1309,6 +1310,7 @@
         const legendLabels = data.labels.map(l => l.toUpperCase());
         const legendColors = ['#3b82f6', '#f59e0b', '#ef4444', '#10b981', '#64748b'];
         renderChartLegend(legendLabels, data.values, legendColors, totalTickets);
+        updateStatBar(data.values, legendLabels, totalTickets);
     }
 
     // ⚡ Legend ใต้กราฟ: จุดสี + สถานะ + จำนวน + % (คลิกเพื่อกรองได้)
@@ -1349,6 +1351,45 @@
         });
     }
 
+    // อัปเดตตัวเลขใน Stat Bar (แถวบนสุด)
+    function updateStatBar(values, labels, total) {
+        const statusMap = { NEW: 0, ASSIGNED: 1, PENDING: 2, SOLVED: 3, CLOSED: 4 };
+        const ids = { total: 'statTotal', NEW: 'statNew', ASSIGNED: 'statAssigned', PENDING: 'statPending', SOLVED: 'statSolved', CLOSED: 'statClosed' };
+        const totalEl = document.getElementById(ids.total);
+        if (totalEl) totalEl.textContent = total || 0;
+        labels.forEach((lbl, i) => {
+            const key = lbl.toUpperCase();
+            if (ids[key]) {
+                const el = document.getElementById(ids[key]);
+                if (el) el.textContent = values[i] || 0;
+            }
+        });
+    }
+
+    // Toggle .active บน stat card ที่ตรงกับ currentStatus
+    function updateStatBarActive(status) {
+        document.querySelectorAll('.stat-card').forEach(card => {
+            const ds = card.dataset.status ? card.dataset.status.toUpperCase() : '';
+            const match = status === 'ALL' ? ds === 'TOTAL' : ds === status;
+            card.classList.toggle('active', match);
+        });
+    }
+
+    // แสดงชื่อ user จาก JWT ใน User Pill
+    function renderUserPill() {
+        try {
+            const token = window.ssoToken || sessionStorage.getItem('sysnect_sso_token');
+            if (!token) return;
+            const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
+            const name = payload.name || payload.display_name || payload.preferred_username || payload.email || payload.sub || 'User';
+            const el = document.getElementById('userPillName');
+            if (el) el.textContent = name.split('@')[0];
+        } catch (e) {
+            const el = document.getElementById('userPillName');
+            if (el) el.textContent = 'User';
+        }
+    }
+
     function handleLegendClick(status) {
         const data = getFilteredData();
         const hasData = data.values.some(v => v > 0);
@@ -1368,6 +1409,7 @@
 
         renderTicketList(currentStatus);
         updateChartLegendActive();
+        updateStatBarActive(currentStatus);
     }
 
     function cleanHtmlText(htmlStr) {
@@ -2384,7 +2426,7 @@
     
 
     
-    let currentTheme = localStorage.getItem('sysnectTheme') || 'light';
+    let currentTheme = localStorage.getItem('sysnectTheme') || 'dark';
     function initTheme() {
         document.documentElement.setAttribute('data-theme', currentTheme);
         const icon = document.querySelector('#btnThemeToggle .theme-icon');
@@ -2401,6 +2443,7 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         initTheme();
+        renderUserPill();
 
         // Initialize Custom Dropdowns for Priority and Date
         function setupCustomDropdown(containerId, headerId, titleId, listId, selectId) {
