@@ -524,6 +524,7 @@ body::before {
 .dashboard-wrapper.split-active .right-panel {
     width: 62%;
     opacity: 1;
+    overflow: visible;
 }
 
 /* ──────────────────────────────────────────
@@ -739,15 +740,16 @@ body::before {
     height: 100%;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
     background: var(--bg-surface);
+    /* overflow: hidden ถูกลบออก — scroll อยู่ที่ .ticket-container-scroll เท่านั้น */
 }
 
 .ticket-header-sticky {
     padding: 14px 20px 0;
     border-bottom: 1px solid var(--border);
     background: var(--bg-surface);
-    z-index: 10;
+    position: relative;
+    z-index: 20;
     flex-shrink: 0;
 }
 .ticket-header-sticky h3 {
