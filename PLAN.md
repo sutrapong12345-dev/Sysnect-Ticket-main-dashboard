@@ -134,6 +134,14 @@ Status:
 
 ---
 
+## 🐛 Bug Fixes Log
+
+| วันที่ | บัค | แก้อย่างไร | Commit |
+|---|---|---|---|
+| 2026-06-25 | Dropdown ถูก ticket list บดบัง | ลบ `overflow:hidden` จาก `.ticket-list-card`, เพิ่ม `position:relative` ให้ `.ticket-header-sticky`, เพิ่ม `overflow:visible` ให้ `.right-panel` ตอน split-active | bdcda01 |
+
+---
+
 ## ⏳ งานที่รอทำ (หลัง redesign MAIN เสร็จ)
 
 1. SLA Indicator badge บน Ticket card (BASE) — รอรู้ threshold
