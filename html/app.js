@@ -599,7 +599,7 @@ async function fetchData(isAutoRefresh = false) {
         // หน้าเว็บอยู่ GitHub Pages = ชี้มาที่ backend ในคอมเรา (dev) · ขึ้น server จริงค่อยเปลี่ยนเป็น URL server
         const API_BASE = (location.protocol.startsWith('http') && !location.hostname.endsWith('github.io') && !location.hostname.endsWith('pages.dev') && !location.hostname.endsWith('workers.dev'))
             ? location.origin
-            : 'https://bubbly-solace-production-904b.up.railway.app'; // 🔧 Cloudflare tunnel (quick tunnel = เปลี่ยนทุกครั้งที่รีสตาร์ท)
+            : 'https://sysnect-ticket-main-dashboard-production.up.railway.app';
         const queryParam = isAutoRefresh ? '?source=autoRefresh' : '?source=initialLoad';
         const API_URL = `${API_BASE}/api/tickets${queryParam}`;
         const N8N_DIRECT_URL = `https://n8n.sysnect.co.th/webhook/48ec49ee-a4ca-4677-bad7-deb3c3ec341d${queryParam}`;
