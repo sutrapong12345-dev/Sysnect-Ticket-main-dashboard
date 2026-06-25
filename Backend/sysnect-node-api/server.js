@@ -108,7 +108,7 @@ const ssoTokenCache = new Map(); // token -> expiresAt (ms)
 async function validateSsoToken(token) {
     const exp = ssoTokenCache.get(token);
     if (exp && exp > Date.now()) return true;
-    const resp = await httpsRequest(SSO_VALIDATE_URL, { headers: { Authorization: `Bearer ${token}` } }, 8000);
+    const resp = await httpsRequest(SSO_VALIDATE_URL, { headers: { Authorization: `Bearer ${token}` } }, 3000);
     if (resp.status === 200) {
         ssoTokenCache.set(token, Date.now() + SSO_CACHE_MS);
         return true;
@@ -498,7 +498,7 @@ app.post('/api/sync', syncLimiter, security.requireSyncAuth, async (req, res) =>
 // ============================================================
 // HEALTH CHECK
 // ============================================================
-app.get('/api/health', requireSso, async (req, res) => {
+app.get('/api/health', async (req, res) => {
     const cacheExists = fs.existsSync(CACHE_FILE);
     let cacheAge = null;
     if (cacheExists) {
