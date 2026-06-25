@@ -240,6 +240,7 @@ function applyDefaultView() {
 
     const rangeSelect = document.getElementById('filterDateRange');
     if (rangeSelect) rangeSelect.value = defaultView;
+    syncQuickChips(defaultView);
 
     if (!STATE.isLoading) {
         updateDashboardLayout();
@@ -366,6 +367,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     fetchData();
     applyAutoRefreshSetting();
+    renderUserPill();
 });
 
 // ==============================================
@@ -776,13 +778,14 @@ async function fetchData(isAutoRefresh = false) {
 
         STATE.isLoading = false; // ปิดสถานะกำลังโหลด
         populateProjectFilter();
-        
+
         // ซ่อน Loader เมื่อเสร็จสิ้น
         setTimeout(() => {
             if (!isAutoRefresh && loader) loader.classList.add('hidden');
             updateDashboardLayout();
             initChart();
             renderTickets();
+            updateKPIRow();
             renderMonthlyBreakdown();
             updateLastUpdatedTime();
             // Auto-open default status tab (first load only)
@@ -1307,6 +1310,11 @@ function toggleStatusFilter(statusKey, forceOpen = false) {
     // ⚡ อัปเดตสถานะ active ของ legend ใต้กราฟ
     document.querySelectorAll('.cl-row').forEach(row => {
         row.classList.toggle('active', row.dataset.status === STATE.currentStatus);
+    });
+
+    // ⚡ อัปเดต KPI cards active state
+    document.querySelectorAll('.kpi-card').forEach(card => {
+        card.classList.toggle('active', card.dataset.status === STATE.currentStatus);
     });
 
     updateDashboardLayout();
@@ -1881,14 +1889,16 @@ function setupEventListeners() {
     // Dropdown Filters
     document.getElementById('projectFilter')?.addEventListener('change', (e) => {
         STATE.projectFilter = e.target.value;
-        initChart(); // Update chart
-        renderTickets(); // Update list
+        initChart();
+        renderTickets();
+        updateKPIRow();
     });
-    
+
     document.getElementById('priorityFilter')?.addEventListener('change', (e) => {
         STATE.priorityFilter = e.target.value;
-        initChart(); // Update chart
-        renderTickets(); // Update list
+        initChart();
+        renderTickets();
+        updateKPIRow();
     });
     
     // Update native date input display (dd/mm/yyyy hack)
@@ -1915,8 +1925,10 @@ function setupEventListeners() {
         STATE.dateFilter = 'custom';
         const rangeSelect = document.getElementById('filterDateRange');
         if (rangeSelect) rangeSelect.value = 'all'; // Reset dropdown visually
+        syncQuickChips('custom'); // ไม่มี chip ตรงกับ custom → deactivate ทุก chip
         initChart();
         renderTickets();
+        updateKPIRow();
         renderMonthlyBreakdown();
     };
 
@@ -1925,7 +1937,8 @@ function setupEventListeners() {
 
     document.getElementById('filterDateRange')?.addEventListener('change', (e) => {
         STATE.dateFilter = e.target.value;
-        
+        syncQuickChips(e.target.value);
+
         // Clear custom inputs when selecting a predefined range
         const startEl = document.getElementById('filterDateStart');
         const endEl = document.getElementById('filterDateEnd');
@@ -1941,6 +1954,7 @@ function setupEventListeners() {
         updateDashboardLayout();
         initChart();
         renderTickets();
+        updateKPIRow();
         renderMonthlyBreakdown();
     });
 
@@ -1961,9 +1975,11 @@ function setupEventListeners() {
         if (rangeSelect) rangeSelect.value = 'all';
 
         STATE.dateFilter = 'all';
+        syncQuickChips('all'); // sync chips กลับหลัง clear
         updateDashboardLayout();
         initChart();
         renderTickets();
+        updateKPIRow();
         renderMonthlyBreakdown();
     });
 
@@ -1973,6 +1989,69 @@ function setupEventListeners() {
         fetchData();
     });
 }
+// ==============================================
+// KPI Row, User Pill, Quick Chips
+// ==============================================
+
+function updateKPIRow() {
+    // ใช้ getFilteredData() เพื่อให้ตัวเลขตรงกับ date/priority/project filter ปัจจุบัน
+    const { filtered } = getFilteredData();
+    const map = {
+        new:      document.getElementById('kpiNew'),
+        assigned: document.getElementById('kpiAssigned'),
+        pending:  document.getElementById('kpiPending'),
+        solved:   document.getElementById('kpiSolved'),
+        closed:   document.getElementById('kpiClosed'),
+    };
+    Object.entries(map).forEach(([status, el]) => {
+        if (el) el.textContent = (filtered[status] || []).length;
+    });
+    // Sync active state กับ current status filter
+    document.querySelectorAll('.kpi-card').forEach(card => {
+        card.classList.toggle('active', card.dataset.status === STATE.currentStatus);
+    });
+}
+
+function renderUserPill() {
+    const token = window.ssoToken || sessionStorage.getItem('sysnect_sso_token');
+    const el = document.getElementById('userPillName');
+    if (!el) return;
+    if (!token) { el.textContent = 'Guest'; return; }
+    try {
+        const parts = token.split('.');
+        if (parts.length !== 3) throw new Error('not jwt');
+        const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+        const name = payload.name
+            || payload.preferred_username
+            || payload.email?.split('@')[0]
+            || payload.sub
+            || 'User';
+        el.textContent = name;
+    } catch (_) {
+        el.textContent = 'User';
+    }
+}
+
+window.applyQuickChip = function(range) {
+    // Sync the hidden select so existing filter logic picks it up
+    const rangeSelect = document.getElementById('filterDateRange');
+    if (rangeSelect) {
+        rangeSelect.value = range;
+        rangeSelect.dispatchEvent(new Event('change'));
+    }
+    // Update chip active state
+    document.querySelectorAll('.qchip').forEach(chip => {
+        chip.classList.toggle('active', chip.dataset.range === range);
+    });
+};
+
+// Keep chips in sync when filterDateRange changes externally (e.g. applyDefaultView)
+function syncQuickChips(range) {
+    document.querySelectorAll('.qchip').forEach(chip => {
+        chip.classList.toggle('active', chip.dataset.range === range);
+    });
+}
+
 // ==============================================
 // Anti-Inspection & UI Protection
 // ==============================================

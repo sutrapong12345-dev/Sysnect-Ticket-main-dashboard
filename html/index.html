@@ -55,7 +55,7 @@
             try {
                 const backendHealthUrl = (location.protocol.startsWith('http') && !location.hostname.endsWith('github.io') && !location.hostname.endsWith('pages.dev') && !location.hostname.endsWith('workers.dev'))
                     ? `${location.origin}/api/health`
-                    : 'https://bubbly-solace-production-904b.up.railway.app/api/health';
+                    : 'https://sysnect-ticket-main-dashboard-production.up.railway.app/api/health';
 
                 const response = await fetch(backendHealthUrl, {
                     headers: {
@@ -161,7 +161,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet" />
     
     <!-- External CSS -->
-    <link rel="stylesheet" href="style.css?v=8">
+    <link rel="stylesheet" href="style.css?v=9">
     
     <style>
         /* Keep only Loader CSS inline for immediate rendering to prevent flash of unstyled content during load */
@@ -224,6 +224,10 @@
         <button class="btn-action" id="btnExportAll" title="Export Report" onclick="openExportModal()">
             <span class="material-symbols-outlined">analytics</span> Export
         </button>
+        <div class="user-pill" id="userPill" title="Logged in via SYSNECT SSO">
+            <span class="material-symbols-outlined" style="font-size:18px; color:var(--primary);">account_circle</span>
+            <span class="user-pill-name" id="userPillName">User</span>
+        </div>
     </div>
 </header>
 
@@ -235,7 +239,31 @@
         <div class="glass-card chart-card">
             <h2 class="chart-title">SYSNECT - Enterprise Ticket Dashboard</h2>
             <p class="chart-subtitle" id="chartSubtitle">Real-time Ticket Tracking & Analysis</p>
-            
+
+            <!-- KPI Summary Row: 5 status cards คลิกกรองได้ -->
+            <div class="kpi-summary-row" id="kpiSummaryRow">
+                <button class="kpi-card" data-status="new" onclick="toggleStatusFilter('new')">
+                    <span class="kpi-count" id="kpiNew">-</span>
+                    <span class="kpi-label">NEW</span>
+                </button>
+                <button class="kpi-card" data-status="assigned" onclick="toggleStatusFilter('assigned')">
+                    <span class="kpi-count" id="kpiAssigned">-</span>
+                    <span class="kpi-label">ASSIGNED</span>
+                </button>
+                <button class="kpi-card" data-status="pending" onclick="toggleStatusFilter('pending')">
+                    <span class="kpi-count" id="kpiPending">-</span>
+                    <span class="kpi-label">PENDING</span>
+                </button>
+                <button class="kpi-card" data-status="solved" onclick="toggleStatusFilter('solved')">
+                    <span class="kpi-count" id="kpiSolved">-</span>
+                    <span class="kpi-label">SOLVED</span>
+                </button>
+                <button class="kpi-card" data-status="closed" onclick="toggleStatusFilter('closed')">
+                    <span class="kpi-count" id="kpiClosed">-</span>
+                    <span class="kpi-label">CLOSED</span>
+                </button>
+            </div>
+
             <!-- legend บนแบบเดิม (ซ่อนไว้ ใช้ legend ใต้กราฟแบบมีจำนวน+% แทน) -->
             <div class="custom-legend" id="customLegend" style="display: none;">
                 <div class="legend-item"><div class="legend-color" style="background: var(--status-new);"></div>NEW</div>
@@ -291,8 +319,17 @@
                 </div>
             </div>
 
-            <!-- ─── Filter Bar (ย้ายจาก navbar) ─── -->
+            <!-- ─── Filter Bar ─── -->
             <div class="ticket-filter-bar" id="ticketFilterBar">
+                <!-- Quick Chips: เลือกช่วงเวลาได้ทันที -->
+                <div class="quick-chips-row" id="quickChipsRow">
+                    <button class="qchip active" data-range="all" onclick="applyQuickChip('all')">ทั้งหมด</button>
+                    <button class="qchip" data-range="today" onclick="applyQuickChip('today')">วันนี้</button>
+                    <button class="qchip" data-range="week" onclick="applyQuickChip('week')">7 วัน</button>
+                    <button class="qchip" data-range="month" onclick="applyQuickChip('month')">เดือนนี้</button>
+                    <button class="qchip" data-range="lastMonth" onclick="applyQuickChip('lastMonth')">เดือนที่แล้ว</button>
+                    <button class="qchip" data-range="year" onclick="applyQuickChip('year')">ปีนี้</button>
+                </div>
                 <!-- แถว 1: Project -->
                 <div class="filter-row filter-row-top">
                     <select id="projectFilter">
@@ -563,8 +600,8 @@
     </div>
 </div>
 
-<script src="thai-fonts.js?v=12"></script>
-<script src="app.js?v=12"></script>
+<script src="thai-fonts.js?v=13"></script>
+<script src="app.js?v=13"></script>
 
 </body>
 </html>
