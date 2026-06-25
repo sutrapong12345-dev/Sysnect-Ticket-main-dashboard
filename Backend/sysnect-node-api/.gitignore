@@ -1,0 +1,16 @@
+# ===== Secrets — ห้ามขึ้น Git เด็ดขาด =====
+.env
+.env.local
+.env.*.local
+
+# ===== Dependencies =====
+node_modules/
+
+# ===== Runtime artifacts =====
+tickets_cached.json
+*.log
+npm-debug.log*
+
+# ===== OS / Editor =====
+.DS_Store
+Thumbs.db

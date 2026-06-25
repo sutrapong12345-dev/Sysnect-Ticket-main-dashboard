@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  # Database Container (PostgreSQL)
+  postgres:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=sysnect
+      - POSTGRES_PASSWORD=sysnect_secret
+      - POSTGRES_DB=ticket_database
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  # Backend Container (n8n for processing data)
+  n8n:
+    image: n8nio/n8n:latest
+    restart: always
+    ports:
+      - "5678:5678"
+    environment:
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_DATABASE=ticket_database
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_USER=sysnect
+      - DB_POSTGRESDB_PASSWORD=sysnect_secret
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=password
+      - WEBHOOK_URL=http://localhost:5678/
+    depends_on:
+      - postgres
+    volumes:
+      - n8n_data:/home/node/.n8n
+
+  # Node.js API + Delta Sync (Postgres ← n8n/GLPI)
+  sysnect-node-api:
+    build: ./sysnect-node-api
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      # ----- PostgreSQL -----
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=sysnect
+      - DB_PASSWORD=sysnect_secret
+      - DB_NAME=ticket_database
+      # ----- Delta Sync -----
+      - N8N_WEBHOOK=https://n8n.sysnect.co.th/webhook/48ec49ee-a4ca-4677-bad7-deb3c3ec341d
+      - BACKFILL_DAYS=120
+      - SYNC_INTERVAL_MS=300000
+      # ----- GLPI (ช่องทางสำรอง) -----
+      - GLPI_BASE_URL=https://itservicedesk.sysnect.co.th/apirest.php
+      - GLPI_USER=admin_sysnect
+      - GLPI_PASS=!P@ssw0rd##
+      - GLPI_APP_TOKEN=Cxhq0afuuU5qsChRdAqpZHWOEQowqXYr6Cz8nl81
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:
+    name: sysnect_postgres_data
+  n8n_data:
+    name: sysnect_n8n_data

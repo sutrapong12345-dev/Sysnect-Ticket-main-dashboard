@@ -1,0 +1,16 @@
+# กัน node_modules ของ Windows ทับตัวที่ npm install ใน image (alpine/linux)
+node_modules
+npm-debug.log*
+
+# ไม่เอา secret / ไฟล์ที่ไม่จำเป็นเข้า image
+.env
+.env.*
+.git
+.gitignore
+*.md
+tickets_cached.json
+
+# ไฟล์ build/compose เองไม่ต้องอยู่ใน image
+Dockerfile
+docker-compose.yml
+.dockerignore

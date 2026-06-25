@@ -1,0 +1,51 @@
+# ============================================================
+# SYSNECT BASE Dashboard — Full Stack (Node API + PostgreSQL)
+#   เตรียม: copy .env.example .env  แล้วแก้รหัส/secret ให้เรียบร้อย
+#   รัน:    docker compose up -d --build
+#   เปิด:   http://localhost:3000/
+#   ปิด:    docker compose down        (ข้อมูล PostgreSQL ยังอยู่ใน volume 'pgdata')
+# ============================================================
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: sysnect-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-sysnect}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-sysnect_secret}
+      POSTGRES_DB: ${DB_NAME:-ticket_database}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-sysnect} -d ${DB_NAME:-ticket_database}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    # เปิดพอร์ตนี้เฉพาะถ้าต้องต่อ DB จากเครื่อง host โดยตรง (เช่น DBeaver) — production ไม่ต้องเปิด
+    # ports:
+    #   - "5432:5432"
+
+  api:
+    build: .
+    container_name: sysnect-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # บังคับให้ชี้ไปที่ service 'db' ใน network ของ compose (ทับค่า DB_HOST/DB_PORT ใน .env)
+      DB_HOST: db
+      DB_PORT: "5432"
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    volumes:
+      # เสิร์ฟหน้าเว็บทั้ง 2 ตัวจากโฟลเดอร์จริง (server.js resolve path เป็น /html/...)
+      #   BASE ที่ /  ·  MAIN ที่ /main  — ใช้ API /api/tickets ตัวเดียวกัน
+      # อยากได้ image แบบ self-contained: ลบ volume เหล่านี้ แล้วก๊อปโฟลเดอร์หน้าเว็บเข้า image ใน Dockerfile แทน
+      - "../../html/Ticket Dash board Base test beta:/html/Ticket Dash board Base test beta:ro"
+      - "../../html/Ticket Dash board MAIN Web:/html/Ticket Dash board MAIN Web:ro"
+
+volumes:
+  pgdata:
