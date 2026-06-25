@@ -392,7 +392,7 @@
                 ? 'http://localhost:3000'
                 : (location.protocol.startsWith('http') && !location.hostname.endsWith('github.io') && !location.hostname.endsWith('pages.dev') && !location.hostname.endsWith('workers.dev'))
                     ? location.origin
-                    : 'https://bubbly-solace-production-904b.up.railway.app'; // 🔧 Cloudflare tunnel
+                    : 'https://sysnect-ticket-main-dashboard-production.up.railway.app';
             const API_URL = `${API_BASE}/api/tickets${queryParam}`;
             const N8N_DIRECT_URL = `https://n8n.sysnect.co.th/webhook/48ec49ee-a4ca-4677-bad7-deb3c3ec341d${queryParam}`;
 
@@ -1105,7 +1105,7 @@
                 ? 'http://localhost:3000/api/health'
                 : (location.protocol.startsWith('http') && !location.hostname.endsWith('github.io') && !location.hostname.endsWith('pages.dev') && !location.hostname.endsWith('workers.dev'))
                     ? `${location.origin}/api/health`
-                    : 'https://bubbly-solace-production-904b.up.railway.app/api/health';
+                    : 'https://sysnect-ticket-main-dashboard-production.up.railway.app/api/health';
             const ssoTokenH = sessionStorage.getItem('sysnect_sso_token');
             const res = await fetch(healthUrl, { signal: AbortSignal.timeout(5000), headers: ssoTokenH ? { 'Authorization': `Bearer ${ssoTokenH}` } : {} });
             if (res.ok) {
