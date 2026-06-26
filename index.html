@@ -179,7 +179,7 @@
     <!-- Flatpickr for Date Inputs -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <link rel="stylesheet" href="style.css?v=10">
+    <link rel="stylesheet" href="style.css?v=11">
 </head>
 <body>
 
@@ -394,17 +394,26 @@
 
 <div class="dashboard-wrapper three-panel" id="dashboardWrapper">
 
-    <!-- ═══ SIDEBAR LEFT — Project List ═══ -->
+    <!-- ═══ SIDEBAR LEFT — Status Bar Chart + Project List ═══ -->
     <div class="sidebar-left" id="sidebarLeft">
         <div class="sidebar-card">
             <div class="sidebar-header">
-                <span class="material-symbols-outlined" style="font-size:16px;color:var(--primary-color,#6366f1);">folder_open</span>
-                <span class="sidebar-title">โครงการ</span>
+                <span class="material-symbols-outlined" style="font-size:16px;color:var(--primary-color,#6366f1);">bar_chart</span>
+                <span class="sidebar-title">สรุปสถานะ</span>
+            </div>
+            <!-- Status vertical bar chart -->
+            <div class="sidebar-chart-area">
+                <canvas id="statusBarCanvas"></canvas>
+            </div>
+            <!-- Project list section -->
+            <div class="sidebar-section-head">
+                <span class="material-symbols-outlined" style="font-size:13px;color:var(--primary-color,#6366f1);flex-shrink:0;">folder_open</span>
+                <span>โครงการ</span>
                 <span class="sidebar-count-badge" id="projSidebarCount">0</span>
             </div>
             <div class="sidebar-body" id="projectSidebarList">
-                <div style="text-align:center;padding:30px 10px;color:var(--text-sub,#94a3b8);font-size:13px;">
-                    <span class="material-symbols-outlined" style="font-size:32px;display:block;margin-bottom:8px;opacity:0.4;">folder_open</span>
+                <div style="text-align:center;padding:20px 10px;color:var(--text-sub,#94a3b8);font-size:12px;">
+                    <span class="material-symbols-outlined" style="font-size:28px;display:block;margin-bottom:6px;opacity:0.4;">folder_open</span>
                     กำลังโหลด...
                 </div>
             </div>
@@ -478,30 +487,31 @@
         </div>
     </div>
 
-    <!-- ═══ SIDEBAR RIGHT — Compact Ticket List ═══ -->
+    <!-- ═══ SIDEBAR RIGHT — Trend Line Chart ═══ -->
     <div class="sidebar-right" id="sidebarRight">
         <div class="sidebar-card">
             <div class="sidebar-header">
-                <span class="material-symbols-outlined" style="font-size:16px;color:var(--primary-color,#6366f1);">confirmation_number</span>
-                <span class="sidebar-title">ทิกเก็ตทั้งหมด</span>
-                <span class="sidebar-count-badge" id="rightSidebarCount">0</span>
+                <span class="material-symbols-outlined" style="font-size:16px;color:var(--primary-color,#6366f1);">trending_up</span>
+                <span class="sidebar-title">แนวโน้มทิกเก็ต</span>
             </div>
-            <div class="sidebar-filter">
-                <select id="sidebarDateFilter" onchange="onSidebarDateChange(this.value)">
-                    <option value="all">ทุกเวลา</option>
-                    <option value="today">วันนี้</option>
-                    <option value="yesterday">เมื่อวาน</option>
-                    <option value="week">7 วันล่าสุด</option>
-                    <option value="month" selected>เดือนนี้</option>
-                    <option value="last_month">เดือนที่แล้ว</option>
-                    <option value="year">ปีนี้</option>
-                </select>
+            <!-- Period selector buttons -->
+            <div class="period-selector" id="periodSelector">
+                <button class="period-btn active" data-period="week" onclick="onPeriodChange('week')">สัปดาห์</button>
+                <button class="period-btn" data-period="month" onclick="onPeriodChange('month')">เดือน</button>
+                <button class="period-btn" data-period="3month" onclick="onPeriodChange('3month')">3 เดือน</button>
+                <button class="period-btn" data-period="6month" onclick="onPeriodChange('6month')">6 เดือน</button>
+                <button class="period-btn" data-period="year" onclick="onPeriodChange('year')">ปีนี้</button>
             </div>
-            <div class="sidebar-body" id="rightSidebarList">
-                <div style="text-align:center;padding:30px 10px;color:var(--text-sub,#94a3b8);font-size:13px;">
-                    <span class="material-symbols-outlined" style="font-size:32px;display:block;margin-bottom:8px;opacity:0.4;">inbox</span>
-                    กำลังโหลด...
-                </div>
+            <!-- Trend line chart canvas -->
+            <div class="trend-chart-area">
+                <canvas id="trendLineCanvas"></canvas>
+            </div>
+            <!-- Summary footer -->
+            <div class="trend-summary">
+                <span class="ts-label">รวมช่วงเวลานี้</span>
+                <span class="ts-sep">—</span>
+                <span class="ts-value" id="trendTotal">0</span>
+                <span class="ts-unit">ใบ</span>
             </div>
         </div>
     </div>
@@ -798,9 +808,9 @@
 
         <div class="version-card">
             <div class="v-title">SYSNECT Dashboard</div>
-            <div class="v-tag">v2.2.0-MAIN</div>
+            <div class="v-tag">v2.4.0-MAIN</div>
             <div class="v-detail">2026-06-26 / MAIN (n8n + Static)</div>
-            <div class="v-detail">Soft Rounded × Glassmorphism</div>
+            <div class="v-detail">Status Bar Chart + Trend Line Chart</div>
         </div>
     </div>
 </div>
@@ -993,7 +1003,7 @@ input:checked + .slider:before { transform: translateX(20px); }
 }
 </style>
 
-<script src="app.js?v=5" defer></script>
+<script src="app.js?v=6" defer></script>
 
 </body>
 </html>

@@ -154,11 +154,19 @@
 
         // Apply theme immediately (sync with navbar button)
         const newTheme = settings.theme;
+        const prevTheme = document.documentElement.getAttribute('data-theme');
         document.documentElement.setAttribute('data-theme', newTheme);
         localStorage.setItem('sysnectTheme', newTheme);
         if (typeof currentTheme !== 'undefined') window.currentTheme = newTheme;
         const themeIcon = document.querySelector('#btnThemeToggle .theme-icon');
         if (themeIcon) themeIcon.textContent = newTheme === 'dark' ? 'light_mode' : 'dark_mode';
+        // Rebuild sidebar charts on theme change
+        if (newTheme !== prevTheme) {
+            if (window._statusBarChart) { window._statusBarChart.destroy(); window._statusBarChart = null; }
+            if (window._trendLineChart) { window._trendLineChart.destroy(); window._trendLineChart = null; }
+            if (typeof renderProjectSidebar === 'function') renderProjectSidebar();
+            if (typeof renderTrendLineChart === 'function') renderTrendLineChart();
+        }
 
         // Apply view immediately if changed
         const dateFilterEl = document.getElementById('dateFilter');
@@ -1313,7 +1321,7 @@
         if (typeof updateStatBar === 'function') updateStatBar(data.values, data.labels, totalTickets);
         // อัปเดต sidebars (ถ้ามีข้อมูลใหม่)
         if (typeof renderProjectSidebar === 'function') renderProjectSidebar();
-        if (typeof renderRightSidebar === 'function') renderRightSidebar();
+        if (typeof renderTrendLineChart === 'function') renderTrendLineChart();
     }
 
     // ⚡ Legend ใต้กราฟ: จุดสี + สถานะ + progress bar + จำนวน + %
@@ -2415,7 +2423,88 @@
     
     let currentTheme = localStorage.getItem('sysnectTheme') || 'light';
 
-    // ─── Sidebar: Project List ────────────────────────────
+    // ─── Sidebar Left: Status Bar Chart (vertical cylinders) ────
+    function renderStatusBarChart(values, labels) {
+        const canvas = document.getElementById('statusBarCanvas');
+        if (!canvas || typeof Chart === 'undefined') return;
+
+        const statLabels = (labels || ['new','assigned','pending','solved','closed']).map(l => l.toUpperCase());
+        const statValues = values || [0, 0, 0, 0, 0];
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const colorMap = {
+            'NEW': isDark ? '#60a5fa' : '#3b82f6',
+            'ASSIGNED': isDark ? '#fbbf24' : '#f59e0b',
+            'PENDING': isDark ? '#f87171' : '#ef4444',
+            'SOLVED': isDark ? '#34d399' : '#10b981',
+            'CLOSED': isDark ? '#94a3b8' : '#64748b'
+        };
+        const shortMap = { 'NEW': 'New', 'ASSIGNED': 'Assgn', 'PENDING': 'Pend', 'SOLVED': 'Solv', 'CLOSED': 'Clsd' };
+        const colors = statLabels.map(l => colorMap[l] || '#6366f1');
+        const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+        const tickColor = isDark ? '#94a3b8' : '#64748b';
+
+        if (window._statusBarChart) {
+            window._statusBarChart.data.datasets[0].data = statValues;
+            window._statusBarChart.data.datasets[0].backgroundColor = colors.map(c => c + 'bb');
+            window._statusBarChart.data.datasets[0].borderColor = colors;
+            window._statusBarChart.update('active');
+            return;
+        }
+
+        window._statusBarChart = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: statLabels.map(l => shortMap[l] || l),
+                datasets: [{
+                    data: statValues,
+                    backgroundColor: colors.map(c => c + 'bb'),
+                    borderColor: colors,
+                    borderWidth: 2,
+                    borderRadius: { topLeft: 7, topRight: 7 },
+                    borderSkipped: false,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 700, easing: 'easeInOutQuart' },
+                plugins: {
+                    legend: { display: false },
+                    datalabels: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            title: (items) => statLabels[items[0].dataIndex] || '',
+                            label: ctx => ` ${ctx.parsed.y} ใบ`
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        display: true,
+                        beginAtZero: true,
+                        grid: { color: gridColor },
+                        border: { display: false },
+                        ticks: {
+                            color: tickColor,
+                            font: { size: 9, family: 'JetBrains Mono' },
+                            maxTicksLimit: 4,
+                            stepSize: 1
+                        }
+                    },
+                    x: {
+                        grid: { display: false },
+                        border: { display: false },
+                        ticks: {
+                            color: tickColor,
+                            font: { size: 9.5, weight: '600' }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // ─── Sidebar Left: Project List (display only) ────────────
     function renderProjectSidebar() {
         const el = document.getElementById('projectSidebarList');
         const badge = document.getElementById('projSidebarCount');
@@ -2434,20 +2523,20 @@
         const entries = Object.entries(projMap).sort((a, b) => b[1] - a[1]);
         if (badge) badge.textContent = entries.length;
 
+        // Render status bar chart at top of left sidebar
+        renderStatusBarChart(data.values, data.labels);
+
         if (entries.length === 0) {
-            el.innerHTML = '<div style="text-align:center;padding:30px 10px;color:var(--text-sub,#94a3b8);font-size:12px;"><span class="material-symbols-outlined" style="font-size:28px;display:block;margin-bottom:6px;opacity:0.35;">folder_open</span>ไม่มีข้อมูล</div>';
+            el.innerHTML = '<div style="text-align:center;padding:20px 10px;color:var(--text-sub,#94a3b8);font-size:12px;"><span class="material-symbols-outlined" style="font-size:28px;display:block;margin-bottom:6px;opacity:0.35;">folder_open</span>ไม่มีข้อมูล</div>';
             return;
         }
 
         const maxCount = entries[0][1];
-        const currentProj = document.getElementById('projectFilter')?.value || 'all';
-
         let html = '';
         entries.forEach(([name, count]) => {
             const pct = (count / maxCount * 100).toFixed(1);
-            const isActive = currentProj !== 'all' && currentProj === name ? ' active' : '';
             html += `
-            <div class="proj-row${isActive}" onclick="filterByProject('${escapeHtml(name)}')" title="${escapeHtml(name)} — ${count} ใบ">
+            <div class="proj-row" title="${escapeHtml(name)} — ${count} ใบ">
                 <span class="proj-name">${escapeHtml(name)}</span>
                 <div class="proj-bar-wrap"><div class="proj-bar-fill" data-pct="${pct}" style="width:0%"></div></div>
                 <span class="proj-count">${count}</span>
@@ -2477,83 +2566,189 @@
         renderProjectSidebar();
     };
 
-    // ─── Sidebar: Compact Ticket List ────────────────────
-    let sidebarDateValue = 'all';
+    // ─── Sidebar Right: Trend Line Chart ─────────────────
+    let currentTrendPeriod = 'week';
 
-    function renderRightSidebar() {
-        const el = document.getElementById('rightSidebarList');
-        const badge = document.getElementById('rightSidebarCount');
-        if (!el) return;
-
+    function aggregateByPeriod(period) {
         const data = getFilteredData();
-        const colorMap = { new: '#3b82f6', assigned: '#f59e0b', pending: '#ef4444', solved: '#10b981', closed: '#64748b' };
-
-        // Collect all tickets
         let tickets = [];
-        Object.entries(data.project_breakdown || {}).forEach(([status, arr]) => {
-            (arr || []).forEach(t => tickets.push({ ...t, _status: status }));
+        Object.values(data.project_breakdown || {}).forEach(arr => {
+            (arr || []).forEach(t => tickets.push(t));
         });
 
-        // Filter by sidebar date
-        if (sidebarDateValue !== 'all') {
-            const today = new Date();
-            const startOf = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
-            tickets = tickets.filter(t => {
+        const now = new Date();
+        const buckets = {};
+
+        if (period === 'week') {
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date(now);
+                d.setDate(now.getDate() - i);
+                const key = d.toISOString().slice(0, 10);
+                buckets[key] = { label: `${d.getDate()}/${d.getMonth()+1}`, count: 0 };
+            }
+            tickets.forEach(t => {
+                const key = (t.date_open || '').slice(0, 10);
+                if (buckets[key]) buckets[key].count++;
+            });
+        } else if (period === 'month') {
+            for (let i = 29; i >= 0; i--) {
+                const d = new Date(now);
+                d.setDate(now.getDate() - i);
+                const key = d.toISOString().slice(0, 10);
+                buckets[key] = { label: (i % 5 === 0 || i === 0) ? `${d.getDate()}/${d.getMonth()+1}` : '', count: 0 };
+            }
+            tickets.forEach(t => {
+                const key = (t.date_open || '').slice(0, 10);
+                if (buckets[key]) buckets[key].count++;
+            });
+        } else if (period === '3month') {
+            for (let i = 12; i >= 0; i--) {
+                const wEnd = new Date(now);
+                wEnd.setDate(now.getDate() - i * 7);
+                const wStart = new Date(wEnd);
+                wStart.setDate(wEnd.getDate() - 6);
+                const key = `w${i}`;
+                buckets[key] = {
+                    label: `${wStart.getDate()}/${wStart.getMonth()+1}`,
+                    count: 0, start: new Date(wStart.setHours(0,0,0,0)), end: new Date(wEnd.setHours(23,59,59,999))
+                };
+            }
+            tickets.forEach(t => {
                 const d = t.date_open ? new Date(t.date_open) : null;
-                if (!d) return false;
-                if (sidebarDateValue === 'today') return d >= startOf(today);
-                if (sidebarDateValue === 'yesterday') {
-                    const yest = new Date(today); yest.setDate(today.getDate() - 1);
-                    return d >= startOf(yest) && d < startOf(today);
-                }
-                if (sidebarDateValue === 'week') {
-                    const w = new Date(today); w.setDate(today.getDate() - 6);
-                    return d >= startOf(w);
-                }
-                if (sidebarDateValue === 'month') return d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
-                if (sidebarDateValue === 'last_month') {
-                    const lm = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-                    return d.getMonth() === lm.getMonth() && d.getFullYear() === lm.getFullYear();
-                }
-                if (sidebarDateValue === 'year') return d.getFullYear() === today.getFullYear();
-                return true;
+                if (!d || isNaN(d)) return;
+                Object.values(buckets).forEach(b => { if (d >= b.start && d <= b.end) b.count++; });
+            });
+        } else if (period === '6month') {
+            for (let i = 12; i >= 0; i--) {
+                const wEnd = new Date(now);
+                wEnd.setDate(now.getDate() - i * 14);
+                const wStart = new Date(wEnd);
+                wStart.setDate(wEnd.getDate() - 13);
+                const key = `b${i}`;
+                buckets[key] = {
+                    label: `${wStart.getDate()}/${wStart.getMonth()+1}`,
+                    count: 0, start: new Date(wStart.setHours(0,0,0,0)), end: new Date(wEnd.setHours(23,59,59,999))
+                };
+            }
+            tickets.forEach(t => {
+                const d = t.date_open ? new Date(t.date_open) : null;
+                if (!d || isNaN(d)) return;
+                Object.values(buckets).forEach(b => { if (d >= b.start && d <= b.end) b.count++; });
+            });
+        } else if (period === 'year') {
+            const curYear = now.getFullYear();
+            const thaiMonths = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+            for (let m = 0; m <= now.getMonth(); m++) {
+                const key = `${curYear}-${String(m+1).padStart(2,'0')}`;
+                buckets[key] = { label: thaiMonths[m], count: 0 };
+            }
+            tickets.forEach(t => {
+                const d = t.date_open ? new Date(t.date_open) : null;
+                if (!d || isNaN(d) || d.getFullYear() !== curYear) return;
+                const key = `${curYear}-${String(d.getMonth()+1).padStart(2,'0')}`;
+                if (buckets[key]) buckets[key].count++;
             });
         }
 
-        // Sort: newest first
-        tickets.sort((a, b) => new Date(b.date_open || 0) - new Date(a.date_open || 0));
-        if (badge) badge.textContent = tickets.length;
+        const entries = Object.values(buckets);
+        return {
+            labels: entries.map(b => b.label),
+            counts: entries.map(b => b.count),
+            total: entries.reduce((s, b) => s + b.count, 0)
+        };
+    }
 
-        if (tickets.length === 0) {
-            el.innerHTML = '<div style="text-align:center;padding:30px 10px;color:var(--text-sub,#94a3b8);font-size:12px;"><span class="material-symbols-outlined" style="font-size:28px;display:block;margin-bottom:6px;opacity:0.35;">inbox</span>ไม่มีทิกเก็ต</div>';
+    function renderTrendLineChart() {
+        const canvas = document.getElementById('trendLineCanvas');
+        const totalEl = document.getElementById('trendTotal');
+        if (!canvas || typeof Chart === 'undefined') return;
+
+        const { labels, counts, total } = aggregateByPeriod(currentTrendPeriod);
+        if (totalEl) totalEl.textContent = total;
+
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const lineColor = isDark ? '#a78bfa' : '#6366f1';
+        const fillColor = isDark ? 'rgba(167,139,250,0.1)' : 'rgba(99,102,241,0.07)';
+        const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+        const tickColor = isDark ? '#64748b' : '#94a3b8';
+
+        if (window._trendLineChart) {
+            window._trendLineChart.data.labels = labels;
+            window._trendLineChart.data.datasets[0].data = counts;
+            if (totalEl) totalEl.textContent = total;
+            window._trendLineChart.update('active');
             return;
         }
 
-        let html = '';
-        tickets.slice(0, 50).forEach(t => {
-            const color = colorMap[t._status] || '#64748b';
-            const shortId = extractShortId(t);
-            const title = escapeHtml(t.name || t.project || '-');
-            const proj = escapeHtml(t.project || '');
-            const dateStr = formatDateTime(t.date_open);
-            html += `
-            <div class="mini-ticket" style="border-left-color:${color}"
-                onclick="handleLegendClick('${t._status.toUpperCase()}')" title="${title}">
-                <div class="mt-header">
-                    <span class="mt-id">#${escapeHtml(shortId)}</span>
-                    <span class="mt-badge" style="background:${color}20;color:${color};border:1px solid ${color}40">${t._status.toUpperCase()}</span>
-                </div>
-                <div class="mt-title">${title}</div>
-                ${proj ? `<div class="mt-project"><span class="material-symbols-outlined" style="font-size:10px;vertical-align:middle;">folder</span> ${proj}</div>` : ''}
-                <div class="mt-date">${dateStr}</div>
-            </div>`;
+        window._trendLineChart = new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'ทิกเก็ต',
+                    data: counts,
+                    borderColor: lineColor,
+                    backgroundColor: fillColor,
+                    borderWidth: 2.5,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: labels.length <= 8 ? 4 : 2,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: lineColor,
+                    pointBorderColor: isDark ? '#060612' : '#ffffff',
+                    pointBorderWidth: 2,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { intersect: false, mode: 'index' },
+                plugins: {
+                    legend: { display: false },
+                    datalabels: { display: false },
+                    tooltip: {
+                        callbacks: { label: ctx => ` ${ctx.parsed.y} ใบ` }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: gridColor },
+                        border: { display: false },
+                        ticks: {
+                            color: tickColor,
+                            font: { size: 10, family: 'JetBrains Mono' },
+                            stepSize: 1,
+                            maxTicksLimit: 5
+                        }
+                    },
+                    x: {
+                        grid: { display: false },
+                        border: { display: false },
+                        ticks: {
+                            color: tickColor,
+                            font: { size: 9.5 },
+                            maxRotation: 45,
+                            minRotation: 0,
+                            autoSkip: true,
+                            maxTicksLimit: 8
+                        }
+                    }
+                }
+            }
         });
-        el.innerHTML = html;
     }
 
-    window.onSidebarDateChange = function(val) {
-        sidebarDateValue = val;
-        renderRightSidebar();
+    window.onPeriodChange = function(period) {
+        currentTrendPeriod = period;
+        document.querySelectorAll('.period-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.period === period);
+        });
+        if (window._trendLineChart) {
+            window._trendLineChart.destroy();
+            window._trendLineChart = null;
+        }
+        renderTrendLineChart();
     };
 
     function renderUserPill() {
@@ -2611,6 +2806,11 @@
         localStorage.setItem('sysnect_settings', JSON.stringify(settingsObj));
         const icon = this.querySelector('.theme-icon');
         if (icon) icon.textContent = currentTheme === 'dark' ? 'light_mode' : 'dark_mode';
+        // Rebuild sidebar charts so colors match new theme
+        if (window._statusBarChart) { window._statusBarChart.destroy(); window._statusBarChart = null; }
+        if (window._trendLineChart) { window._trendLineChart.destroy(); window._trendLineChart = null; }
+        if (typeof renderProjectSidebar === 'function') renderProjectSidebar();
+        if (typeof renderTrendLineChart === 'function') renderTrendLineChart();
     });
 
     document.addEventListener('DOMContentLoaded', () => {
