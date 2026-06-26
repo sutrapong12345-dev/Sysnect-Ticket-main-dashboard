@@ -2462,15 +2462,25 @@
                     borderWidth: 2,
                     borderRadius: { topLeft: 7, topRight: 7 },
                     borderSkipped: false,
+                    minBarLength: 6,
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 animation: { duration: 700, easing: 'easeInOutQuart' },
+                layout: { padding: { top: 20, right: 4, left: 4, bottom: 0 } },
                 plugins: {
                     legend: { display: false },
-                    datalabels: { display: false },
+                    datalabels: {
+                        anchor: 'end',
+                        align: 'end',
+                        offset: -1,
+                        color: (ctx) => colors[ctx.dataIndex] || (isDark ? '#a78bfa' : '#6366f1'),
+                        font: { weight: '800', size: 10, family: 'JetBrains Mono' },
+                        formatter: (val) => val > 0 ? val : '0',
+                        clamp: true
+                    },
                     tooltip: {
                         callbacks: {
                             title: (items) => statLabels[items[0].dataIndex] || '',
@@ -2480,16 +2490,8 @@
                 },
                 scales: {
                     y: {
-                        display: true,
+                        display: false,
                         beginAtZero: true,
-                        grid: { color: gridColor },
-                        border: { display: false },
-                        ticks: {
-                            color: tickColor,
-                            font: { size: 9, family: 'JetBrains Mono' },
-                            maxTicksLimit: 4,
-                            stepSize: 1
-                        }
                     },
                     x: {
                         grid: { display: false },
@@ -2510,8 +2512,11 @@
         const badge = document.getElementById('projSidebarCount');
         if (!el) return;
 
-        const data = getFilteredData();
-        const breakdown = data.project_breakdown || {};
+        // Use ALL raw data — independent of center panel filters
+        const breakdown = mockDataRaw || {};
+        const statusOrder = ['new', 'assigned', 'pending', 'solved', 'closed'];
+        const rawValues = statusOrder.map(s => (breakdown[s] || []).length);
+
         const projMap = {};
         Object.keys(breakdown).forEach(status => {
             (breakdown[status] || []).forEach(ticket => {
@@ -2523,8 +2528,8 @@
         const entries = Object.entries(projMap).sort((a, b) => b[1] - a[1]);
         if (badge) badge.textContent = entries.length;
 
-        // Render status bar chart at top of left sidebar
-        renderStatusBarChart(data.values, data.labels);
+        // Render status bar chart at top of left sidebar (raw counts, not filtered)
+        renderStatusBarChart(rawValues, statusOrder);
 
         if (entries.length === 0) {
             el.innerHTML = '<div style="text-align:center;padding:20px 10px;color:var(--text-sub,#94a3b8);font-size:12px;"><span class="material-symbols-outlined" style="font-size:28px;display:block;margin-bottom:6px;opacity:0.35;">folder_open</span>ไม่มีข้อมูล</div>';
@@ -2570,9 +2575,9 @@
     let currentTrendPeriod = 'week';
 
     function aggregateByPeriod(period) {
-        const data = getFilteredData();
+        // Use ALL raw data — independent of center panel filters
         let tickets = [];
-        Object.values(data.project_breakdown || {}).forEach(arr => {
+        Object.values(mockDataRaw || {}).forEach(arr => {
             (arr || []).forEach(t => tickets.push(t));
         });
 

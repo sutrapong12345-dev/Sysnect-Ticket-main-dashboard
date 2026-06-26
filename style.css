@@ -452,16 +452,16 @@
 
         /* ─── THREE-PANEL MODE (default) ─── */
         .dashboard-wrapper.three-panel .sidebar-left {
-            width: 22%;
+            width: 27%;
             opacity: 1;
         }
         .dashboard-wrapper.three-panel .left-panel {
-            width: 28%;
+            width: 27%;
             max-width: none;
             margin: 0;
         }
         .dashboard-wrapper.three-panel .sidebar-right {
-            width: calc(50% - 20px);
+            width: calc(46% - 20px);
             opacity: 1;
         }
         .dashboard-wrapper.three-panel .right-panel {
