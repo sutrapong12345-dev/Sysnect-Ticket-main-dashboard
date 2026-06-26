@@ -1314,7 +1314,7 @@
         if (typeof updateStatBar === 'function') updateStatBar(data.values, data.labels, totalTickets);
     }
 
-    // ⚡ Legend ใต้กราฟ: จุดสี + สถานะ + จำนวน + % (คลิกเพื่อกรองได้)
+    // ⚡ Legend ใต้กราฟ: จุดสี + สถานะ + progress bar + จำนวน + %
     function renderChartLegend(labels, values, colors, total) {
         const el = document.getElementById('chartLegendDetailed');
         if (!el) return;
@@ -1325,24 +1325,39 @@
             const pctText = count === 0 ? '0%' : (pct < 0.1 ? '<0.1%' : pct.toFixed(1) + '%');
             const active = (currentStatus === labels[i]) ? ' active' : '';
             html += `
-                <button type="button" class="cl-row${active}" data-status="${labels[i]}" onclick="handleLegendClick('${labels[i]}')">
+                <button type="button" class="cl-row${active}" data-status="${labels[i]}" data-pct="${pct.toFixed(2)}"
+                    style="--cl-color:${colors[i]}" onclick="handleLegendClick('${labels[i]}')">
                     <span class="cl-dot" style="background:${colors[i]}"></span>
                     <span class="cl-label">${labels[i]}</span>
+                    <div class="cl-bar-wrap">
+                        <div class="cl-bar-fill" style="width:0%;background:${colors[i]}" data-pct="${pct.toFixed(2)}"></div>
+                    </div>
                     <span class="cl-count">${count}</span>
                     <span class="cl-pct">${pctText}</span>
                 </button>`;
         }
-        // ALL — สถานะที่ 6 แสดงทุก ticket รวมกัน
+        // ALL row
         const allActive = (currentStatus === 'ALL') ? ' active' : '';
         html += `
             <button type="button" class="cl-row${allActive}" data-status="ALL" onclick="handleLegendClick('ALL')"
-                style="margin-top:4px; border-top: 1px dashed #e2e8f0; padding-top:8px;">
-                <span class="cl-dot" style="background: conic-gradient(#3b82f6 0% 20%, #f59e0b 20% 40%, #ef4444 40% 60%, #10b981 60% 80%, #64748b 80% 100%); border-radius:50%;"></span>
-                <span class="cl-label" style="font-weight:700;">ALL</span>
+                style="margin-top:4px; border-top:1px dashed rgba(99,102,241,0.12); padding-top:8px; --cl-color:#6366f1">
+                <span class="cl-dot" style="background:conic-gradient(#3b82f6 0% 20%,#f59e0b 20% 40%,#ef4444 40% 60%,#10b981 60% 80%,#64748b 80% 100%);border-radius:50%;"></span>
+                <span class="cl-label" style="font-weight:800;">ALL</span>
+                <div class="cl-bar-wrap">
+                    <div class="cl-bar-fill" style="width:0%;background:linear-gradient(90deg,#3b82f6,#f59e0b,#ef4444,#10b981,#64748b)" data-pct="100"></div>
+                </div>
                 <span class="cl-count">${total}</span>
                 <span class="cl-pct">100%</span>
             </button>`;
         el.innerHTML = html;
+        // Animate bars in after paint
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                el.querySelectorAll('.cl-bar-fill').forEach(bar => {
+                    bar.style.width = bar.dataset.pct + '%';
+                });
+            });
+        });
     }
 
     // อัปเดตสถานะ active ของ legend ใต้กราฟให้ตรงกับ currentStatus
