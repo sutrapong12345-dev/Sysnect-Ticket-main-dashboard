@@ -459,6 +459,8 @@
             width: 33.33%;
             max-width: none;
             margin: 0;
+            position: relative;
+            z-index: 20;
         }
         .dashboard-wrapper.three-panel .sidebar-right {
             width: calc(33.33% - 20px);
