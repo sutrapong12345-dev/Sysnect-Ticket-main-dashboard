@@ -452,16 +452,16 @@
 
         /* ─── THREE-PANEL MODE (default) ─── */
         .dashboard-wrapper.three-panel .sidebar-left {
-            width: 27%;
+            width: 33.33%;
             opacity: 1;
         }
         .dashboard-wrapper.three-panel .left-panel {
-            width: 27%;
+            width: 33.33%;
             max-width: none;
             margin: 0;
         }
         .dashboard-wrapper.three-panel .sidebar-right {
-            width: calc(46% - 20px);
+            width: calc(33.33% - 20px);
             opacity: 1;
         }
         .dashboard-wrapper.three-panel .right-panel {
@@ -2523,8 +2523,8 @@
 }
 
 .trend-chart-area {
-    flex: 1;
-    min-height: 0;
+    flex: none;
+    height: 210px;
     padding: 8px 12px 4px;
     overflow: hidden;
     position: relative;
@@ -2533,6 +2533,68 @@
     width: 100% !important;
     height: 100% !important;
 }
+
+/* ── Period breakdown list (below chart) ── */
+.trend-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 5px 10px 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    border-top: 1px solid rgba(99,102,241,0.06);
+}
+.trend-list::-webkit-scrollbar { width: 3px; }
+.trend-list::-webkit-scrollbar-track { background: transparent; }
+.trend-list::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.18); border-radius: 3px; }
+[data-theme="dark"] .trend-list::-webkit-scrollbar-thumb { background: rgba(167,139,250,0.2); }
+[data-theme="dark"] .trend-list { border-top-color: rgba(255,255,255,0.04); }
+
+.tl-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 5px;
+    border-radius: 7px;
+    transition: background 0.12s;
+}
+.tl-row:hover { background: rgba(99,102,241,0.05); }
+[data-theme="dark"] .tl-row:hover { background: rgba(167,139,250,0.06); }
+
+.tl-period {
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--text-sub, #64748b);
+    min-width: 44px;
+    flex-shrink: 0;
+    font-family: 'JetBrains Mono', monospace;
+}
+.tl-bar-wrap {
+    flex: 1;
+    height: 5px;
+    background: rgba(0,0,0,0.06);
+    border-radius: 999px;
+    overflow: hidden;
+}
+[data-theme="dark"] .tl-bar-wrap { background: rgba(255,255,255,0.07); }
+.tl-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #6366f1, #8b5cf6);
+    transition: width 0.55s cubic-bezier(0.4,0,0.2,1);
+}
+[data-theme="dark"] .tl-bar-fill { background: linear-gradient(90deg, #a78bfa, #7c3aed); }
+.tl-count {
+    font-size: 11.5px;
+    font-weight: 800;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--primary-color, #6366f1);
+    min-width: 26px;
+    text-align: right;
+    flex-shrink: 0;
+}
+[data-theme="dark"] .tl-count { color: #a78bfa; }
 
 .trend-summary {
     display: flex;
@@ -2573,18 +2635,18 @@
    Responsive — 3-Panel (sidebar-left + center + sidebar-right)
    ============================================== */
 
-/* ── Large desktop (1281–1600px): slightly compressed ── */
+/* ── Large desktop (1281–1600px): equal thirds ── */
 @media (max-width: 1600px) and (min-width: 1281px) {
-    .dashboard-wrapper.three-panel .sidebar-left  { width: 26%; }
-    .dashboard-wrapper.three-panel .left-panel    { width: 26%; }
-    .dashboard-wrapper.three-panel .sidebar-right { width: calc(48% - 20px); }
+    .dashboard-wrapper.three-panel .sidebar-left  { width: 33.33%; }
+    .dashboard-wrapper.three-panel .left-panel    { width: 33.33%; }
+    .dashboard-wrapper.three-panel .sidebar-right { width: calc(33.33% - 20px); }
 }
 
-/* ── Medium desktop (1025–1280px): tighter columns ── */
+/* ── Medium desktop (1025–1280px): equal thirds ── */
 @media (max-width: 1280px) and (min-width: 1025px) {
-    .dashboard-wrapper.three-panel .sidebar-left  { width: 25%; }
-    .dashboard-wrapper.three-panel .left-panel    { width: 27%; }
-    .dashboard-wrapper.three-panel .sidebar-right { width: calc(48% - 20px); }
+    .dashboard-wrapper.three-panel .sidebar-left  { width: 33.33%; }
+    .dashboard-wrapper.three-panel .left-panel    { width: 33.33%; }
+    .dashboard-wrapper.three-panel .sidebar-right { width: calc(33.33% - 20px); }
     .sidebar-chart-area { height: 140px; }
     .proj-name { width: 76px; }
 }
@@ -2609,7 +2671,9 @@
     }
     /* Chart areas: explicit heights (Chart.js needs defined container) */
     .sidebar-chart-area { height: 200px; }
-    .trend-chart-area   { height: 320px; flex: none; }
+    .trend-chart-area   { height: 260px; flex: none; }
+    /* Breakdown list: cap height when stacked */
+    .trend-list { flex: none; max-height: 200px; }
     /* Period buttons: bigger, centered row */
     .period-selector { gap: 8px; padding: 10px 14px; justify-content: center; }
     .period-btn      { flex: unset; padding: 7px 18px; font-size: 12.5px; min-width: 80px; }
@@ -2628,7 +2692,8 @@
         overflow: visible !important;
     }
     .sidebar-chart-area { height: 180px; }
-    .trend-chart-area   { height: 280px; }
+    .trend-chart-area   { height: 230px; }
+    .trend-list { max-height: 180px; }
     /* Project name wider when full width */
     .proj-name { width: 110px; }
 }
@@ -2655,7 +2720,8 @@
         font-size: 11px;
     }
     /* Trend chart area */
-    .trend-chart-area { height: 230px; padding: 6px 8px 2px; }
+    .trend-chart-area { height: 200px; padding: 6px 8px 2px; }
+    .trend-list { max-height: 160px; }
     /* Trend summary */
     .trend-summary { padding: 6px 10px 10px; gap: 4px; }
     .ts-label, .ts-unit { font-size: 10px; }

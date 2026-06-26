@@ -2663,6 +2663,44 @@
         };
     }
 
+    function renderTrendList(labels, counts, period) {
+        const el = document.getElementById('trendList');
+        if (!el) return;
+        let listData;
+        if (period === 'month' && labels.length >= 28) {
+            // 30-day data → group into 6 buckets of 5 days
+            listData = [];
+            for (let g = 0; g < 6; g++) {
+                const startIdx = g * 5;
+                const grpCounts = counts.slice(startIdx, startIdx + 5);
+                const grpLabel = labels[startIdx + 4] || labels.slice(startIdx, startIdx + 5).find(function(l){return l;}) || '';
+                const tot = grpCounts.reduce(function(s,c){return s+c;}, 0);
+                if (grpLabel) listData.push({ label: grpLabel, count: tot });
+            }
+        } else {
+            listData = labels.map(function(l,i){ return { label:l, count: counts[i]||0 }; })
+                             .filter(function(p){ return p.label !== ''; });
+        }
+        if (!listData || listData.length === 0) { el.innerHTML = ''; return; }
+        const maxCount = Math.max.apply(null, listData.map(function(p){return p.count;})) || 1;
+        let html = '';
+        listData.forEach(function(p) {
+            const pct = ((p.count / maxCount) * 100).toFixed(1);
+            const safeLabel = String(p.label).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            html += '<div class="tl-row">' +
+                '<span class="tl-period">' + safeLabel + '</span>' +
+                '<div class="tl-bar-wrap"><div class="tl-bar-fill" data-pct="' + pct + '" style="width:0%"></div></div>' +
+                '<span class="tl-count">' + p.count + '</span>' +
+            '</div>';
+        });
+        el.innerHTML = html;
+        requestAnimationFrame(function(){ requestAnimationFrame(function(){
+            el.querySelectorAll('.tl-bar-fill').forEach(function(bar){
+                bar.style.width = bar.dataset.pct + '%';
+            });
+        }); });
+    }
+
     function renderTrendLineChart() {
         const canvas = document.getElementById('trendLineCanvas');
         const totalEl = document.getElementById('trendTotal');
@@ -2670,6 +2708,7 @@
 
         const { labels, counts, total } = aggregateByPeriod(currentTrendPeriod);
         if (totalEl) totalEl.textContent = total;
+        renderTrendList(labels, counts, currentTrendPeriod);
 
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
         const lineColor = isDark ? '#a78bfa' : '#6366f1';
