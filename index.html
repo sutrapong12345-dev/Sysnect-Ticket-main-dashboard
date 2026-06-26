@@ -392,7 +392,26 @@
     </div>
 </div>
 
-<div class="dashboard-wrapper" id="dashboardWrapper">
+<div class="dashboard-wrapper three-panel" id="dashboardWrapper">
+
+    <!-- ═══ SIDEBAR LEFT — Project List ═══ -->
+    <div class="sidebar-left" id="sidebarLeft">
+        <div class="sidebar-card">
+            <div class="sidebar-header">
+                <span class="material-symbols-outlined" style="font-size:16px;color:var(--primary-color,#6366f1);">folder_open</span>
+                <span class="sidebar-title">โครงการ</span>
+                <span class="sidebar-count-badge" id="projSidebarCount">0</span>
+            </div>
+            <div class="sidebar-body" id="projectSidebarList">
+                <div style="text-align:center;padding:30px 10px;color:var(--text-sub,#94a3b8);font-size:13px;">
+                    <span class="material-symbols-outlined" style="font-size:32px;display:block;margin-bottom:8px;opacity:0.4;">folder_open</span>
+                    กำลังโหลด...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ CENTER — Chart Panel ═══ -->
     <div class="left-panel">
         <div class="chart-card">
             <h2 class="chart-title">SYSNECT - Enterprise Ticket Dashboard</h2>
@@ -459,6 +478,35 @@
         </div>
     </div>
 
+    <!-- ═══ SIDEBAR RIGHT — Compact Ticket List ═══ -->
+    <div class="sidebar-right" id="sidebarRight">
+        <div class="sidebar-card">
+            <div class="sidebar-header">
+                <span class="material-symbols-outlined" style="font-size:16px;color:var(--primary-color,#6366f1);">confirmation_number</span>
+                <span class="sidebar-title">ทิกเก็ตทั้งหมด</span>
+                <span class="sidebar-count-badge" id="rightSidebarCount">0</span>
+            </div>
+            <div class="sidebar-filter">
+                <select id="sidebarDateFilter" onchange="onSidebarDateChange(this.value)">
+                    <option value="all">ทุกเวลา</option>
+                    <option value="today">วันนี้</option>
+                    <option value="yesterday">เมื่อวาน</option>
+                    <option value="week">7 วันล่าสุด</option>
+                    <option value="month" selected>เดือนนี้</option>
+                    <option value="last_month">เดือนที่แล้ว</option>
+                    <option value="year">ปีนี้</option>
+                </select>
+            </div>
+            <div class="sidebar-body" id="rightSidebarList">
+                <div style="text-align:center;padding:30px 10px;color:var(--text-sub,#94a3b8);font-size:13px;">
+                    <span class="material-symbols-outlined" style="font-size:32px;display:block;margin-bottom:8px;opacity:0.4;">inbox</span>
+                    กำลังโหลด...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ RIGHT PANEL — Full Ticket List (split mode) ═══ -->
     <div class="right-panel" id="rightPanel">
         <div class="ticket-list-card">
             <div class="ticket-header-sticky">
@@ -945,7 +993,7 @@ input:checked + .slider:before { transform: translateX(20px); }
 }
 </style>
 
-<script src="app.js?v=4" defer></script>
+<script src="app.js?v=5" defer></script>
 
 </body>
 </html>

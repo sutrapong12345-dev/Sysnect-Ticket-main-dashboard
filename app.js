@@ -1310,8 +1310,10 @@
         const legendLabels = data.labels.map(l => l.toUpperCase());
         const legendColors = ['#3b82f6', '#f59e0b', '#ef4444', '#10b981', '#64748b'];
         renderChartLegend(legendLabels, data.values, legendColors, totalTickets);
-        // อัปเดต stat bar
         if (typeof updateStatBar === 'function') updateStatBar(data.values, data.labels, totalTickets);
+        // อัปเดต sidebars (ถ้ามีข้อมูลใหม่)
+        if (typeof renderProjectSidebar === 'function') renderProjectSidebar();
+        if (typeof renderRightSidebar === 'function') renderRightSidebar();
     }
 
     // ⚡ Legend ใต้กราฟ: จุดสี + สถานะ + progress bar + จำนวน + %
@@ -1372,21 +1374,23 @@
         const hasData = data.values.some(v => v > 0);
         if (!hasData) return;
 
-        // ถ้าไม่ใช่ ALL ให้ตรวจว่า status นั้นมีข้อมูลหรือไม่
         if (status !== 'ALL') {
             const statusIdx = data.labels.findIndex(l => l.toUpperCase() === status);
             if (statusIdx !== -1 && data.values[statusIdx] === 0) return;
         }
 
-        currentStatus = status;
-        document.getElementById('dashboardWrapper').classList.add('split-active');
-        document.getElementById('statusName').innerText = currentStatus.toUpperCase();
-        const centerBtnText = document.querySelector('.center-toggle-btn .btn-text');
-        if (centerBtnText) centerBtnText.innerText = 'Close';
-
-        renderTicketList(currentStatus);
-        updateChartLegendActive();
-        if (typeof updateStatBarActive === 'function') updateStatBarActive(currentStatus);
+        // ใช้ enterSplitMode ที่รองรับ 3-panel
+        if (typeof window._enterSplitMode === 'function') {
+            window._enterSplitMode(status);
+        } else {
+            // fallback
+            currentStatus = status;
+            document.getElementById('dashboardWrapper').classList.remove('three-panel');
+            document.getElementById('dashboardWrapper').classList.add('split-active');
+            renderTicketList(currentStatus);
+            updateChartLegendActive();
+            if (typeof updateStatBarActive === 'function') updateStatBarActive(currentStatus);
+        }
     }
 
     function cleanHtmlText(htmlStr) {
@@ -2352,38 +2356,44 @@
     const dashboardWrapper = document.getElementById('dashboardWrapper');
     const btnText = toggleBtn?.querySelector('.btn-text');
 
+    // ─── ฟังก์ชัน Switch Mode ─────────────────────────────
+    function enterSplitMode(status) {
+        dashboardWrapper.classList.remove('three-panel');
+        dashboardWrapper.classList.add('split-active');
+        if (btnText) btnText.innerText = 'Close';
+        currentStatus = status || 'ALL';
+        renderTicketList(currentStatus);
+        updateChartLegendActive();
+        if (typeof updateStatBarActive === 'function') updateStatBarActive(currentStatus);
+    }
+
+    function exitSplitMode() {
+        dashboardWrapper.classList.remove('split-active');
+        dashboardWrapper.classList.add('three-panel');
+        if (btnText) btnText.innerText = 'Open';
+        currentStatus = null;
+        updateChartLegendActive();
+        if (typeof updateStatBarActive === 'function') updateStatBarActive('');
+        window.currentRenderId = (window.currentRenderId || 0) + 1;
+        const ticketContainerEl = document.getElementById('ticketContainer');
+        if (ticketContainerEl) ticketContainerEl.innerHTML = '';
+    }
+
     // เมื่อคลิกปุ่มตรงกลาง
     if (toggleBtn && dashboardWrapper && btnText) {
         toggleBtn.addEventListener('click', function() {
-            // เพิ่มเอฟเฟกต์หมุน
             this.classList.add('spin-active');
             setTimeout(() => this.classList.remove('spin-active'), 800);
-
-            // สั่งสลับ Class
-            dashboardWrapper.classList.toggle('split-active');
-            
             if (dashboardWrapper.classList.contains('split-active')) {
-                // ถ้าเปิดอยู่ ให้ปุ่มเปลี่ยนเป็นคำว่า Closed
-                btnText.innerText = 'Closed';
-                currentStatus = 'ALL';
-                renderTicketList('ALL');
-                updateChartLegendActive();
+                exitSplitMode();
             } else {
-                // ถ้าปิดอยู่ ให้ปุ่มกลับมาเป็นคำว่า Open
-                btnText.innerText = 'Open';
-                currentStatus = null;
-                updateChartLegendActive();
-
-                // อัปเดต ID เพื่อหยุดการวาด (ถ้ายังวาดไม่เสร็จ)
-                window.currentRenderId = (window.currentRenderId || 0) + 1;
-
-                // เคลียร์เนื้อหาทิ้งทันที เพื่อไม่ให้เบราว์เซอร์ต้องคำนวณ Layout ของการ์ด 400+ ใบ
-                // ในขณะที่กล่องกำลังหดตัว (แก้ปัญหาแอนิเมชันตอนปิดกระตุก)
-                const ticketContainerEl = document.getElementById('ticketContainer');
-                if (ticketContainerEl) ticketContainerEl.innerHTML = '';
+                enterSplitMode('ALL');
             }
         });
     }
+
+    // Expose enterSplitMode ให้ handleLegendClick ใช้ได้
+    window._enterSplitMode = enterSplitMode;
 
     window.copyTicketId = function(id, btn) {
         navigator.clipboard.writeText(id).then(() => {
@@ -2404,6 +2414,147 @@
 
     
     let currentTheme = localStorage.getItem('sysnectTheme') || 'light';
+
+    // ─── Sidebar: Project List ────────────────────────────
+    function renderProjectSidebar() {
+        const el = document.getElementById('projectSidebarList');
+        const badge = document.getElementById('projSidebarCount');
+        if (!el) return;
+
+        const data = getFilteredData();
+        const breakdown = data.project_breakdown || {};
+        const projMap = {};
+        Object.keys(breakdown).forEach(status => {
+            (breakdown[status] || []).forEach(ticket => {
+                const proj = ticket.project || 'ไม่ระบุ';
+                projMap[proj] = (projMap[proj] || 0) + 1;
+            });
+        });
+
+        const entries = Object.entries(projMap).sort((a, b) => b[1] - a[1]);
+        if (badge) badge.textContent = entries.length;
+
+        if (entries.length === 0) {
+            el.innerHTML = '<div style="text-align:center;padding:30px 10px;color:var(--text-sub,#94a3b8);font-size:12px;"><span class="material-symbols-outlined" style="font-size:28px;display:block;margin-bottom:6px;opacity:0.35;">folder_open</span>ไม่มีข้อมูล</div>';
+            return;
+        }
+
+        const maxCount = entries[0][1];
+        const currentProj = document.getElementById('projectFilter')?.value || 'all';
+
+        let html = '';
+        entries.forEach(([name, count]) => {
+            const pct = (count / maxCount * 100).toFixed(1);
+            const isActive = currentProj !== 'all' && currentProj === name ? ' active' : '';
+            html += `
+            <div class="proj-row${isActive}" onclick="filterByProject('${escapeHtml(name)}')" title="${escapeHtml(name)} — ${count} ใบ">
+                <span class="proj-name">${escapeHtml(name)}</span>
+                <div class="proj-bar-wrap"><div class="proj-bar-fill" data-pct="${pct}" style="width:0%"></div></div>
+                <span class="proj-count">${count}</span>
+            </div>`;
+        });
+        el.innerHTML = html;
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            el.querySelectorAll('.proj-bar-fill').forEach(bar => {
+                bar.style.width = bar.dataset.pct + '%';
+            });
+        }));
+    }
+
+    window.filterByProject = function(name) {
+        const sel = document.getElementById('projectFilter');
+        const customSel = document.getElementById('customDropdownSelected');
+        if (!sel) return;
+        // Toggle: click same project again → reset to all
+        if (sel.value === name) {
+            sel.value = 'all';
+            if (customSel) customSel.textContent = 'Project: ทั้งหมด';
+        } else {
+            sel.value = name;
+            if (customSel) customSel.textContent = name;
+        }
+        sel.dispatchEvent(new Event('change'));
+        renderProjectSidebar();
+    };
+
+    // ─── Sidebar: Compact Ticket List ────────────────────
+    let sidebarDateValue = 'all';
+
+    function renderRightSidebar() {
+        const el = document.getElementById('rightSidebarList');
+        const badge = document.getElementById('rightSidebarCount');
+        if (!el) return;
+
+        const data = getFilteredData();
+        const colorMap = { new: '#3b82f6', assigned: '#f59e0b', pending: '#ef4444', solved: '#10b981', closed: '#64748b' };
+
+        // Collect all tickets
+        let tickets = [];
+        Object.entries(data.project_breakdown || {}).forEach(([status, arr]) => {
+            (arr || []).forEach(t => tickets.push({ ...t, _status: status }));
+        });
+
+        // Filter by sidebar date
+        if (sidebarDateValue !== 'all') {
+            const today = new Date();
+            const startOf = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+            tickets = tickets.filter(t => {
+                const d = t.date_open ? new Date(t.date_open) : null;
+                if (!d) return false;
+                if (sidebarDateValue === 'today') return d >= startOf(today);
+                if (sidebarDateValue === 'yesterday') {
+                    const yest = new Date(today); yest.setDate(today.getDate() - 1);
+                    return d >= startOf(yest) && d < startOf(today);
+                }
+                if (sidebarDateValue === 'week') {
+                    const w = new Date(today); w.setDate(today.getDate() - 6);
+                    return d >= startOf(w);
+                }
+                if (sidebarDateValue === 'month') return d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
+                if (sidebarDateValue === 'last_month') {
+                    const lm = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                    return d.getMonth() === lm.getMonth() && d.getFullYear() === lm.getFullYear();
+                }
+                if (sidebarDateValue === 'year') return d.getFullYear() === today.getFullYear();
+                return true;
+            });
+        }
+
+        // Sort: newest first
+        tickets.sort((a, b) => new Date(b.date_open || 0) - new Date(a.date_open || 0));
+        if (badge) badge.textContent = tickets.length;
+
+        if (tickets.length === 0) {
+            el.innerHTML = '<div style="text-align:center;padding:30px 10px;color:var(--text-sub,#94a3b8);font-size:12px;"><span class="material-symbols-outlined" style="font-size:28px;display:block;margin-bottom:6px;opacity:0.35;">inbox</span>ไม่มีทิกเก็ต</div>';
+            return;
+        }
+
+        let html = '';
+        tickets.slice(0, 50).forEach(t => {
+            const color = colorMap[t._status] || '#64748b';
+            const shortId = extractShortId(t);
+            const title = escapeHtml(t.name || t.project || '-');
+            const proj = escapeHtml(t.project || '');
+            const dateStr = formatDateTime(t.date_open);
+            html += `
+            <div class="mini-ticket" style="border-left-color:${color}"
+                onclick="handleLegendClick('${t._status.toUpperCase()}')" title="${title}">
+                <div class="mt-header">
+                    <span class="mt-id">#${escapeHtml(shortId)}</span>
+                    <span class="mt-badge" style="background:${color}20;color:${color};border:1px solid ${color}40">${t._status.toUpperCase()}</span>
+                </div>
+                <div class="mt-title">${title}</div>
+                ${proj ? `<div class="mt-project"><span class="material-symbols-outlined" style="font-size:10px;vertical-align:middle;">folder</span> ${proj}</div>` : ''}
+                <div class="mt-date">${dateStr}</div>
+            </div>`;
+        });
+        el.innerHTML = html;
+    }
+
+    window.onSidebarDateChange = function(val) {
+        sidebarDateValue = val;
+        renderRightSidebar();
+    };
 
     function renderUserPill() {
         const token = sessionStorage.getItem('sysnect_sso_token') || window.ssoToken || '';
