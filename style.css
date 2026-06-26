@@ -2569,3 +2569,114 @@
 [data-theme="dark"] .ts-sep { color: rgba(167,139,250,0.3); }
 [data-theme="dark"] .ts-value { color: #a78bfa; }
 
+/* ==============================================
+   Responsive — 3-Panel (sidebar-left + center + sidebar-right)
+   ============================================== */
+
+/* ── Large desktop (1281–1600px): slightly compressed ── */
+@media (max-width: 1600px) and (min-width: 1281px) {
+    .dashboard-wrapper.three-panel .sidebar-left  { width: 26%; }
+    .dashboard-wrapper.three-panel .left-panel    { width: 26%; }
+    .dashboard-wrapper.three-panel .sidebar-right { width: calc(48% - 20px); }
+}
+
+/* ── Medium desktop (1025–1280px): tighter columns ── */
+@media (max-width: 1280px) and (min-width: 1025px) {
+    .dashboard-wrapper.three-panel .sidebar-left  { width: 25%; }
+    .dashboard-wrapper.three-panel .left-panel    { width: 27%; }
+    .dashboard-wrapper.three-panel .sidebar-right { width: calc(48% - 20px); }
+    .sidebar-chart-area { height: 140px; }
+    .proj-name { width: 76px; }
+}
+
+/* ── Tablet landscape (≤1024px): stack vertically ── */
+@media (max-width: 1024px) {
+    /* 3-panel sidebars → full-width stacked rows */
+    .dashboard-wrapper.three-panel .sidebar-left,
+    .dashboard-wrapper.three-panel .sidebar-right {
+        width: 100% !important;
+        opacity: 1 !important;
+        overflow: visible !important;
+    }
+    .dashboard-wrapper.three-panel .left-panel {
+        width: 100% !important;
+    }
+    /* Sidebar cards: auto-height when stacked */
+    .sidebar-left .sidebar-card,
+    .sidebar-right .sidebar-card {
+        height: auto;
+        min-height: 0;
+    }
+    /* Chart areas: explicit heights (Chart.js needs defined container) */
+    .sidebar-chart-area { height: 200px; }
+    .trend-chart-area   { height: 320px; flex: none; }
+    /* Period buttons: bigger, centered row */
+    .period-selector { gap: 8px; padding: 10px 14px; justify-content: center; }
+    .period-btn      { flex: unset; padding: 7px 18px; font-size: 12.5px; min-width: 80px; }
+    /* Trend summary */
+    .ts-value { font-size: 26px; }
+    .trend-summary { padding: 10px 14px 14px; }
+}
+
+/* ── Tablet portrait (≤900px) ── */
+@media (max-width: 900px) {
+    /* Ensure sidebars are shown full-width even without three-panel overrides */
+    .sidebar-left,
+    .sidebar-right {
+        width: 100% !important;
+        opacity: 1 !important;
+        overflow: visible !important;
+    }
+    .sidebar-chart-area { height: 180px; }
+    .trend-chart-area   { height: 280px; }
+    /* Project name wider when full width */
+    .proj-name { width: 110px; }
+}
+
+/* ── Mobile (≤640px) ── */
+@media (max-width: 640px) {
+    /* Limit project list so it doesn't grow endlessly on mobile */
+    .sidebar-left .sidebar-body { max-height: 220px; overflow-y: auto; }
+    /* Sidebar chart */
+    .sidebar-chart-area  { height: 150px; padding: 6px 10px 4px; }
+    /* Project section head */
+    .sidebar-section-head {
+        font-size: 10px;
+        padding: 6px 12px 4px;
+    }
+    /* Project rows: full width */
+    .proj-name { width: 90px; }
+    /* Period selector: pill row, wrap OK */
+    .period-selector { gap: 4px; padding: 8px 10px; flex-wrap: wrap; }
+    .period-btn {
+        flex: 1;
+        min-width: calc(33% - 8px);
+        padding: 6px 4px;
+        font-size: 11px;
+    }
+    /* Trend chart area */
+    .trend-chart-area { height: 230px; padding: 6px 8px 2px; }
+    /* Trend summary */
+    .trend-summary { padding: 6px 10px 10px; gap: 4px; }
+    .ts-label, .ts-unit { font-size: 10px; }
+    .ts-sep  { font-size: 10px; }
+    .ts-value { font-size: 20px; }
+    /* Stat bar: allow scroll on mobile */
+    .stat-bar { padding: 6px 10px; gap: 6px; }
+    .stat-card { min-width: 88px; padding: 8px 10px; }
+    .stat-card .sc-value { font-size: 18px; }
+}
+
+/* ── Small mobile (≤420px) ── */
+@media (max-width: 420px) {
+    .sidebar-chart-area { height: 130px; }
+    .trend-chart-area   { height: 200px; }
+    .period-btn { font-size: 9.5px; padding: 5px 2px; }
+    .proj-name  { width: 74px; }
+    /* Stat card even more compact */
+    .stat-card  { min-width: 74px; padding: 6px 8px; }
+    .stat-card .sc-value { font-size: 16px; }
+    .stat-card .sc-label { font-size: 9px; }
+    .stat-card .sc-sub   { font-size: 8.5px; }
+}
+
