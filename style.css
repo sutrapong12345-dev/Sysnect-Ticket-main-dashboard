@@ -119,7 +119,7 @@
             -webkit-backdrop-filter: blur(16px) saturate(200%);
             padding: 8px 15px;
             border-radius: 20px;
-            width: 420px;
+            width: min(420px, 100%);
             border: 1px solid rgba(255,255,255,0.65);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
@@ -128,7 +128,7 @@
             border-color: var(--primary-color, #6366f1);
             background: #fff;
             box-shadow: 0 4px 14px rgba(99,102,241,0.15);
-            width: 460px;
+            width: min(460px, 100%);
         }
 
         .search-box input {
@@ -145,6 +145,17 @@
             align-items: center;
             gap: 10px;
             flex-shrink: 0;
+        }
+
+        /* Center section: flex-fill the gap, constrain search width */
+        .nav-center {
+            flex: 1;
+            min-width: 0;
+            max-width: 500px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 8px;
         }
 
         .date-filter, .btn-action {
@@ -1279,13 +1290,16 @@
         /* ==============================================
            Responsive CSS (รองรับหน้าจอเล็ก และการบีบหน้าต่าง)
         ================================================= */
-        /* จอ zoom 125% หรือ tablet landscape (1025–1280px) — ยังแสดง 2 คอลัมน์ได้ แค่ search เล็กลง */
+        /* จอ zoom 125% หรือ tablet landscape (≤1024px) */
         @media (max-width: 1024px) {
             body { overflow-y: auto; }
             .brand-logo { max-height: 44px; }
             .top-navbar { padding: 0 16px; }
             .search-box { width: 220px; }
             .search-box:focus-within { width: 260px; }
+            /* Hide "Export Report" text on tablets to prevent overflow */
+            #btnExport { padding: 8px 10px; font-size: 0; gap: 0; }
+            #btnExport .material-symbols-outlined { font-size: 18px; }
             .dashboard-wrapper {
                 flex-direction: column;
                 height: auto;
@@ -1306,7 +1320,7 @@
             .chart-container { max-width: 100%; padding: 0 10px; box-sizing: border-box; height: 320px; }
         }
 
-        /* tablet portrait (901–1024px ก็ cover แล้ว ด้านล่างนี้คือ <= 900px) */
+        /* tablet portrait (≤900px) */
         @media (max-width: 900px) {
             body { overflow-y: auto !important; }
             .top-navbar { padding: 0 12px; }
@@ -1319,6 +1333,16 @@
             .dashboard-wrapper.split-active .right-panel { width: 100% !important; }
             .chart-card, .ticket-list-card { min-height: auto !important; height: auto !important; }
             .ticket-container-scroll { max-height: none !important; overflow-y: visible !important; }
+        }
+
+        /* ── Tablet narrow (641–900px): slim navbar ── */
+        @media (max-width: 900px) and (min-width: 641px) {
+            /* Hide "Export Report" text label — ประหยัด ~90px ใน nav-right */
+            #btnExport { padding: 8px 10px; font-size: 0; gap: 0; }
+            #btnExport .material-symbols-outlined { font-size: 18px; }
+            /* User pill: avatar only (ซ่อน username text เมื่อ login แล้ว) */
+            .user-pill { max-width: 38px; padding: 5px 6px; }
+            .user-pill .up-name { display: none; }
         }
 
         /* มือถือจริง — navbar พับเป็น 2 แถว: [Logo | Buttons] / [Search] */
@@ -1336,27 +1360,68 @@
                 order: 3;
                 width: 100%;
                 flex-basis: 100%;
+                padding: 0;
+                max-width: 100%;
             }
             .nav-center .search-box,
             .nav-center .search-box:focus-within {
                 width: 100%;
+                max-width: 100%;
                 box-sizing: border-box;
             }
-            .nav-right { flex-shrink: 0; gap: 6px; }
+            .nav-right { flex-shrink: 0; gap: 4px; }
+            /* User pill: icon only on mobile row-1 */
+            .user-pill { max-width: 38px; padding: 5px 6px; }
+            .user-pill .up-name { display: none; }
             .chart-container { height: 270px !important; }
-            .dashboard-wrapper { padding: 8px; }
+            /* Extra bottom padding เพื่อป้องกัน export FAB บัง ticket ล่าง */
+            .dashboard-wrapper { padding: 8px; padding-bottom: 80px; }
             .chart-card { padding: 14px 8px; }
             #lastUpdateContainer { gap: 5px; }
         }
 
-        /* มือถือเล็กมาก — ซ่อน text ปุ่ม เหลือแค่ icon */
+        /* มือถือเล็กมาก — icon-only buttons, ซ่อน user-pill ทั้งหมด */
         @media (max-width: 420px) {
             .btn-action.primary-action { padding: 8px 10px; font-size: 0; gap: 0; }
             .btn-action.primary-action .material-symbols-outlined { font-size: 18px; }
-            #btnExport { padding: 8px 10px; font-size: 0; }
+            #btnExport { padding: 8px 10px; font-size: 0; gap: 0; }
             #btnExport .material-symbols-outlined { font-size: 18px; }
+            /* ซ่อน user-pill บนมือถือเล็กมาก (space มีน้อยมาก) */
+            .user-pill { display: none !important; }
             .filter-row-bottom { flex-wrap: wrap !important; }
             input[type="date"] { font-size: 11px; min-width: 100px; }
+            /* Navbar right ให้แน่นขึ้น */
+            .nav-right { gap: 3px; }
+        }
+
+        /* ── Stat bar: grid 3×2 บนมือถือ (ไม่ต้อง scroll แนวนอน) ── */
+        @media (max-width: 480px) {
+            .stat-bar {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                overflow-x: visible;
+                padding: 6px 10px;
+                gap: 6px;
+            }
+            .stat-card {
+                min-width: 0;
+                flex: none;
+            }
+        }
+
+        /* ── Touch device: min 44px tap target + disable hover-only effects ── */
+        @media (hover: none) and (pointer: coarse) {
+            /* iOS HIG: 44×44px minimum touch target */
+            .btn-action, .icon-btn { min-height: 44px; }
+            .stat-card { min-height: 54px; }
+            /* Fast tap feedback */
+            .btn-action, .stat-card, .ticket-item, .cl-row, .period-btn {
+                -webkit-tap-highlight-color: transparent;
+            }
+            /* Stat card hover ไม่ lift บน touch */
+            .stat-card:hover { transform: none; }
+            /* ticket-item hover ไม่ lift บน touch */
+            .ticket-item:hover { transform: none; box-shadow: none; border-left-width: 6px; }
         }
 
         /* ==============================================
@@ -1542,10 +1607,12 @@
         
         
 
-        /* Hover Focus Mode for Tickets — ตัด filter: blur ที่ทำให้การ์ดทุกใบ repaint ตอนเลื่อนเมาส์ */
-        .ticket-container-scroll:hover .ticket-item:not(:hover) {
-            opacity: 0.55;
-            transform: scale(0.985);
+        /* Hover Focus Mode — active only on true-hover devices (mouse/trackpad), not touch */
+        @media (hover: hover) {
+            .ticket-container-scroll:hover .ticket-item:not(:hover) {
+                opacity: 0.55;
+                transform: scale(0.985);
+            }
         }
 
         .btn-copy-id {
