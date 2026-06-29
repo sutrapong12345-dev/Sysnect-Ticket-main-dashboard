@@ -185,7 +185,7 @@
 
     function loadSettings() {
         const settingsRaw = localStorage.getItem('sysnect_settings');
-        let settings = { notifications: false, defaultView: 'today', autoRefresh: '0', autoRefreshCustom: 10, defaultStatus: '', theme: 'light' };
+        let settings = { notifications: false, defaultView: 'today', autoRefresh: '0', autoRefreshCustom: 10, defaultStatus: '', theme: 'dark' };
 
         const legacyDefaultView = localStorage.getItem('sysnect_setting_defaultView');
         if (!settingsRaw && legacyDefaultView) {
@@ -225,7 +225,7 @@
 
         // Restore theme
         const themeSel = document.getElementById('settingTheme');
-        const savedTheme = settings.theme || localStorage.getItem('sysnectTheme') || 'light';
+        const savedTheme = settings.theme || localStorage.getItem('sysnectTheme') || 'dark';
         if (themeSel) themeSel.value = savedTheme;
         document.documentElement.setAttribute('data-theme', savedTheme);
         localStorage.setItem('sysnectTheme', savedTheme);
