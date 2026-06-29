@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="th" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SYSNECT - Enterprise Ticket Dashboard</title>
+    <!-- Security Policy -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://auth.sysnect.co.th https://n8n.sysnect.co.th https://itservicedesk.sysnect.co.th https://app.sysnect.com http://127.0.0.1:1880 http://localhost:5678 http://localhost:3000 https://*.trycloudflare.com; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:;">
+    
+    <!-- SSO Authentication Check -->
+    <script>
+        (async function() {
+            // Bypass SSO check if opened directly as local file (file://) to prevent browser ERR_UNSAFE_REDIRECT
+            if (window.location.protocol === 'file:') {
+                console.warn('Running locally via file:// scheme. SSO authentication check bypassed.');
+                return;
+            }
+
+            // Loop prevention
+            let redirectCount = parseInt(sessionStorage.getItem('sysnect_sso_redirect_count') || '0');
+            if (redirectCount >= 3) {
+                document.body.innerHTML = `
+                    <div style="font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #f8fafc; color: #333;">
+                        <h2 style="color: #ef4444;">SSO Login Loop Detected</h2>
+                        <p>ระบบตรวจพบการ Redirect วนลูป โปรดตรวจสอบ Console (F12) เพื่อดูข้อผิดพลาด</p>
+                        <p style="color: #64748b; font-size: 14px;">อาจเกิดจาก CORS Policy หรือ Token ไม่ถูกต้อง</p>
+                        <button onclick="sessionStorage.removeItem('sysnect_sso_redirect_count'); window.location.reload();" style="margin-top: 20px; padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer;">ลองใหม่อีกครั้ง</button>
+                    </div>`;
+                return;
+            }
+
+            // 1. ดึง Token จาก URL query parameter, hash, หรือ sessionStorage
+            const urlParams = new URLSearchParams(window.location.search);
+            const hashParams = new URLSearchParams(window.location.hash.substring(1));
+            let token = urlParams.get('access_token') || urlParams.get('token') || hashParams.get('access_token') || hashParams.get('token');
+            
+            if (token) {
+                sessionStorage.setItem('sysnect_sso_token', token);
+                const cleanUrl = new URL(window.location.href);
+                cleanUrl.searchParams.delete('access_token');
+                cleanUrl.searchParams.delete('token');
+                cleanUrl.hash = ''; // Clear hash if token was there
+                window.history.replaceState({}, document.title, cleanUrl.pathname + cleanUrl.search + cleanUrl.hash);
+            } else {
+                token = sessionStorage.getItem('sysnect_sso_token');
+            }
+            
+            // 2. ถ้าไม่มี Token เลย ให้บังคับไปหน้า Login SSO ทันที
+            if (!token) {
+                redirectToSSO();
+                return;
+            }
+            
+            // 3. ตรวจสอบความถูกต้องของ Token กับ API (ผ่าน Backend เพื่อเลี่ยง CORS ตรงๆ จาก auth)
+            try {
+                const backendHealthUrl = (location.protocol.startsWith('http') && !location.hostname.endsWith('github.io') && !location.hostname.endsWith('pages.dev') && !location.hostname.endsWith('workers.dev'))
+                    ? `${location.origin}/api/health`
+                    : 'https://sysnect-ticket-main-dashboard-production.up.railway.app/api/health';
+
+                const response = await fetch(backendHealthUrl, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    signal: AbortSignal.timeout(5000)
+                });
+                
+                if (response.status === 401) {
+                    throw new Error('Unauthorized (401)');
+                }
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to validate token: ${response.status}`);
+                }
+                
+                window.ssoToken = token;
+                
+                // Success: reset redirect count
+                sessionStorage.removeItem('sysnect_sso_redirect_count');
+                
+            } catch (err) {
+                console.error('SSO authentication error:', err);
+                
+                // ตรวจสอบว่าเป็น Network Error หรือ Timeout หรือไม่
+                const isNetworkError = err.name === 'AbortError' || err.name === 'TimeoutError' || (err.message && err.message.includes('Failed to fetch'));
+                
+                if (isNetworkError && token) {
+                    // โหมดออฟไลน์ (Offline Mode): Backend ไม่ตอบสนอง แต่มี Token เดิมอยู่
+                    console.warn('Backend offline. Entering Offline Mode using existing token.');
+                    window.SYSNECT_OFFLINE = true;
+                    window.ssoToken = token; // ให้ระบบทำงานต่อด้วย Token เดิม
+                    sessionStorage.removeItem('sysnect_sso_redirect_count'); // เคลียร์ loop counter
+                    
+                    // แสดง Toast เตือนแบบ Non-blocking (auto-dismiss 6s)
+                    window.addEventListener('DOMContentLoaded', () => {
+                        const toast = document.createElement('div');
+                        toast.id = 'offlineToast';
+                        toast.style.cssText = `
+                            position: fixed; top: 68px; right: 20px; z-index: 9999;
+                            background: #1e293b; color: #f8fafc; border-left: 4px solid #f59e0b;
+                            padding: 12px 16px; border-radius: 10px; font-size: 13px;
+                            display: flex; align-items: center; gap: 10px; max-width: 360px;
+                            box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+                            animation: toastIn 0.35s ease; pointer-events: auto;
+                        `;
+                        toast.innerHTML = `
+                            <span class="material-symbols-outlined" style="font-size:18px;color:#f59e0b;flex-shrink:0;">cloud_off</span>
+                            <span style="flex:1;line-height:1.4;">โหมดออฟไลน์ — แสดงข้อมูลจาก n8n โดยตรง</span>
+                            <button onclick="this.closest('#offlineToast').remove()" style="background:none;border:none;color:#94a3b8;cursor:pointer;padding:2px;line-height:1;flex-shrink:0;" title="ปิด">
+                                <span class="material-symbols-outlined" style="font-size:16px;">close</span>
+                            </button>
+                        `;
+                        if (!document.getElementById('toastInStyle')) {
+                            const s = document.createElement('style');
+                            s.id = 'toastInStyle';
+                            s.textContent = `
+                                @keyframes toastIn { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:translateX(0); } }
+                                @keyframes toastOut { from { opacity:1; transform:translateX(0); } to { opacity:0; transform:translateX(20px); } }
+                            `;
+                            document.head.appendChild(s);
+                        }
+                        document.body.appendChild(toast);
+                        setTimeout(() => {
+                            if (toast.parentNode) {
+                                toast.style.animation = 'toastOut 0.35s ease forwards';
+                                setTimeout(() => toast.remove(), 350);
+                            }
+                        }, 6000);
+                    });
+                    
+                    // ให้โหลดหน้าเว็บต่อไป (app.js จะจัดการเรื่อง n8n_direct เอง)
+                    return;
+                }
+                
+                // ถ้าไม่ใช่ Network Error (เช่น Token ผิด/หมดอายุ) หรือไม่มี Token ให้ลบ Token ทิ้ง และเข้าสู่หน้า SSO
+                sessionStorage.removeItem('sysnect_sso_token');
+                redirectToSSO();
+            }
+            
+            function redirectToSSO() {
+                sessionStorage.setItem('sysnect_sso_redirect_count', redirectCount + 1);
+                // ใช้ URL ของหน้าปัจจุบันเป็น redirect_uri อัตโนมัติ (รองรับ deploy ได้ทุก URL โดยไม่ต้องแก้โค้ด)
+                const redirectUri = window.location.origin + window.location.pathname;
+                const ssoLoginUrl = `https://auth.sysnect.co.th/?redirect_uri=${redirectUri}`;
+                window.location.href = ssoLoginUrl;
+            }
+        })();
+    </script>
+    
+    <!-- Dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    
+    <!-- Security Dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+    
+    <!-- Export Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet" />
+    
+    <!-- External CSS -->
+    <link rel="stylesheet" href="style.css?v=9">
+    
+    <style>
+        /* Keep only Loader CSS inline for immediate rendering to prevent flash of unstyled content during load */
+        .sysnect-loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; display: flex; align-items: center; justify-content: center; transition: opacity 0.5s, visibility 0.5s; background: #f0f4ff; overflow: hidden; }
+        .blob-bg { position: absolute; border-radius: 50%; filter: blur(100px); opacity: 0.65; animation: moveBlob 15s infinite alternate cubic-bezier(0.4, 0, 0.2, 1); z-index: 0; }
+        .blob-1 { width: 60vw; height: 60vw; background: rgba(147, 197, 253, 0.7); top: -10%; left: -10%; animation-delay: 0s; }
+        .blob-2 { width: 50vw; height: 50vw; background: rgba(196, 181, 253, 0.6); bottom: -20%; right: -10%; animation-duration: 18s; animation-delay: -5s; }
+        .blob-3 { width: 55vw; height: 55vw; background: rgba(186, 230, 253, 0.5); top: 20%; left: 30%; animation-duration: 22s; animation-delay: -10s; }
+        @keyframes moveBlob { 0% { transform: translate(0, 0) scale(1); } 33% { transform: translate(15%, 10%) scale(1.1); } 66% { transform: translate(-10%, 15%) scale(0.9); } 100% { transform: translate(10%, -15%) scale(1.05); } }
+        .sysnect-loader.hidden { opacity: 0; visibility: hidden; transform: scale(1.05); transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+        .cyber-loader-container { display: flex; flex-direction: column; align-items: center; width: 450px; position: relative; z-index: 10; }
+        .cyber-loader-text { font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 700; color: #2563eb; letter-spacing: 3px; margin-bottom: 20px; animation: pulse 1.5s infinite; text-align: center; }
+        .cyber-progress-wrapper { width: 100%; height: 6px; background: rgba(37, 99, 235, 0.12); border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
+        .cyber-progress-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #3b82f6, #93c5fd); border-radius: 4px; transition: width 0.4s ease-out; box-shadow: 0 0 10px rgba(59, 130, 246, 0.4); }
+        .cyber-loader-percent { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 600; color: #64748b; align-self: flex-end; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    </style>
+</head>
+<body>
+
+<!-- Loader -->
+<div id="sysnectLoader" class="sysnect-loader">
+    <!-- Gemini-like moving background blobs -->
+    <div class="blob-bg blob-1"></div>
+    <div class="blob-bg blob-2"></div>
+    <div class="blob-bg blob-3"></div>
+    
+    <div class="cyber-loader-container">
+        <div class="cyber-loader-text">SYSNECT TICKET DASHBOARD</div>
+        <div class="cyber-progress-wrapper"><div class="cyber-progress-bar" id="loaderBar"></div></div>
+        <div style="display: flex; justify-content: space-between; width: 100%;">
+            <div id="loaderMessage" style="font-family: 'Prompt', sans-serif; font-size: 13px; color: #64748b;">กำลังเตรียมการเชื่อมต่อ...</div>
+            <div class="cyber-loader-percent" id="loaderPercent">0%</div>
+        </div>
+    </div>
+</div>
+
+<!-- Top Navbar -->
+<header class="top-navbar">
+    <div class="nav-left">
+        <img src="sysnect-logo.png" alt="SYSNECT Logo" class="brand-logo" onerror="this.src='https://via.placeholder.com/150x40/ffffff/1a365d?text=SYSNECT'">
+        <span id="appVersionTag" onclick="showVersionInfo()" title="คลิกเพื่อดู Version Info" style="font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-muted); background:var(--bg-main); border:1px solid var(--border-solid); border-radius:4px; padding:2px 7px; white-space:nowrap; cursor:pointer; transition:border-color 0.2s, color 0.2s; user-select:none;" onmouseover="this.style.borderColor='var(--primary)';this.style.color='var(--primary)'" onmouseout="this.style.borderColor='var(--border-solid)';this.style.color='var(--text-muted)'">v2.1.0</span>
+    </div>
+    
+    <div class="search-box">
+        <span class="material-symbols-outlined" style="color: var(--text-muted);">search</span>
+        <input type="text" id="searchInput" placeholder="Search Ticket ID, Project or Location...">
+    </div>
+
+    <div class="nav-right">
+        <button class="btn-action theme-toggle btn-icon-only" id="btnSettings" title="Settings">
+            <span class="material-symbols-outlined">settings</span>
+        </button>
+        <button class="btn-action theme-toggle btn-icon-only" id="btnThemeToggle" title="Toggle Dark/Light Mode">
+            <span class="material-symbols-outlined" id="themeIcon">dark_mode</span>
+        </button>
+        <button class="btn-action btn-primary" id="btnRefresh">
+            <span class="material-symbols-outlined">sync</span> Refresh
+        </button>
+        <button class="btn-action" id="btnExportAll" title="Export Report" onclick="openExportModal()">
+            <span class="material-symbols-outlined">analytics</span> Export
+        </button>
+        <div class="user-pill" id="userPill" title="Logged in via SYSNECT SSO">
+            <span class="material-symbols-outlined" style="font-size:18px; color:var(--primary);">account_circle</span>
+            <span class="user-pill-name" id="userPillName">User</span>
+        </div>
+    </div>
+</header>
+
+<!-- Main Dashboard Container -->
+<main class="dashboard-container" id="dashboardContainer">
+    
+    <!-- Left Panel: Chart & Stats -->
+    <section class="left-panel">
+        <div class="glass-card chart-card">
+            <h2 class="chart-title">SYSNECT - Enterprise Ticket Dashboard</h2>
+            <p class="chart-subtitle" id="chartSubtitle">Real-time Ticket Tracking & Analysis</p>
+
+            <!-- KPI Summary Row: 5 status cards คลิกกรองได้ -->
+            <div class="kpi-summary-row" id="kpiSummaryRow">
+                <button class="kpi-card" data-status="new" onclick="toggleStatusFilter('new')">
+                    <span class="kpi-count" id="kpiNew">-</span>
+                    <span class="kpi-label">NEW</span>
+                </button>
+                <button class="kpi-card" data-status="assigned" onclick="toggleStatusFilter('assigned')">
+                    <span class="kpi-count" id="kpiAssigned">-</span>
+                    <span class="kpi-label">ASSIGNED</span>
+                </button>
+                <button class="kpi-card" data-status="pending" onclick="toggleStatusFilter('pending')">
+                    <span class="kpi-count" id="kpiPending">-</span>
+                    <span class="kpi-label">PENDING</span>
+                </button>
+                <button class="kpi-card" data-status="solved" onclick="toggleStatusFilter('solved')">
+                    <span class="kpi-count" id="kpiSolved">-</span>
+                    <span class="kpi-label">SOLVED</span>
+                </button>
+                <button class="kpi-card" data-status="closed" onclick="toggleStatusFilter('closed')">
+                    <span class="kpi-count" id="kpiClosed">-</span>
+                    <span class="kpi-label">CLOSED</span>
+                </button>
+            </div>
+
+            <!-- legend บนแบบเดิม (ซ่อนไว้ ใช้ legend ใต้กราฟแบบมีจำนวน+% แทน) -->
+            <div class="custom-legend" id="customLegend" style="display: none;">
+                <div class="legend-item"><div class="legend-color" style="background: var(--status-new);"></div>NEW</div>
+                <div class="legend-item"><div class="legend-color" style="background: var(--status-assigned);"></div>ASSIGNED</div>
+                <div class="legend-item"><div class="legend-color" style="background: var(--status-pending);"></div>PENDING</div>
+                <div class="legend-item"><div class="legend-color" style="background: var(--status-solved);"></div>SOLVED</div>
+                <div class="legend-item"><div class="legend-color" style="background: var(--status-closed);"></div>CLOSED</div>
+            </div>
+
+            <div class="chart-wrapper">
+                <canvas id="ticketChart"></canvas>
+                <div class="center-stats">
+                    <div class="count" id="totalTicketsCount">-</div>
+                    <div class="label" id="totalTicketsLabel">Total</div>
+                </div>
+            </div>
+
+            <!-- ⚡ Legend ใต้กราฟ: จุดสี + สถานะ + จำนวน + % (คลิกเพื่อกรอง) -->
+            <div class="chart-legend-detailed" id="chartLegendDetailed"></div>
+
+            <!-- Last Updated Status -->
+            <div class="last-update-container" id="lastUpdateContainer" style="margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap;">
+                <div style="display: inline-flex; align-items: center; gap: 5px; background: rgba(16, 185, 129, 0.05); padding: 3px 10px; border-radius: 10px; border: 1px solid rgba(16, 185, 129, 0.15); font-size: 12px; color: var(--text-muted);">
+                    <span class="material-symbols-outlined sync-icon" style="font-size: 14px; color: #10b981;">web</span>
+                    <span id="lastUpdateText">หน้าเว็บซิงค์ล่าสุด: กำลังโหลด...</span>
+                </div>
+                <!-- สถานะแหล่งข้อมูล n8n -->
+                <div id="n8nStatusBadge" style="display: inline-flex; align-items: center; gap: 6px; background: rgba(100,116,139,0.05); padding: 3px 10px; border-radius: 10px; border: 1px solid rgba(100,116,139,0.15); font-size: 12px; color: var(--text-muted);">
+                    <span id="n8nDot" style="width:8px; height:8px; border-radius:50%; background:#94a3b8; display:inline-block; transition: background 0.4s, box-shadow 0.4s;"></span>
+                    <span id="n8nStatusText">n8n</span>
+                </div>
+                <!-- สถานะแหล่งข้อมูล PostgreSQL -->
+                <div id="pgStatusBadge" style="display: inline-flex; align-items: center; gap: 6px; background: rgba(100,116,139,0.05); padding: 3px 10px; border-radius: 10px; border: 1px solid rgba(100,116,139,0.15); font-size: 12px; color: var(--text-muted);">
+                    <span id="pgDot" style="width:8px; height:8px; border-radius:50%; background:#94a3b8; display:inline-block; transition: background 0.4s, box-shadow 0.4s;"></span>
+                    <span id="pgStatusText">PostgreSQL</span>
+                </div>
+            </div>
+            
+        </div>
+    </section>
+
+    <!-- Right Panel: Data View -->
+    <section class="right-panel glass-card">
+        <div class="ticket-panel">
+            <div class="panel-header">
+                <div class="panel-title" id="panelTitle">
+                    <span class="material-symbols-outlined">dataset</span> All Tickets
+                    <span id="panelFilterChip" class="filter-chip-today" style="display:none; background:#dbeafe; color:#2563eb; border-radius:10px; font-size:11px; padding:2px 8px; font-weight:600; margin-left:8px; vertical-align: middle;">วันนี้</span>
+                </div>
+                <div class="view-controls">
+                    <button class="view-btn active" id="btnListView" title="List View"><span class="material-symbols-outlined">view_list</span></button>
+                    <button class="view-btn" id="btnTableView" title="Table View"><span class="material-symbols-outlined">table_chart</span></button>
+                </div>
+            </div>
+
+            <!-- ─── Filter Bar ─── -->
+            <div class="ticket-filter-bar" id="ticketFilterBar">
+                <!-- Quick Chips: เลือกช่วงเวลาได้ทันที -->
+                <div class="quick-chips-row" id="quickChipsRow">
+                    <button class="qchip active" data-range="all" onclick="applyQuickChip('all')">ทั้งหมด</button>
+                    <button class="qchip" data-range="today" onclick="applyQuickChip('today')">วันนี้</button>
+                    <button class="qchip" data-range="week" onclick="applyQuickChip('week')">7 วัน</button>
+                    <button class="qchip" data-range="month" onclick="applyQuickChip('month')">เดือนนี้</button>
+                    <button class="qchip" data-range="lastMonth" onclick="applyQuickChip('lastMonth')">เดือนที่แล้ว</button>
+                    <button class="qchip" data-range="year" onclick="applyQuickChip('year')">ปีนี้</button>
+                </div>
+                <!-- แถว 1: Project -->
+                <div class="filter-row filter-row-top">
+                    <select id="projectFilter">
+                        <option value="all">Project: ทั้งหมด</option>
+                    </select>
+                </div>
+                <!-- แถว 2: Priority | ช่วงเวลา | วันที่ | ล้าง -->
+                <div class="filter-row filter-row-bottom">
+                    <select id="priorityFilter">
+                        <option value="all">Priority: ทั้งหมด</option>
+                        <option value="critical">วิกฤต (Critical)</option>
+                        <option value="high">สูง (High)</option>
+                        <option value="medium">ปานกลาง (Medium)</option>
+                        <option value="low">ต่ำ (Low)</option>
+                    </select>
+                    <select id="filterDateRange">
+                        <option value="all">ทุกเวลา</option>
+                        <option value="today">วันนี้</option>
+                        <option value="yesterday">เมื่อวาน</option>
+                        <option value="week">7 วันล่าสุด</option>
+                        <option value="last30">30 วันล่าสุด</option>
+                        <option value="month">เดือนนี้</option>
+                        <option value="lastMonth">เดือนที่แล้ว</option>
+                        <option value="year">ปีนี้</option>
+                    </select>
+                    <span class="filter-sep">|</span>
+                    <input type="date" id="filterDateStart" class="formatted-date" title="วันที่เริ่มต้น">
+                    <span class="filter-sep">ถึง</span>
+                    <input type="date" id="filterDateEnd" class="formatted-date" title="วันที่สิ้นสุด">
+                    <button id="btnClearDateRange" class="btn-filter-clear" title="ล้างตัวกรอง">
+                        <span class="material-symbols-outlined" style="font-size:13px;">close</span> ล้าง
+                    </button>
+                </div>
+            </div>
+
+            <!-- Monthly Breakdown moved here -->
+            <div id="monthlyBreakdown" style="display: none; width: 100%; padding: 0 24px; margin-top: 16px;"></div>
+            
+            <div class="ticket-content" id="ticketContainer">
+                <!-- Content injected via JS -->
+            </div>
+        </div>
+    </section>
+    
+    <!-- Floating Action Bar for Selective Export -->
+    <div class="export-fab" id="selectionFAB">
+        <div class="fab-content">
+            <span class="material-symbols-outlined">picture_as_pdf</span>
+            <span>Export (<span id="selectionCount">0</span>)</span>
+        </div>
+        <div class="fab-actions">
+            <button class="btn-cancel" onclick="clearSelection()" style="padding: 8px 16px; border-radius: 8px; cursor: pointer;">Cancel</button>
+            <button class="btn-primary" onclick="exportSelectedTickets()" style="padding: 8px 24px; border-radius: 8px; border:none; display:flex; align-items:center; gap:8px; cursor: pointer;">
+                <span class="material-symbols-outlined" style="font-size:18px;">download</span> Download
+            </button>
+        </div>
+    </div>
+    
+</main>
+
+<!-- Month Detail Modal -->
+<div class="modal-overlay" id="monthDetailModal">
+    <div class="modal-content" style="max-width: 800px; width: 95%;">
+        <div class="modal-header">
+            <div class="modal-title">
+                <span class="material-symbols-outlined">event_note</span>
+                <span id="monthDetailTitle">สรุปตั๋วเดือน...</span>
+            </div>
+            <button class="btn-close-modal" onclick="closeMonthDetailModal()">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="modal-body" id="monthDetailBody" style="max-height: 60vh; overflow-y: auto; padding-right: 10px;">
+            <!-- Content injected via JS -->
+        </div>
+    </div>
+</div>
+
+<!-- Export Options Modal -->
+<div class="modal-overlay" id="exportModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div class="modal-title">
+                <span class="material-symbols-outlined">analytics</span>
+                Export Report
+            </div>
+            <button class="btn-close-modal" onclick="closeExportModal()">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        
+        <div class="export-option-group">
+            <label class="export-label">เลือกช่วงเวลาข้อมูล (Date Range)</label>
+            <select class="export-select" id="exportDateRange">
+                <option value="selected" id="optSelected" style="display:none; font-weight:bold; color:var(--primary);">เฉพาะที่เลือก (Selected Only)</option>
+                <option value="all">ข้อมูลทั้งหมด (All Time)</option>
+                <option value="today">วันนี้ (Today)</option>
+                <option value="week">7 วันล่าสุด (Last 7 Days)</option>
+                <option value="month">เดือนนี้ (This Month)</option>
+                <option value="last_month">เดือนที่แล้ว (Last Month)</option>
+            </select>
+        </div>
+
+        <div class="export-option-group">
+            <label class="export-label">เลือกรูปแบบไฟล์ (Format)</label>
+            <div class="export-format-grid">
+                <button class="format-btn selected" data-format="excel" onclick="selectExportFormat('excel')">
+                    <span class="material-symbols-outlined format-icon format-excel">table_view</span>
+                    Excel
+                </button>
+                <button class="format-btn" data-format="csv" onclick="selectExportFormat('csv')">
+                    <span class="material-symbols-outlined format-icon format-csv">data_object</span>
+                    CSV
+                </button>
+                <button class="format-btn" data-format="pdf" onclick="selectExportFormat('pdf')">
+                    <span class="material-symbols-outlined format-icon format-pdf">picture_as_pdf</span>
+                    PDF
+                </button>
+            </div>
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn-cancel" style="background: none; border: 1px solid #e2e8f0; padding: 10px 20px; border-radius: 8px; cursor: pointer; color: #64748b; font-weight: 600;" onclick="closeExportModal()">ยกเลิก</button>
+            <button class="btn-export-submit" onclick="executeExport()">
+                <span class="material-symbols-outlined" style="font-size: 18px;">download</span>
+                ดาวน์โหลด
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Settings Panel Overlay -->
+<div class="settings-overlay" id="settingsPanelOverlay" onclick="closeSettingsPanel()"></div>
+
+<!-- Settings Drawer -->
+<div class="settings-panel" id="settingsPanel">
+    <div class="settings-header">
+        <div class="settings-title">
+            <span class="material-symbols-outlined">settings</span>
+            Settings
+        </div>
+        <button class="btn-close-settings" onclick="closeSettingsPanel()">
+            <span class="material-symbols-outlined">close</span>
+        </button>
+    </div>
+
+    <div class="settings-body">
+
+        <!-- Default View -->
+        <div class="settings-section">
+            <div class="settings-section-label">
+                <span class="material-symbols-outlined">view_day</span>
+                Default View After Login
+            </div>
+            <div class="settings-btn-group">
+                <button class="settings-toggle-btn" data-setting="defaultView" data-value="today"
+                    onclick="onSettingDefaultViewChange('today')">
+                    <span class="material-symbols-outlined" style="font-size:16px;">today</span>
+                    Ticket Today
+                </button>
+                <button class="settings-toggle-btn" data-setting="defaultView" data-value="all"
+                    onclick="onSettingDefaultViewChange('all')">
+                    <span class="material-symbols-outlined" style="font-size:16px;">dataset</span>
+                    All Tickets
+                </button>
+            </div>
+        </div>
+
+        <!-- Sound Notification -->
+        <div class="settings-section">
+            <div class="settings-section-label">
+                <span class="material-symbols-outlined">notifications_active</span>
+                เสียงแจ้งเตือน
+            </div>
+            <label class="settings-toggle-label">
+                <input type="checkbox" id="settingNotifToggle" onchange="onSettingNotifChange(this)">
+                <span class="settings-toggle-switch"></span>
+                <span class="settings-toggle-text" id="settingNotifText">ปิดอยู่</span>
+            </label>
+            <p class="settings-hint">เมื่อเปิด: จะมีเสียง + ป้ายแจ้งเตือนเมื่อตรวจพบ Ticket ใหม่เข้ามาในระบบ<br>(ระบบ Auto-Refresh ทำงานตลอดทุก 30 วินาที)</p>
+        </div>
+
+        <!-- Auto-refresh -->
+        <div class="settings-section">
+            <div class="settings-section-label">
+                <span class="material-symbols-outlined">autorenew</span>
+                รีเฟรชอัตโนมัติ (Auto-refresh)
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+                <select id="settingAutoRefresh" onchange="onAutoRefreshChange()" class="setting-select">
+                    <option value="0">ปิด</option>
+                    <option value="0.5" selected>30 วินาที (Default)</option>
+                    <option value="1">1 นาที</option>
+                    <option value="5">5 นาที</option>
+                    <option value="15">15 นาที</option>
+                    <option value="30">30 นาที</option>
+                    <option value="custom">กำหนดเอง</option>
+                </select>
+                <div id="autoRefreshCustomWrap" style="display:none;align-items:center;gap:6px;">
+                    <input type="number" id="settingAutoRefreshCustom" min="1" max="1440" value="10"
+                        onchange="onSettingAutoRefreshCustomChange()"
+                        style="width:58px;padding:4px 6px;border-radius:6px;border:1px solid var(--border-solid);font-family:inherit;text-align:center;font-size:13px;background:var(--bg-card-solid);color:var(--text-main);">
+                    <span style="font-size:13px;color:var(--text-muted);">นาที</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Default Status Tab -->
+        <div class="settings-section">
+            <div class="settings-section-label">
+                <span class="material-symbols-outlined">filter_list</span>
+                สถานะเริ่มต้น (Default Status)
+            </div>
+            <select id="settingDefaultStatus" onchange="onSettingDefaultStatusChange(this.value)" class="setting-select">
+                <option value="">ไม่เปิดอัตโนมัติ</option>
+                <option value="all">ทั้งหมด (ALL)</option>
+                <option value="new">NEW</option>
+                <option value="assigned">ASSIGNED</option>
+                <option value="pending">PENDING</option>
+                <option value="solved">SOLVED</option>
+                <option value="closed">CLOSED</option>
+            </select>
+            <p class="settings-hint">เปิดแผง Ticket list อัตโนมัติเมื่อโหลดเว็บ</p>
+        </div>
+
+        <!-- Theme -->
+        <div class="settings-section">
+            <div class="settings-section-label">
+                <span class="material-symbols-outlined">palette</span>
+                ธีม (Theme)
+            </div>
+            <select id="settingTheme" onchange="onSettingThemeChange(this.value)" class="setting-select">
+                <option value="light">สว่าง (Light)</option>
+                <option value="dark">มืด (Dark)</option>
+            </select>
+        </div>
+
+        <!-- Version Info -->
+        <div class="settings-section settings-version-section">
+            <div class="settings-section-label">
+                <span class="material-symbols-outlined">info</span>
+                Version Info
+            </div>
+            <div class="version-info-card">
+                <div class="version-badge-row">
+                    <span class="material-symbols-outlined" style="font-size:20px; color:var(--primary);">hub</span>
+                    <span style="font-weight:700; color:var(--primary); font-size:14px;">SYSNECT Dashboard</span>
+                </div>
+                <div class="version-detail-row">
+                    <span class="vd-label">Version</span>
+                    <span class="vd-value" id="appVersionDisplay">v2.1.0-BASE</span>
+                </div>
+                <div class="version-detail-row">
+                    <span class="vd-label">Build Date</span>
+                    <span class="vd-value" id="appBuildDisplay">2026-06-23</span>
+                </div>
+                <div class="version-detail-row">
+                    <span class="vd-label">Edition</span>
+                    <span class="vd-value" style="color:#10b981;">BASE (Node + PostgreSQL)</span>
+                </div>
+                <div class="version-detail-row">
+                    <span class="vd-label">Backend</span>
+                    <span class="vd-value">Node :3000 · PG :5432</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script src="thai-fonts.js?v=13"></script>
+<script src="app.js?v=13"></script>
+
+</body>
+</html>
