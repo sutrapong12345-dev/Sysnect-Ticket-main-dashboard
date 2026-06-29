@@ -415,6 +415,27 @@
                 liveData = await fetchWithTimeout(N8N_DIRECT_URL, 45000);
                 window.dataSourceGlobal = 'n8n_direct';
                 window.isFallbackGlobal = false;
+
+                // ✅ บันทึกลง Railway PostgreSQL ทุกครั้งที่ดึง n8n สำเร็จ (fire-and-forget)
+                (async () => {
+                    try {
+                        const snapshotUrl = 'https://sysnect-ticket-main-dashboard-production.up.railway.app/api/snapshot';
+                        const tok = sessionStorage.getItem('sysnect_sso_token');
+                        const r = await fetch(snapshotUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                ...(tok ? { 'Authorization': `Bearer ${tok}` } : {})
+                            },
+                            body: JSON.stringify(liveData),
+                            signal: AbortSignal.timeout(10000)
+                        });
+                        if (r.ok) {
+                            const j = await r.json();
+                            console.log(`[SNAPSHOT] 💾 บันทึกลง Railway PG สำเร็จ: ${j.written}/${j.fetched} ตั๋ว`);
+                        }
+                    } catch (_) { /* ไม่บล็อก UI */ }
+                })();
             } catch (n8nError) {
                 console.warn("n8n ตอบสนองช้าหรือมีปัญหา → สลับไปใช้ฐานข้อมูลสำรอง (Backend)...", n8nError);
                 if(loaderMessage) loaderMessage.innerText = "n8n ไม่พร้อม กำลังดึงข้อมูลจากฐานข้อมูลสำรอง...";

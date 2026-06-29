@@ -496,6 +496,28 @@ app.post('/api/sync', syncLimiter, security.requireSyncAuth, async (req, res) =>
 });
 
 // ============================================================
+// SNAPSHOT — รับข้อมูล n8n ที่ frontend ดึงมาแล้ว → upsert ลง Postgres ทันที
+// เรียกจาก browser ทุกครั้งที่ดึง n8n สำเร็จ (fire-and-forget)
+// ============================================================
+app.post('/api/snapshot', requireSso, async (req, res) => {
+    const body = req.body;
+    if (!body || !Array.isArray(body['new'])) {
+        return res.status(400).json({ ok: false, message: 'ข้อมูลไม่ถูกต้อง (ต้องมี key "new" เป็น array)' });
+    }
+    try {
+        if (!db.isSchemaReady()) {
+            return res.status(503).json({ ok: false, message: 'Database schema ยังไม่พร้อม' });
+        }
+        const result = await sync.upsertFromN8nGrouped(body);
+        console.log(`[SNAPSHOT] 💾 บันทึกจาก browser สำเร็จ: ${result.written}/${result.fetched} ตั๋ว`);
+        return res.json({ ok: true, written: result.written, fetched: result.fetched });
+    } catch (e) {
+        console.error(`[SNAPSHOT] ❌ ล้มเหลว: ${e.message}`);
+        return res.status(500).json({ ok: false, message: e.message });
+    }
+});
+
+// ============================================================
 // HEALTH CHECK
 // ============================================================
 app.get('/api/health', async (req, res) => {
