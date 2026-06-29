@@ -329,13 +329,17 @@
 
         // Show loader and start simulated progress
         const loader = document.getElementById('sysnectLoader');
-        const loaderBar = document.querySelector('.cyber-progress-bar');
+        const loaderBar = document.getElementById('progressRing');
         const loaderPercent = document.getElementById('loaderPercent');
         const loaderMessage = document.getElementById('loaderMessage');
-        
+        const EL_CIRC = 339.292; // 2π×54
+        function setRingProgress(pct) {
+            if (!loaderBar) return;
+            loaderBar.style.strokeDashoffset = EL_CIRC - (pct / 100) * EL_CIRC;
+        }
         if (!isAutoRefresh && loader && loaderBar && loaderPercent) {
             loader.classList.remove('hidden');
-            loaderBar.style.width = '0%';
+            setRingProgress(0);
             loaderPercent.innerText = '0%';
         }
         
@@ -347,8 +351,8 @@
             const increment = Math.max(0.2, (98 - progress) / 15);
             progress += increment;
             if (progress > 98) progress = 98;
-            
-            loaderBar.style.width = progress + '%';
+
+            setRingProgress(progress);
             loaderPercent.innerText = Math.round(progress) + '%';
             
             if (!isAutoRefresh && loaderMessage) {
@@ -460,7 +464,7 @@
             
             clearInterval(progressInterval);
             if (loaderBar && loaderPercent) {
-                loaderBar.style.width = '100%';
+                setRingProgress(100);
                 loaderPercent.innerText = '100%';
                 if(loaderMessage) {
                     loaderMessage.innerText = "ดึงข้อมูลสำเร็จ! กำลังแสดงผล...";

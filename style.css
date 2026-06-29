@@ -1360,168 +1360,163 @@
         }
 
         /* ==============================================
-           SYSNECT Cyber-AI Loader (Light Theme)
+           SYSNECT Enterprise Loader
         ================================================= */
         .sysnect-loader {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: #f8fafc;
-            overflow: hidden;
-            z-index: 9999;
+            background-color: #050816;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.8s;
+            z-index: 99999;
+            overflow: hidden;
+            transition: opacity 0.7s ease, visibility 0.7s ease;
         }
-
-        /* Gemini Voice-like Background Blobs */
-        .blob-bg {
-            position: absolute;
-            border-radius: 50%;
-            filter: blur(80px);
-            opacity: 0.7;
-            animation: moveBlob 15s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
-            z-index: 0;
-        }
-        
-        .blob-1 {
-            width: 60vw; height: 60vw;
-            background: rgba(186, 230, 253, 0.8);
-            top: -10%; left: -10%;
-            animation-delay: 0s;
-        }
-        
-        .blob-2 {
-            width: 50vw; height: 50vw;
-            background: rgba(191, 219, 254, 0.7);
-            bottom: -20%; right: -10%;
-            animation-duration: 18s;
-            animation-delay: -5s;
-        }
-        
-        .blob-3 {
-            width: 55vw; height: 55vw;
-            background: rgba(224, 242, 254, 0.9);
-            top: 20%; left: 30%;
-            animation-duration: 22s;
-            animation-delay: -10s;
-        }
-
-        @keyframes moveBlob {
-            0% { transform: translate(0, 0) scale(1); }
-            33% { transform: translate(15%, 10%) scale(1.1); }
-            66% { transform: translate(-10%, 15%) scale(0.9); }
-            100% { transform: translate(10%, -15%) scale(1.05); }
-        }
-
         .sysnect-loader.hidden {
             opacity: 0;
             visibility: hidden;
         }
-
-        .cyber-loader-container {
+        .loader-orb {
+            position: fixed;
+            border-radius: 50%;
+            z-index: 0;
+            pointer-events: none;
+        }
+        .loader-orb-1 {
+            width: 500px; height: 500px;
+            background: #3b82f6;
+            filter: blur(100px);
+            top: -150px; left: -150px;
+            opacity: 0.3;
+        }
+        .loader-orb-2 {
+            width: 400px; height: 400px;
+            background: #eab308;
+            filter: blur(100px);
+            bottom: -100px; right: -100px;
+            opacity: 0.2;
+        }
+        .enterprise-loader-container {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            padding: 50px 70px;
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.10);
+            border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        }
+        .el-logo {
             display: flex;
             flex-direction: column;
             align-items: center;
-            width: 500px;
-            max-width: 90vw;
-            position: relative;
-            z-index: 10;
+            margin-bottom: 32px;
         }
-
-        .cyber-loader-text {
-            font-family: 'Share Tech Mono', 'Courier New', monospace;
-            font-size: 26px;
-            font-weight: 800;
-            color: #1e3a8a; /* SYSNECT Blue */
-            letter-spacing: 8px;
-            margin-bottom: 25px;
-            text-transform: uppercase;
-            animation: text-flicker 3s linear infinite;
-        }
-
-        .cyber-progress-wrapper {
-            position: relative;
-            width: 100%;
-            height: 12px;
-            border: 1px solid #cbd5e1;
-            padding: 3px;
-            box-sizing: border-box;
-            background: #f8fafc;
-            box-shadow: 0 0 10px rgba(59, 130, 246, 0.1);
-        }
-
-        /* Techy Brackets */
-        .cyber-progress-wrapper::before,
-        .cyber-progress-wrapper::after {
-            content: '';
-            position: absolute;
-            top: -6px;
-            width: 15px;
-            height: 22px;
-            border: 2px solid #3b82f6;
-        }
-        .cyber-progress-wrapper::before {
-            left: -8px;
-            border-right: none;
-        }
-        .cyber-progress-wrapper::after {
-            right: -8px;
-            border-left: none;
-        }
-
-        .cyber-progress-bar {
-            height: 100%;
-            background: linear-gradient(90deg, #3b82f6, #0ea5e9, #10b981);
-            background-size: 200% 100%;
-            width: 0%;
-            animation: shimmer 1.5s infinite linear;
-            transition: width 0.4s ease-out;
-            box-shadow: 0 0 8px rgba(14, 165, 233, 0.6);
-        }
-
-        .cyber-loader-subtext {
-            display: flex;
-            justify-content: space-between;
-            width: 100%;
-            margin-top: 8px;
-        }
-
-        #loaderMessage {
+        .el-logo-sub {
             font-family: 'Prompt', sans-serif;
-            font-size: 13px;
-            color: #1e3a8a;
-            font-weight: normal;
-            letter-spacing: normal;
-        }
-
-        #loaderPercent {
-            font-family: 'JetBrains Mono', 'Courier New', monospace;
-            font-size: 14px;
+            font-size: 10px;
+            letter-spacing: 4px;
+            color: #94a3b8;
             font-weight: 600;
-            color: #1e3a8a;
+            margin-bottom: 5px;
         }
-
-        @keyframes fill-bar {
-            0% { width: 0%; }
-            30% { width: 25%; }
-            60% { width: 80%; }
-            100% { width: 100%; }
+        .el-logo-main {
+            font-family: 'Prompt', sans-serif;
+            font-size: 30px;
+            font-weight: 800;
+            letter-spacing: -1px;
+            display: flex;
+            align-items: center;
         }
-
-        @keyframes shimmer {
-            0% { background-position: 100% 0; }
-            100% { background-position: -100% 0; }
+        .el-blue { color: #60a5fa; text-shadow: 0 0 20px rgba(96,165,250,0.5); }
+        .el-logo-ring {
+            width: 22px; height: 22px;
+            border: 2.5px solid #facc15;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 5px;
+            box-shadow: 0 0 12px rgba(250,204,21,0.4);
         }
-
-        @keyframes text-flicker {
-            0% { opacity: 1; }
-            2% { opacity: 0.6; }
-            4% { opacity: 1; }
-            40% { opacity: 1; text-shadow: none; }
-            42% { opacity: 0.8; text-shadow: 2px 0 #ef4444, -2px 0 #0ea5e9; }
-            44% { opacity: 1; text-shadow: none; }
-            100% { opacity: 1; }
+        .el-logo-ring::after {
+            content: 'e';
+            color: #facc15;
+            font-size: 13px;
+            font-weight: bold;
+            font-family: 'Prompt', sans-serif;
+        }
+        .el-progress-wrapper {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 24px;
+        }
+        .el-progress-svg { transform: rotate(-90deg); display: block; }
+        .el-ring-bg { fill: none; stroke: rgba(255,255,255,0.1); stroke-width: 6; }
+        .el-ring-bar {
+            fill: none;
+            stroke: url(#elGradient);
+            stroke-width: 6;
+            stroke-linecap: round;
+            stroke-dasharray: 339.292;
+            stroke-dashoffset: 339.292;
+            transition: stroke-dashoffset 0.35s ease;
+            filter: drop-shadow(0 0 8px rgba(59,130,246,0.6));
+        }
+        .el-progress-text {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 20px;
+            font-weight: 700;
+            color: #fff;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .el-status {
+            font-family: 'Prompt', sans-serif;
+            color: #94a3b8;
+            font-size: 13px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            margin-bottom: 20px;
+        }
+        .el-dot {
+            display: inline-block;
+            width: 4px; height: 4px;
+            background: #60a5fa;
+            border-radius: 50%;
+            animation: elBounce 1.4s infinite ease-in-out both;
+        }
+        .el-dot:nth-child(2) { animation-delay: -0.32s; }
+        .el-dot:nth-child(3) { animation-delay: -0.16s; }
+        @keyframes elBounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+        .el-footer {
+            font-family: 'Prompt', sans-serif;
+            font-size: 10px;
+            color: #475569;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            padding-top: 16px;
+        }
+        #loaderMessage { color: inherit; }
+        #loaderPercent {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 20px;
+            font-weight: 700;
+            color: #fff;
+        }
+        @media (max-width: 600px) {
+            .enterprise-loader-container { padding: 36px 36px; }
+            .el-logo-main { font-size: 24px; }
         }
 
         
@@ -1768,77 +1763,6 @@
     font-weight: 700;
     color: #0f172a;
     padding-left: 12px;
-}
-/* Responsive Canvas & Text Overlay for Loader */
-.canvas-wrapper {
-    position: relative;
-    width: 100%;
-    max-width: 480px;
-    height: 130px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-bottom: 0px;
-}
-#neuralCanvas {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 1;
-    pointer-events: none;
-}
-.loader-title-overlay {
-    position: relative;
-    z-index: 2;
-    text-align: center;
-    pointer-events: none;
-}
-.loader-title-top {
-    font-family: 'Prompt', 'Arial', sans-serif;
-    font-weight: 900;
-    font-size: 32px;
-    background: linear-gradient(90deg, #1a365d 0%, #2563eb 50%, #1a365d 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    line-height: 1.2;
-}
-.loader-title-bottom {
-    font-family: 'Prompt', 'Arial', sans-serif;
-    font-weight: 800;
-    font-size: 24px;
-    letter-spacing: 3px;
-    color: #1e3a8a;
-    margin-top: 2px;
-}
-/* Responsive adjustments for mobile screens */
-@media (max-width: 600px) {
-    .cyber-loader-container {
-        width: 90vw;
-    }
-    .canvas-wrapper {
-        height: 100px;
-    }
-    .loader-title-top {
-        font-size: 24px;
-    }
-    .loader-title-bottom {
-        font-size: 16px;
-        letter-spacing: 1px;
-    }
-}
-@media (max-width: 400px) {
-    .canvas-wrapper {
-        height: 80px;
-    }
-    .loader-title-top {
-        font-size: 20px;
-    }
-    .loader-title-bottom {
-        font-size: 14px;
-    }
 }
 
 /* Custom UI Overrides for Rounded Corners */

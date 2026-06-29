@@ -183,145 +183,48 @@
 </head>
 <body>
 
-<!-- SYSNECT Premium Loader (High-Tech Era) -->
+<!-- SYSNECT Enterprise Loader -->
 <div id="sysnectLoader" class="sysnect-loader">
-    <!-- Gemini-like moving background blobs -->
-    <div class="blob-bg blob-1"></div>
-    <div class="blob-bg blob-2"></div>
-    <div class="blob-bg blob-3"></div>
-    
-    <div class="cyber-loader-container">
+    <div class="loader-orb loader-orb-1"></div>
+    <div class="loader-orb loader-orb-2"></div>
 
-        <!-- 3D Neural Network Canvas (Optimized) & Responsive Text -->
-        <div class="canvas-wrapper">
-            <canvas id="neuralCanvas" width="480" height="130"></canvas>
-            <div class="loader-title-overlay">
-                <div class="loader-title-top">SYSNECT TICKET</div>
-                <div class="loader-title-bottom">DASH BOARD</div>
+    <div class="enterprise-loader-container">
+        <!-- Logo -->
+        <div class="el-logo">
+            <span class="el-logo-sub">INFORMATION</span>
+            <div class="el-logo-main">
+                <span class="el-blue">SYSN</span>
+                <div class="el-logo-ring"></div>
+                <span class="el-blue">CT</span>
             </div>
         </div>
-        
-        <div class="cyber-progress-wrapper" style="margin-top: 5px;">
-            <div class="cyber-progress-bar"></div>
+
+        <!-- Circular Progress -->
+        <div class="el-progress-wrapper">
+            <svg class="el-progress-svg" width="120" height="120" viewBox="0 0 120 120">
+                <defs>
+                    <linearGradient id="elGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#3b82f6" />
+                        <stop offset="100%" stop-color="#eab308" />
+                    </linearGradient>
+                </defs>
+                <circle class="el-ring-bg" cx="60" cy="60" r="54"></circle>
+                <circle class="el-ring-bar" id="progressRing" cx="60" cy="60" r="54"></circle>
+            </svg>
+            <div class="el-progress-text" id="loaderPercent">0%</div>
         </div>
-        <div class="cyber-loader-subtext" id="loaderMessageContainer">
+
+        <!-- Status -->
+        <div class="el-status">
             <span id="loaderMessage">กำลังเตรียมการเชื่อมต่อ...</span>
-            <span id="loaderPercent">0%</span>
+            <span class="el-dot"></span>
+            <span class="el-dot"></span>
+            <span class="el-dot"></span>
         </div>
+
+        <div class="el-footer">Enterprise Network Operations Center</div>
     </div>
 </div>
-
-<script>
-    // 🚀 3D Neural Network Animation (Clear Text + Abstract Network)
-    (function() {
-        const canvas = document.getElementById('neuralCanvas');
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        
-        // เราใช้จำนวน Node แบบ Fix ไว้ที่ 60 ตัว เพื่อเป็นพื้นหลังให้ลื่นไหล (60fps)
-        const NUM_PARTICLES = 60;
-        let particles = [];
-
-        class Particle {
-            constructor() {
-                this.x = Math.random() * canvas.width;
-                this.y = Math.random() * canvas.height;
-                this.z = Math.random() * 2 + 0.5; // Depth
-                this.vx = (Math.random() - 0.5) * 1.5; // เคลื่อนที่ช้าๆ ลื่นๆ
-                this.vy = (Math.random() - 0.5) * 1.5;
-                this.radius = (Math.random() * 2 + 1) / this.z;
-                
-                this.isFiring = Math.random() > 0.9;
-                this.fireTimer = Math.random() * 200;
-            }
-            update() {
-                this.x += this.vx;
-                this.y += this.vy;
-
-                // Bounce off edges smoothly
-                if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
-                if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
-
-                this.fireTimer--;
-                if(this.fireTimer <= 0) {
-                    this.isFiring = !this.isFiring;
-                    this.fireTimer = Math.random() * 200 + 100;
-                }
-            }
-            draw() {
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx.fillStyle = this.isFiring ? '#0ea5e9' : '#3b82f6';
-                ctx.fill();
-                
-                if (this.isFiring) {
-                    ctx.shadowBlur = 8;
-                    ctx.shadowColor = '#0ea5e9';
-                } else {
-                    ctx.shadowBlur = 0;
-                }
-            }
-        }
-
-        for (let i = 0; i < NUM_PARTICLES; i++) {
-            particles.push(new Particle());
-        }
-
-        let animationId;
-        function animate() {
-            if (document.getElementById('sysnectLoader').classList.contains('hidden')) return;
-            
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // 1. วาดโครงข่าย Neural Network เป็นพื้นหลัง
-            for (let i = 0; i < particles.length; i++) {
-                particles[i].update();
-                particles[i].draw();
-                
-                for (let j = i + 1; j < particles.length; j++) {
-                    const dx = particles[i].x - particles[j].x;
-                    const dy = particles[i].y - particles[j].y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    
-                    // เชื่อมต่อโหนดถ้าระยะห่างน้อยกว่า 65px
-                    if (dist < 65) {
-                        ctx.beginPath();
-                        ctx.moveTo(particles[i].x, particles[i].y);
-                        ctx.lineTo(particles[j].x, particles[j].y);
-                        
-                        let opacity = 1 - (dist / 65);
-                        if (particles[i].isFiring || particles[j].isFiring) {
-                            ctx.strokeStyle = `rgba(14, 165, 233, ${opacity * 0.8})`;
-                            ctx.lineWidth = 1.2 / Math.min(particles[i].z, particles[j].z);
-                        } else {
-                            ctx.strokeStyle = `rgba(59, 130, 246, ${opacity * 0.4})`;
-                            ctx.lineWidth = 0.5 / Math.min(particles[i].z, particles[j].z);
-                        }
-                        
-                        ctx.stroke();
-                        ctx.shadowBlur = 0;
-                    }
-                }
-            }
-
-            animationId = requestAnimationFrame(animate);
-        }
-        
-        animate();
-        
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.attributeName === 'class') {
-                    if (!document.getElementById('sysnectLoader').classList.contains('hidden')) {
-                        cancelAnimationFrame(animationId);
-                        animate();
-                    }
-                }
-            });
-        });
-        observer.observe(document.getElementById('sysnectLoader'), { attributes: true });
-    })();
-</script>
 
 <header class="top-navbar">
     <div class="nav-left" style="display: flex; align-items: center;">
