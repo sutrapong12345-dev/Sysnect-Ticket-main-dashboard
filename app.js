@@ -797,6 +797,13 @@
             const header = document.getElementById('customDropdownHeader');
             if (!list || !header) return;
             if (list.style.display === 'none' || !list.style.display) {
+                const rect = header.getBoundingClientRect();
+                list.style.position = 'fixed';
+                list.style.top = (rect.bottom + 4) + 'px';
+                list.style.left = rect.left + 'px';
+                list.style.minWidth = rect.width + 'px';
+                list.style.width = 'auto';
+                list.style.zIndex = '9999';
                 list.style.display = 'block';
                 header.classList.add('active');
             } else {
@@ -2873,7 +2880,16 @@
                 e.stopPropagation();
                 const isVisible = list.style.display === 'block';
                 document.querySelectorAll('.custom-dropdown-list').forEach(l => l.style.display = 'none');
-                list.style.display = isVisible ? 'none' : 'block';
+                if (!isVisible) {
+                    const rect = header.getBoundingClientRect();
+                    list.style.position = 'fixed';
+                    list.style.top = (rect.bottom + 4) + 'px';
+                    list.style.left = rect.left + 'px';
+                    list.style.minWidth = rect.width + 'px';
+                    list.style.width = 'auto';
+                    list.style.zIndex = '9999';
+                    list.style.display = 'block';
+                }
             });
 
             const items = list.querySelectorAll('.custom-dropdown-item');
