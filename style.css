@@ -1,8 +1,8 @@
 ﻿        :root {
             /* ── Light: White Glassmorphism ── */
             --bg-color: #dde5ff;
-            --card-bg: rgba(255, 255, 255, 0.28);
-            --card-bg-solid: rgba(255, 255, 255, 0.90);
+            --card-bg: rgba(255, 255, 255, 0.13);
+            --card-bg-solid: rgba(255, 255, 255, 0.88);
             --primary-color: #6366f1;
             --primary-dark: #4f46e5;
             --primary-glow: rgba(99,102,241,0.18);
@@ -30,6 +30,12 @@
         body {
             font-family: 'Prompt', 'Segoe UI', sans-serif;
             background-color: var(--bg-color);
+            background-image:
+                radial-gradient(circle 700px at -5%  -5%,  rgba(79,  70,  229, 0.55) 0%, transparent 60%),
+                radial-gradient(circle 600px at 106% 106%, rgba(139, 92,  246, 0.50) 0%, transparent 60%),
+                radial-gradient(circle 800px at 50%  50%,  rgba(99,  102, 241, 0.18) 0%, transparent 60%),
+                radial-gradient(circle 420px at 90%  10%,  rgba(167, 139, 250, 0.42) 0%, transparent 60%);
+            background-attachment: fixed;
             margin: 0;
             padding: 0;
             overflow: hidden;
@@ -46,32 +52,24 @@
             -webkit-user-select: text;
         }
 
-        /* White Glassmorphism orbs + grid (Light mode) */
+        /* Grid overlay (Light mode) — orbs are on body background directly */
         body::before {
             content: "";
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            z-index: -2;
+            z-index: -1;
             background-image:
-                radial-gradient(circle 650px at -5%  -5%,  rgba(99,  102, 241, 0.45) 0%, transparent 65%),
-                radial-gradient(circle 550px at 106% 106%, rgba(167, 139, 250, 0.38) 0%, transparent 65%),
-                radial-gradient(circle 700px at 50%  50%,  rgba(147, 197, 253, 0.22) 0%, transparent 65%),
-                radial-gradient(circle 380px at 90%  10%,  rgba(196, 181, 253, 0.35) 0%, transparent 65%),
-                linear-gradient(rgba(99, 102, 241, 0.04) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(99, 102, 241, 0.04) 1px, transparent 1px);
-            background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 40px 40px, 40px 40px;
-            background-color: #dde5ff;
-            opacity: 1;
-            mix-blend-mode: normal;
+                linear-gradient(rgba(99, 102, 241, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(99, 102, 241, 0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
             pointer-events: none;
-            transition: background-color 0.35s ease;
         }
 
         body::after {
             content: "";
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            z-index: -1;
+            z-index: -2;
             background: none;
             pointer-events: none;
         }
@@ -116,13 +114,13 @@
         .search-box {
             display: flex;
             align-items: center;
-            background: rgba(255,255,255,0.35);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
+            background: rgba(255,255,255,0.18);
+            backdrop-filter: blur(16px) saturate(200%);
+            -webkit-backdrop-filter: blur(16px) saturate(200%);
             padding: 8px 15px;
             border-radius: 20px;
             width: 420px;
-            border: 1px solid rgba(255,255,255,0.7);
+            border: 1px solid rgba(255,255,255,0.65);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
@@ -155,9 +153,9 @@
             border-radius: 8px;
             white-space: nowrap;
             flex-shrink: 0;
-            background: rgba(255,255,255,0.35);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+            background: rgba(255,255,255,0.18);
+            backdrop-filter: blur(12px) saturate(200%);
+            -webkit-backdrop-filter: blur(12px) saturate(200%);
             cursor: pointer;
             font-weight: 600;
             color: #1e293b;
@@ -1916,21 +1914,22 @@
 
 [data-theme="dark"] body {
     background-color: #050816;
+    background-image:
+        radial-gradient(circle 520px at -5%  -5%,  rgba(37,  99,  235, 0.60) 0%, transparent 70%),
+        radial-gradient(circle 420px at 106% 106%, rgba(180, 83,   9,  0.40) 0%, transparent 70%),
+        radial-gradient(circle 640px at 50%  55%,  rgba(109, 40,  217, 0.25) 0%, transparent 70%);
+    background-attachment: fixed;
     color: #e2e8f0;
 }
 
 [data-theme="dark"] body::before {
-    /* Glowing Orbs + Grid Pattern — Ultra-Clear Glass NOC */
+    /* Grid only — orbs are on body background-image */
     background-image:
-        radial-gradient(circle 520px at -5%  -5%,  rgba(37, 99, 235, 0.55)  0%, transparent 70%),
-        radial-gradient(circle 420px at 106% 106%, rgba(180, 83,  9, 0.38)   0%, transparent 70%),
-        radial-gradient(circle 640px at 50%  55%,  rgba(109, 40, 217, 0.22) 0%, transparent 70%),
-        linear-gradient(rgba(59, 130, 246, 0.04) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(59, 130, 246, 0.04) 1px, transparent 1px);
-    background-size: 100% 100%, 100% 100%, 100% 100%, 40px 40px, 40px 40px;
-    background-color: #050816;
+        linear-gradient(rgba(59, 130, 246, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59, 130, 246, 0.05) 1px, transparent 1px);
+    background-size: 40px 40px;
+    background-color: transparent;
     opacity: 1;
-    mix-blend-mode: normal;
 }
 
 [data-theme="dark"] body::after {
@@ -2281,12 +2280,12 @@
     flex-direction: column;
     align-items: flex-start;
     padding: 10px 14px;
-    background: var(--card-bg, rgba(255,255,255,0.28));
-    backdrop-filter: var(--glass-blur, blur(20px) saturate(200%));
-    -webkit-backdrop-filter: var(--glass-blur, blur(20px) saturate(200%));
+    background: rgba(255,255,255,0.13);
+    backdrop-filter: blur(20px) saturate(200%);
+    -webkit-backdrop-filter: blur(20px) saturate(200%);
     border-radius: var(--stat-radius, 18px);
-    border: 1px solid var(--border-color, rgba(255,255,255,0.75));
-    box-shadow: 0 4px 16px rgba(99,102,241,0.10), inset 0 1px 0 rgba(255,255,255,0.7);
+    border: 1px solid rgba(255,255,255,0.65);
+    box-shadow: 0 4px 20px rgba(99,102,241,0.12), inset 0 1px 0 rgba(255,255,255,0.6);
     cursor: pointer;
     transition: all 0.22s cubic-bezier(0.4,0,0.2,1);
     position: relative;
