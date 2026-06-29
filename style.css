@@ -531,19 +531,22 @@
 
         /* ตั้งค่าให้ Card มีความสูง 100% ของพื้นที่ */
         .chart-card, .ticket-list-card {
-            background: var(--card-bg, rgba(255,255,255,0.72));
-            backdrop-filter: var(--glass-blur, blur(20px) saturate(180%));
-            -webkit-backdrop-filter: var(--glass-blur, blur(20px) saturate(180%));
-            border: 1px solid var(--border-color, rgba(255,255,255,0.85));
+            background: var(--card-bg, rgba(255,255,255,0.13));
+            border: 1px solid var(--border-color, rgba(255,255,255,0.75));
             border-radius: var(--card-radius, 20px);
             box-shadow: var(--shadow-card, 0 8px 32px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.9));
             height: 100%;
             min-height: 550px;
             display: flex;
             flex-direction: column;
-            border: 1px solid rgba(99,102,241,0.1);
             box-sizing: border-box;
             transition: var(--theme-transition);
+        }
+
+        /* backdrop-filter เฉพาะ chart-card — ticket-list-card ไม่ใช้เพราะมี select dropdown ข้างใน */
+        .chart-card {
+            backdrop-filter: var(--glass-blur, blur(20px) saturate(200%));
+            -webkit-backdrop-filter: var(--glass-blur, blur(20px) saturate(200%));
         }
 
         /* ฝั่งซ้ายจัดให้อยู่ตรงกลาง */
@@ -598,7 +601,7 @@
         /* ฝั่งขวาจัดการให้ Scroll ได้ */
         .ticket-list-card {
             overflow: hidden; /* ไม่ให้เนื้อหาล้นทะลุขอบโค้งของ Card */
-            padding: 0; /* เอา padding ออกเพื่อให้ส่วน header ติดขอบ */
+            padding: 0;
         }
 
         /* หัวข้อฝั่งขวาติดหนึบด้านบนเวลา Scroll */
@@ -610,6 +613,8 @@
             padding: 8px 20px 10px;
             border-top: 1px solid #e2e8f0;
             background: #f8fafc;
+            position: relative;
+            z-index: 50;
         }
         /* แถวภายใน filter bar */
         .filter-row {
@@ -1989,10 +1994,14 @@
 [data-theme="dark"] .chart-card,
 [data-theme="dark"] .ticket-list-card {
     background: rgba(255,255,255,0.04);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
     border: 1px solid rgba(255,255,255,0.08);
     box-shadow: var(--shadow-card);
+}
+
+/* backdrop-filter เฉพาะ chart-card เท่านั้น (ticket-list-card มี select dropdown) */
+[data-theme="dark"] .chart-card {
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
 }
 
 /* Chart legend rows */
