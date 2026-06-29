@@ -1955,9 +1955,10 @@
     background: rgba(255,255,255,0.04);
 }
 [data-theme="dark"] .ticket-header-sticky {
-    background: rgba(6,6,18,0.6);
+    background: rgba(6,6,18,0.93);
     border-bottom-color: rgba(255,255,255,0.07);
-    backdrop-filter: blur(12px);
+    /* backdrop-filter intentionally omitted: it creates a new fixed-position
+       containing block, which breaks the JS-portal dropdown positioning */
 }
 [data-theme="dark"] .ticket-header-sticky h3 { color: #c4b5fd; }
 
