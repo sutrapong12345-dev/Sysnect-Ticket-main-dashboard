@@ -1878,16 +1878,16 @@
    Dark Mode — Glassmorphism (Purple × Cyan × Ultra Dark)
    ============================================== */
 [data-theme="dark"] {
-    --bg-color: #060612;
+    --bg-color: #050816;
     --card-bg: rgba(255,255,255,0.05);
-    --primary-color: #a78bfa;
-    --primary-dark: #7c3aed;
-    --primary-glow: rgba(167,139,250,0.25);
+    --primary-color: #60a5fa;
+    --primary-dark: #3b82f6;
+    --primary-glow: rgba(96,165,250,0.25);
     --text-main: #e2e8f0;
     --text-sub: #94a3b8;
-    --border-color: rgba(255,255,255,0.08);
-    --bg-main: #060612;
-    --navbar-bg: rgba(6,6,18,0.88);
+    --border-color: rgba(255,255,255,0.1);
+    --bg-main: #050816;
+    --navbar-bg: rgba(255,255,255,0.08);
     --card-radius: 16px;
     --shadow-card: 0 4px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
     --shadow-hover: 0 8px 32px rgba(167,139,250,0.18), 0 2px 8px rgba(0,0,0,0.4);
@@ -1899,31 +1899,35 @@
 }
 
 [data-theme="dark"] body {
-    background-color: #060612;
+    background-color: #050816;
     color: #e2e8f0;
 }
 
 [data-theme="dark"] body::before {
-    background-color: #060612;
+    /* Glowing Orbs + Grid Pattern — Ultra-Clear Glass NOC */
     background-image:
-        radial-gradient(ellipse 80% 60% at 20% 20%, rgba(167,139,250,0.12) 0%, transparent 60%),
-        radial-gradient(ellipse 60% 50% at 80% 80%, rgba(34,211,238,0.08) 0%, transparent 55%),
-        radial-gradient(ellipse 50% 40% at 50% 50%, rgba(99,102,241,0.06) 0%, transparent 70%),
-        url("data:image/svg+xml,%3Csvg width='28' height='28' viewBox='0 0 28 28' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='2' cy='2' r='1' fill='%23a78bfa' fill-opacity='0.12'/%3E%3C/svg%3E");
-    background-size: 100% 100%, 100% 100%, 100% 100%, 28px 28px;
+        radial-gradient(circle 520px at -5%  -5%,  rgba(37, 99, 235, 0.55)  0%, transparent 70%),
+        radial-gradient(circle 420px at 106% 106%, rgba(180, 83,  9, 0.38)   0%, transparent 70%),
+        radial-gradient(circle 640px at 50%  55%,  rgba(109, 40, 217, 0.22) 0%, transparent 70%),
+        linear-gradient(rgba(59, 130, 246, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59, 130, 246, 0.04) 1px, transparent 1px);
+    background-size: 100% 100%, 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+    background-color: #050816;
+    opacity: 1;
+    mix-blend-mode: normal;
 }
 
 [data-theme="dark"] body::after {
-    background: radial-gradient(ellipse 100% 60% at 50% 0%, rgba(6,6,18,0.6) 0%, transparent 100%);
+    background: none;
 }
 
-/* Navbar — frosted glass */
+/* Navbar — glass-strong */
 [data-theme="dark"] .top-navbar {
-    background: rgba(6,6,18,0.88);
+    background: rgba(255, 255, 255, 0.08);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border-bottom: 2px solid rgba(167,139,250,0.5);
-    box-shadow: 0 2px 20px rgba(0,0,0,0.5), 0 1px 0 rgba(167,139,250,0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
 }
 
 [data-theme="dark"] .search-box {
