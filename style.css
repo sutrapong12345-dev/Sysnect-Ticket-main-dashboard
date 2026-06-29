@@ -1,21 +1,21 @@
-﻿        :root {
+        :root {
             /* ── Light: White Glassmorphism ── */
             --bg-color: #dde5ff;
-            --card-bg: rgba(255, 255, 255, 0.13);
+            --card-bg: rgba(255, 255, 255, 0.45);
             --card-bg-solid: rgba(255, 255, 255, 0.88);
             --primary-color: #6366f1;
             --primary-dark: #4f46e5;
             --primary-glow: rgba(99,102,241,0.18);
             --text-main: #0f172a;
             --text-sub: #64748b;
-            --border-color: rgba(255, 255, 255, 0.75);
+            --border-color: rgba(255, 255, 255, 0.3);
             --border-solid: rgba(203, 213, 240, 0.6);
             --bg-main: #dde5ff;
-            --navbar-bg: rgba(255, 255, 255, 0.52);
-            --glass-blur: blur(20px) saturate(200%);
+            --navbar-bg: rgba(255, 255, 255, 0.45);
+            --glass-blur: blur(20px) saturate(180%);
             --card-radius: 20px;
             --stat-radius: 18px;
-            --shadow-card: 0 8px 32px rgba(99,102,241,0.10), inset 0 1px 0 rgba(255,255,255,0.8);
+            --shadow-card: 0 4px 30px rgba(0,0,0,0.1), inset 1px 1px 0 rgba(255,255,255,0.5);
             --shadow-hover: 0 12px 36px rgba(99,102,241,0.18), 0 4px 12px rgba(0,0,0,0.06);
             /* Status pastel colors (light) */
             --s-new: #3b82f6;
@@ -1822,7 +1822,7 @@
    ============================================== */
 [data-theme="dark"] {
     --bg-color: #050816;
-    --card-bg: rgba(255,255,255,0.05);
+    --card-bg: rgba(255,255,255,0.06);
     --primary-color: #60a5fa;
     --primary-dark: #3b82f6;
     --primary-glow: rgba(96,165,250,0.25);
@@ -1830,9 +1830,9 @@
     --text-sub: #94a3b8;
     --border-color: rgba(255,255,255,0.1);
     --bg-main: #050816;
-    --navbar-bg: rgba(255,255,255,0.08);
+    --navbar-bg: rgba(255,255,255,0.05);
     --card-radius: 16px;
-    --shadow-card: 0 4px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
+    --shadow-card: 0 4px 30px rgba(0,0,0,0.2), inset 1px 1px 0 rgba(255,255,255,0.1);
     --shadow-hover: 0 8px 32px rgba(167,139,250,0.18), 0 2px 8px rgba(0,0,0,0.4);
     --s-new: #60a5fa;
     --s-assigned: #fbbf24;
@@ -1848,6 +1848,7 @@
         radial-gradient(circle 420px at 106% 106%, rgba(180, 83,   9,  0.40) 0%, transparent 70%),
         radial-gradient(circle 640px at 50%  55%,  rgba(109, 40,  217, 0.25) 0%, transparent 70%);
     background-attachment: fixed;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.4);
     color: #e2e8f0;
 }
 
