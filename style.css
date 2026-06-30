@@ -2637,6 +2637,63 @@
     font-size: 11px;
     color: var(--text-sub, #94a3b8);
 }
+/* ═══════════════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE OVERRIDES — appended last to win CSS cascade
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Fix 1: stat-bar → 3×2 grid on phones (no horizontal scroll)
+   Must be AFTER .stat-bar { display:flex; overflow-x:auto } at line 2265 */
+@media (max-width: 640px) {
+    .stat-bar {
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+        overflow-x: visible !important;
+        padding: 6px 10px !important;
+        gap: 6px !important;
+    }
+    .stat-card {
+        min-width: 0 !important;
+        flex: none !important;
+        white-space: normal !important;
+    }
+}
+
+/* Fix 2: three-panel section order on mobile/tablet ≤ 1024px
+   DOM order:     sidebar-left | left-panel | sidebar-right
+   Mobile target: left-panel (donut) → sidebar-left (project) → sidebar-right (trend)
+   PC layout stays unchanged (order properties only apply inside flex column) */
+@media (max-width: 1024px) {
+    .dashboard-wrapper.three-panel {
+        flex-direction: column !important;
+        height: auto !important;
+    }
+    .dashboard-wrapper.three-panel .left-panel {
+        order: 1 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        height: auto !important;
+        overflow-y: visible !important;
+    }
+    .dashboard-wrapper.three-panel .sidebar-left {
+        order: 2 !important;
+        width: 100% !important;
+        opacity: 1 !important;
+        overflow: visible !important;
+        height: auto !important;
+    }
+    .dashboard-wrapper.three-panel .sidebar-right {
+        order: 3 !important;
+        width: 100% !important;
+        opacity: 1 !important;
+        overflow: visible !important;
+        height: auto !important;
+    }
+    .dashboard-wrapper.three-panel .sidebar-card {
+        height: auto !important;
+    }
+}
+
 .ts-sep {
     font-size: 11px;
     color: rgba(99,102,241,0.3);
