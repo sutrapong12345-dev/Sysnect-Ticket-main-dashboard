@@ -186,7 +186,7 @@
     <!-- Flatpickr for Date Inputs -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <link rel="stylesheet" href="style.css?v=12">
+    <link rel="stylesheet" href="style.css?v=13">
 </head>
 <body>
 
@@ -915,7 +915,64 @@ input:checked + .slider:before { transform: translateX(20px); }
 }
 </style>
 
-<script src="app.js?v=7" defer></script>
+<!-- ═══ 📱 MOBILE APP MODE: Bottom tab bar (แสดงเฉพาะมือถือ ≤1024px) ═══ -->
+<nav class="mobile-tabbar" id="mobileTabbar" aria-label="เมนูหลัก">
+    <button class="mtab-btn active" type="button" data-mtab-target="overview">
+        <span class="material-symbols-outlined">dashboard</span>
+        <span class="mtab-label">ภาพรวม</span>
+    </button>
+    <button class="mtab-btn" type="button" data-mtab-target="tickets">
+        <span class="material-symbols-outlined">confirmation_number</span>
+        <span class="mtab-label">Tickets</span>
+    </button>
+    <button class="mtab-btn" type="button" data-mtab-target="status">
+        <span class="material-symbols-outlined">bar_chart</span>
+        <span class="mtab-label">สถานะ</span>
+    </button>
+    <button class="mtab-btn" type="button" data-mtab-target="trend">
+        <span class="material-symbols-outlined">trending_up</span>
+        <span class="mtab-label">แนวโน้ม</span>
+    </button>
+</nav>
+
+<script>
+(function () {
+    function ready(fn) { document.readyState !== 'loading' ? fn() : document.addEventListener('DOMContentLoaded', fn); }
+    ready(function () {
+        var body = document.body;
+        var tabbar = document.getElementById('mobileTabbar');
+        if (!tabbar) return;
+        body.classList.add('mtab-on');
+        if (!body.getAttribute('data-mtab')) body.setAttribute('data-mtab', 'overview');
+        var buttons = tabbar.querySelectorAll('.mtab-btn');
+
+        // เปลี่ยนแท็บ; doRender=false = ไม่ render รายการซ้ำ (กรณีถูกเรียกจาก enterSplitMode)
+        window.setMobileTab = function (tab, doRender) {
+            if (!tab) return;
+            body.setAttribute('data-mtab', tab);
+            for (var i = 0; i < buttons.length; i++) {
+                buttons[i].classList.toggle('active', buttons[i].getAttribute('data-mtab-target') === tab);
+            }
+            if (tab === 'tickets' && doRender !== false) {
+                var tc = document.getElementById('ticketContainer');
+                var isEmpty = !tc || tc.children.length === 0;
+                if (isEmpty && typeof window._enterSplitMode === 'function') window._enterSplitMode('ALL');
+            }
+            window.scrollTo({ top: 0, behavior: 'auto' });
+            // ให้ Chart.js ในแท็บที่เพิ่งโชว์ปรับขนาดให้พอดี container
+            setTimeout(function () { window.dispatchEvent(new Event('resize')); }, 60);
+        };
+
+        for (var j = 0; j < buttons.length; j++) {
+            buttons[j].addEventListener('click', function () {
+                window.setMobileTab(this.getAttribute('data-mtab-target'), true);
+            });
+        }
+    });
+})();
+</script>
+
+<script src="app.js?v=8" defer></script>
 
 <!-- ═══ PWA: ลงทะเบียน Service Worker (เปิดเหมือนแอป + offline fallback) ═══ -->
 <script>

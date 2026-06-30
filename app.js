@@ -1739,6 +1739,8 @@
             const searchVal = searchInputEl ? searchInputEl.value : '';
             if(searchVal.trim() !== '') {
                 document.getElementById('dashboardWrapper').classList.add('split-active');
+                // 📱 โหมดแอป: ค้นหาแล้วสลับไปแท็บ Tickets เพื่อเห็นผลลัพธ์
+                if (window.setMobileTab && document.body.classList.contains('mtab-on')) window.setMobileTab('tickets', false);
                 document.getElementById('statusTitle').style.color = '#2980b9';
                 document.getElementById('statusTitle').innerHTML = `ผลลัพธ์การค้นหา &middot; <span id="statusName" style="color:inherit;">ทั้งหมด</span>`;
                 
@@ -2405,6 +2407,11 @@
         renderTicketList(currentStatus);
         updateChartLegendActive();
         if (typeof updateStatBarActive === 'function') updateStatBarActive(currentStatus);
+        // 📱 โหมดแอป (มือถือ): สลับไปแท็บ Tickets อัตโนมัติเมื่อเลือกสถานะ/กดปุ่ม
+        if (window.setMobileTab && document.body.classList.contains('mtab-on')
+            && window.matchMedia('(max-width: 1024px)').matches) {
+            window.setMobileTab('tickets', false);
+        }
         // 📱 มือถือเท่านั้น: เลือกสถานะแล้วเลื่อนลงมาที่ ticket list อัตโนมัติ
         scrollToTicketListOnMobile();
     }
@@ -2412,6 +2419,7 @@
     // เลื่อนหน้าจอลงมาที่ ticket list (เฉพาะจอ ≤1024px) ชดเชยความสูง sticky navbar
     function scrollToTicketListOnMobile() {
         if (!window.matchMedia('(max-width: 1024px)').matches) return;
+        if (document.body.classList.contains('mtab-on')) return; // โหมดแอป: tab จัดการ scroll เอง
         const rp = document.getElementById('rightPanel');
         if (!rp) return;
         setTimeout(() => {

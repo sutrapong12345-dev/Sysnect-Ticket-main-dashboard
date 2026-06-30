@@ -2924,3 +2924,78 @@
     }
 }
 
+/* ═══════════════════════════════════════════════════════════════════════
+   📱 MOBILE APP MODE — Bottom tab bar + one section per tab
+   ทำงานเฉพาะ ≤1024px เท่านั้น; PC (≥1025px) ไม่เห็น tab bar = dashboard เต็มเดิม
+   ═══════════════════════════════════════════════════════════════════════ */
+.mobile-tabbar { display: none; }
+
+@media (max-width: 1024px) {
+    /* ── แถบเมนูล่าง (fixed) ── */
+    body.mtab-on .mobile-tabbar {
+        display: flex;
+        position: fixed;
+        left: 0; right: 0; bottom: 0;
+        z-index: 1200;
+        background: rgba(255,255,255,0.92);
+        backdrop-filter: blur(18px) saturate(180%);
+        -webkit-backdrop-filter: blur(18px) saturate(180%);
+        border-top: 1px solid rgba(99,102,241,0.18);
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+        padding: 6px 4px;
+        padding-bottom: calc(6px + env(safe-area-inset-bottom));
+        justify-content: space-around;
+        align-items: stretch;
+    }
+    .mtab-btn {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        background: none;
+        border: none;
+        padding: 6px 2px;
+        color: #94a3b8;
+        font-family: inherit;
+        cursor: pointer;
+        border-radius: 12px;
+        transition: color 0.2s, background 0.2s;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .mtab-btn .material-symbols-outlined { font-size: 23px; }
+    .mtab-label { font-size: 10.5px; font-weight: 600; white-space: nowrap; }
+    .mtab-btn.active { color: #4f46e5; background: rgba(99,102,241,0.10); }
+    .mtab-btn:active { transform: scale(0.94); }
+
+    /* เผื่อที่ว่างล่างไม่ให้ tab bar บังเนื้อหา */
+    body.mtab-on { padding-bottom: 70px !important; }
+
+    /* ดัน Export FAB ขึ้นเหนือ tab bar */
+    body.mtab-on .export-fab { bottom: 84px !important; }
+
+    /* ── ซ่อนทุก section แล้วโชว์เฉพาะ tab ที่เลือก ── */
+    body.mtab-on #statBar,
+    body.mtab-on #dashboardWrapper > .left-panel,
+    body.mtab-on #dashboardWrapper > .sidebar-left,
+    body.mtab-on #dashboardWrapper > .sidebar-right,
+    body.mtab-on #dashboardWrapper > .right-panel {
+        display: none !important;
+    }
+    /* ภาพรวม: KPI grid + โดนัท */
+    body.mtab-on[data-mtab="overview"] #statBar {
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+    }
+    body.mtab-on[data-mtab="overview"] #dashboardWrapper > .left-panel { display: block !important; }
+    /* Tickets: รายการเต็มจอ */
+    body.mtab-on[data-mtab="tickets"] #dashboardWrapper > .right-panel { display: block !important; }
+    /* สถานะ: bar chart + โครงการ */
+    body.mtab-on[data-mtab="status"] #dashboardWrapper > .sidebar-left { display: block !important; }
+    /* แนวโน้ม: trend chart */
+    body.mtab-on[data-mtab="trend"] #dashboardWrapper > .sidebar-right { display: block !important; }
+
+    /* ในโหมดแอป: ปุ่ม power กลางโดนัทไม่จำเป็น (นำทางด้วย tab แทน) แต่ยังกดดู ticket ได้ */
+}
+
