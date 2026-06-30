@@ -2793,41 +2793,78 @@
     .stat-card .sc-sub   { font-size: 8.5px; }
 }
 
-/* ═══════════════════════════════════════════════════════════
-   MOBILE SECTION ORDER — placed LAST to win all cascade
-   DOM order:     sidebar-left | left-panel | sidebar-right
-   Mobile target: left-panel (donut) → sidebar-left → sidebar-right
-   PC stays unchanged — order only kicks in inside flex-column
-   ═══════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════════
+   MOBILE OVERRIDES — placed LAST in file to guarantee cascade win
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Section order + layout (≤1024px) ──
+   DOM:     sidebar-left | left-panel | sidebar-right
+   Mobile:  left-panel (donut) → sidebar-left → sidebar-right
+   PC stays unchanged */
 @media (max-width: 1024px) {
     .dashboard-wrapper.three-panel {
         flex-direction: column !important;
         height: auto !important;
+        min-height: 0 !important;
     }
+
+    /* --- Section order --- */
+    .dashboard-wrapper.three-panel > .left-panel   { order: 1 !important; }
+    .dashboard-wrapper.three-panel > .sidebar-left  { order: 2 !important; }
+    .dashboard-wrapper.three-panel > .sidebar-right { order: 3 !important; }
+
+    /* --- left-panel: no overflow scroll, size by content --- */
     .dashboard-wrapper.three-panel > .left-panel {
-        order: 1 !important;
         width: 100% !important;
         max-width: 100% !important;
         margin: 0 !important;
         height: auto !important;
+        min-height: 0 !important;
         overflow-y: visible !important;
+        flex-shrink: 0 !important;
     }
-    .dashboard-wrapper.three-panel > .sidebar-left {
-        order: 2 !important;
-        width: 100% !important;
-        opacity: 1 !important;
-        overflow: visible !important;
+
+    /* --- chart-card: kill the 550px min-height, fit content --- */
+    .left-panel .chart-card {
         height: auto !important;
+        min-height: 0 !important;
     }
+
+    /* --- chart-container: fixed but compact height --- */
+    .left-panel .chart-container {
+        height: 280px !important;
+        position: relative !important;
+        overflow: hidden !important;
+    }
+
+    /* --- sidebars: full width, visible --- */
+    .dashboard-wrapper.three-panel > .sidebar-left,
     .dashboard-wrapper.three-panel > .sidebar-right {
-        order: 3 !important;
         width: 100% !important;
         opacity: 1 !important;
         overflow: visible !important;
         height: auto !important;
+        min-height: 0 !important;
     }
     .dashboard-wrapper.three-panel .sidebar-card {
         height: auto !important;
+        min-height: 0 !important;
+    }
+
+    /* --- Toggle button: hide sidebar sections on mobile (like PC split mode) --- */
+    .dashboard-wrapper.three-panel.split-active > .sidebar-left,
+    .dashboard-wrapper.three-panel.split-active > .sidebar-right {
+        height: 0 !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+        opacity: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        pointer-events: none !important;
+    }
+    /* Keep right-panel hidden on mobile even in split-active */
+    .dashboard-wrapper.three-panel.split-active > .right-panel {
+        display: none !important;
     }
 }
 
