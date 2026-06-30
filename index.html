@@ -297,33 +297,7 @@
 
 <div class="dashboard-wrapper three-panel" id="dashboardWrapper">
 
-    <!-- ═══ SIDEBAR LEFT — Status Bar Chart + Project List ═══ -->
-    <div class="sidebar-left" id="sidebarLeft">
-        <div class="sidebar-card">
-            <div class="sidebar-header">
-                <span class="material-symbols-outlined" style="font-size:16px;color:var(--primary-color,#6366f1);">bar_chart</span>
-                <span class="sidebar-title">สรุปสถานะ</span>
-            </div>
-            <!-- Status vertical bar chart -->
-            <div class="sidebar-chart-area">
-                <canvas id="statusBarCanvas"></canvas>
-            </div>
-            <!-- Project list section -->
-            <div class="sidebar-section-head">
-                <span class="material-symbols-outlined" style="font-size:13px;color:var(--primary-color,#6366f1);flex-shrink:0;">folder_open</span>
-                <span>โครงการ</span>
-                <span class="sidebar-count-badge" id="projSidebarCount">0</span>
-            </div>
-            <div class="sidebar-body" id="projectSidebarList">
-                <div style="text-align:center;padding:20px 10px;color:var(--text-sub,#94a3b8);font-size:12px;">
-                    <span class="material-symbols-outlined" style="font-size:28px;display:block;margin-bottom:6px;opacity:0.4;">folder_open</span>
-                    กำลังโหลด...
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ═══ CENTER — Chart Panel ═══ -->
+    <!-- ═══ CENTER — Chart Panel ═══ (DOM first → mobile shows this first) -->
     <div class="left-panel">
         <div class="chart-card">
             <h2 class="chart-title">SYSNECT - Enterprise Ticket Dashboard</h2>
@@ -387,6 +361,32 @@
             
             <!-- Monthly Breakdown -->
             <div id="monthlyBreakdown" style="display: none; width: 100%; max-width: 580px; margin-top: 20px;"></div>
+        </div>
+    </div>
+
+    <!-- ═══ SIDEBAR LEFT — Status Bar Chart + Project List ═══ -->
+    <div class="sidebar-left" id="sidebarLeft">
+        <div class="sidebar-card">
+            <div class="sidebar-header">
+                <span class="material-symbols-outlined" style="font-size:16px;color:var(--primary-color,#6366f1);">bar_chart</span>
+                <span class="sidebar-title">สรุปสถานะ</span>
+            </div>
+            <!-- Status vertical bar chart -->
+            <div class="sidebar-chart-area">
+                <canvas id="statusBarCanvas"></canvas>
+            </div>
+            <!-- Project list section -->
+            <div class="sidebar-section-head">
+                <span class="material-symbols-outlined" style="font-size:13px;color:var(--primary-color,#6366f1);flex-shrink:0;">folder_open</span>
+                <span>โครงการ</span>
+                <span class="sidebar-count-badge" id="projSidebarCount">0</span>
+            </div>
+            <div class="sidebar-body" id="projectSidebarList">
+                <div style="text-align:center;padding:20px 10px;color:var(--text-sub,#94a3b8);font-size:12px;">
+                    <span class="material-symbols-outlined" style="font-size:28px;display:block;margin-bottom:6px;opacity:0.4;">folder_open</span>
+                    กำลังโหลด...
+                </div>
+            </div>
         </div>
     </div>
 

@@ -2797,10 +2797,18 @@
    MOBILE OVERRIDES — placed LAST in file to guarantee cascade win
    ═══════════════════════════════════════════════════════════════════════ */
 
-/* ── Section order + layout (≤1024px) ──
-   DOM:     sidebar-left | left-panel | sidebar-right
-   Mobile:  left-panel (donut) → sidebar-left → sidebar-right
-   PC stays unchanged */
+/* ── Desktop: restore sidebar-left to LEFT position ──
+   DOM order is now: left-panel | sidebar-left | sidebar-right
+   On desktop (row flex), sidebar-left must appear FIRST (leftmost)
+   → use order: -1 to pull it before left-panel (default order: 0) */
+@media (min-width: 1025px) {
+    .dashboard-wrapper.three-panel > .sidebar-left {
+        order: -1;
+    }
+}
+
+/* ── Mobile layout (≤1024px) ──
+   DOM order already correct: left-panel first → no order CSS needed */
 @media (max-width: 1024px) {
     .dashboard-wrapper.three-panel {
         flex-direction: column !important;
@@ -2808,12 +2816,7 @@
         min-height: 0 !important;
     }
 
-    /* --- Section order --- */
-    .dashboard-wrapper.three-panel > .left-panel   { order: 1 !important; }
-    .dashboard-wrapper.three-panel > .sidebar-left  { order: 2 !important; }
-    .dashboard-wrapper.three-panel > .sidebar-right { order: 3 !important; }
-
-    /* --- left-panel: no overflow scroll, size by content --- */
+    /* --- left-panel: size by content, no fixed height --- */
     .dashboard-wrapper.three-panel > .left-panel {
         width: 100% !important;
         max-width: 100% !important;
@@ -2821,7 +2824,6 @@
         height: auto !important;
         min-height: 0 !important;
         overflow-y: visible !important;
-        flex-shrink: 0 !important;
     }
 
     /* --- chart-card: kill the 550px min-height, fit content --- */
