@@ -2405,6 +2405,21 @@
         renderTicketList(currentStatus);
         updateChartLegendActive();
         if (typeof updateStatBarActive === 'function') updateStatBarActive(currentStatus);
+        // 📱 มือถือเท่านั้น: เลือกสถานะแล้วเลื่อนลงมาที่ ticket list อัตโนมัติ
+        scrollToTicketListOnMobile();
+    }
+
+    // เลื่อนหน้าจอลงมาที่ ticket list (เฉพาะจอ ≤1024px) ชดเชยความสูง sticky navbar
+    function scrollToTicketListOnMobile() {
+        if (!window.matchMedia('(max-width: 1024px)').matches) return;
+        const rp = document.getElementById('rightPanel');
+        if (!rp) return;
+        setTimeout(() => {
+            const navbar = document.querySelector('.top-navbar');
+            const navH = navbar ? navbar.offsetHeight : 0;
+            const top = rp.getBoundingClientRect().top + window.pageYOffset - navH - 8;
+            window.scrollTo({ top: Math.max(top, 0), behavior: 'smooth' });
+        }, 150);
     }
 
     function exitSplitMode() {
