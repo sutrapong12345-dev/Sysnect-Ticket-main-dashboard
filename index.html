@@ -2,12 +2,19 @@
 <html lang="th" data-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>SYSNECT - IT Ticket Dashboard</title>
     <meta name="description" content="SYSNECT IT Ticket Dashboard — ระบบติดตามและวิเคราะห์ทิกเก็ตแบบเรียลไทม์">
     <meta name="theme-color" content="#2563eb">
     <link rel="icon" type="image/png" href="sysnect-logo.png">
-    <link rel="apple-touch-icon" href="sysnect-logo.png">
+
+    <!-- ═══ PWA: ติดตั้งลงโฮมสกรีน เปิดเหมือนแอป ═══ -->
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="SYSNECT">
 
     <!-- Preconnect: เร่งการเชื่อมต่อ CDN/Fonts ให้โหลดเร็วขึ้น -->
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -909,6 +916,15 @@ input:checked + .slider:before { transform: translateX(20px); }
 </style>
 
 <script src="app.js?v=7" defer></script>
+
+<!-- ═══ PWA: ลงทะเบียน Service Worker (เปิดเหมือนแอป + offline fallback) ═══ -->
+<script>
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('sw.js').catch(function () { /* เงียบไว้ ไม่ให้กระทบหน้าเว็บ */ });
+    });
+  }
+</script>
 
 </body>
 </html>
