@@ -2658,41 +2658,6 @@
     }
 }
 
-/* Fix 2: three-panel section order on mobile/tablet ≤ 1024px
-   DOM order:     sidebar-left | left-panel | sidebar-right
-   Mobile target: left-panel (donut) → sidebar-left (project) → sidebar-right (trend)
-   PC layout stays unchanged (order properties only apply inside flex column) */
-@media (max-width: 1024px) {
-    .dashboard-wrapper.three-panel {
-        flex-direction: column !important;
-        height: auto !important;
-    }
-    .dashboard-wrapper.three-panel .left-panel {
-        order: 1 !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        margin: 0 !important;
-        height: auto !important;
-        overflow-y: visible !important;
-    }
-    .dashboard-wrapper.three-panel .sidebar-left {
-        order: 2 !important;
-        width: 100% !important;
-        opacity: 1 !important;
-        overflow: visible !important;
-        height: auto !important;
-    }
-    .dashboard-wrapper.three-panel .sidebar-right {
-        order: 3 !important;
-        width: 100% !important;
-        opacity: 1 !important;
-        overflow: visible !important;
-        height: auto !important;
-    }
-    .dashboard-wrapper.three-panel .sidebar-card {
-        height: auto !important;
-    }
-}
 
 .ts-sep {
     font-size: 11px;
@@ -2826,5 +2791,43 @@
     .stat-card .sc-value { font-size: 16px; }
     .stat-card .sc-label { font-size: 9px; }
     .stat-card .sc-sub   { font-size: 8.5px; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MOBILE SECTION ORDER — placed LAST to win all cascade
+   DOM order:     sidebar-left | left-panel | sidebar-right
+   Mobile target: left-panel (donut) → sidebar-left → sidebar-right
+   PC stays unchanged — order only kicks in inside flex-column
+   ═══════════════════════════════════════════════════════════ */
+@media (max-width: 1024px) {
+    .dashboard-wrapper.three-panel {
+        flex-direction: column !important;
+        height: auto !important;
+    }
+    .dashboard-wrapper.three-panel > .left-panel {
+        order: 1 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        height: auto !important;
+        overflow-y: visible !important;
+    }
+    .dashboard-wrapper.three-panel > .sidebar-left {
+        order: 2 !important;
+        width: 100% !important;
+        opacity: 1 !important;
+        overflow: visible !important;
+        height: auto !important;
+    }
+    .dashboard-wrapper.three-panel > .sidebar-right {
+        order: 3 !important;
+        width: 100% !important;
+        opacity: 1 !important;
+        overflow: visible !important;
+        height: auto !important;
+    }
+    .dashboard-wrapper.three-panel .sidebar-card {
+        height: auto !important;
+    }
 }
 
