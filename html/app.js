@@ -766,13 +766,20 @@ async function fetchData(isAutoRefresh = false) {
             closed: liveData["closed"] || []
         };
 
-        // แจ้งเตือนเสียงเฉพาะเมื่อ auto-refresh เจอ ticket ใหม่ และ setting เปิดอยู่
-        if (isAutoRefresh && prevTotal !== undefined && incomingTotal > prevTotal) {
-            const diff = incomingTotal - prevTotal;
-            if (loadSettings().notifications) {
-                playNotificationSound();
-                showNotificationToast(diff);
+        // แจ้งเตือนเมื่อมี ticket ใหม่ใน new/assigned/pending (ทั้ง manual refresh และ auto-refresh)
+        {
+            const activeData = { new: liveData["new"] || [], assigned: liveData["assigned"] || [], pending: liveData["pending"] || [] };
+            const currentIds = collectTicketIds(activeData);
+            const seenRaw = localStorage.getItem('sysnect_seen_ticket_ids');
+            const seenIds = seenRaw ? new Set(JSON.parse(seenRaw)) : null;
+            if (seenIds !== null) {
+                const newCount = [...currentIds].filter(id => !seenIds.has(id)).length;
+                if (newCount > 0 && loadSettings().notifications) {
+                    playNotificationSound();
+                    showNotificationToast(newCount);
+                }
             }
+            localStorage.setItem('sysnect_seen_ticket_ids', JSON.stringify([...currentIds]));
         }
         STATE.prevTotalCount = incomingTotal;
 
