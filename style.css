@@ -2808,93 +2808,72 @@
 }
 
 /* ── Mobile layout (≤1024px) ──
-   DOM order already correct: left-panel first → no order CSS needed */
+   ⚠️ JS ลบ class .three-panel ออกตอน split (app.js enterSplitMode / fallback)
+   → ห้ามใช้ .three-panel ใน selector ที่ต้องทำงานทั้ง 2 state
+   → ใช้ #dashboardWrapper (ID specificity สูง) แทน ชนะ base/desktop rules */
 @media (max-width: 1024px) {
-    .dashboard-wrapper.three-panel {
+    /* Column layout — applies in BOTH three-panel & split-active states */
+    #dashboardWrapper {
         flex-direction: column !important;
         height: auto !important;
         min-height: 0 !important;
     }
 
-    /* --- left-panel: size by content, no fixed height --- */
-    .dashboard-wrapper.three-panel > .left-panel {
+    /* All panels: full width, natural height, visible */
+    #dashboardWrapper > .left-panel,
+    #dashboardWrapper > .sidebar-left,
+    #dashboardWrapper > .sidebar-right,
+    #dashboardWrapper > .right-panel {
         width: 100% !important;
         max-width: 100% !important;
         margin: 0 !important;
         height: auto !important;
         min-height: 0 !important;
-        overflow-y: visible !important;
+        opacity: 1 !important;
+        overflow: visible !important;
+        pointer-events: auto !important;
     }
 
-    /* --- chart-card: kill the 550px min-height, fit content --- */
-    .left-panel .chart-card {
+    /* chart-card: kill the 550px min-height; chart-container compact */
+    #dashboardWrapper .chart-card {
         height: auto !important;
         min-height: 0 !important;
     }
-
-    /* --- chart-container: fixed but compact height --- */
-    .left-panel .chart-container {
+    #dashboardWrapper .chart-container {
         height: 280px !important;
         position: relative !important;
         overflow: hidden !important;
     }
-
-    /* --- sidebars: full width, visible --- */
-    .dashboard-wrapper.three-panel > .sidebar-left,
-    .dashboard-wrapper.three-panel > .sidebar-right {
-        width: 100% !important;
-        opacity: 1 !important;
-        overflow: visible !important;
-        height: auto !important;
-        min-height: 0 !important;
-    }
-    .dashboard-wrapper.three-panel .sidebar-card {
+    #dashboardWrapper .sidebar-card {
         height: auto !important;
         min-height: 0 !important;
     }
 
-    /* --- right-panel (ticket list): hidden until split-active --- */
-    .dashboard-wrapper.three-panel:not(.split-active) > .right-panel {
+    /* Ticket list hidden until split-active */
+    #dashboardWrapper:not(.split-active) > .right-panel {
         display: none !important;
     }
 
-    /* ─── SPLIT-ACTIVE (กดปุ่ม power / เลือกสถานะ) ───
-       Insert ticket list right after the chart, then the two sidebars:
-       1) ฉาด (chart) → 2) Ticket list → 3) สรุปสถานะ → 4) แนวโน้ม */
-    .dashboard-wrapper.three-panel.split-active > .left-panel   { order: 1 !important; }
-    .dashboard-wrapper.three-panel.split-active > .right-panel  { order: 2 !important; }
-    .dashboard-wrapper.three-panel.split-active > .sidebar-left  { order: 3 !important; }
-    .dashboard-wrapper.three-panel.split-active > .sidebar-right { order: 4 !important; }
+    /* ─── SPLIT-ACTIVE (กดปุ่ม power / เลือกสถานะ / ค้นหา) ───
+       Order: 1) ฉาด chart → 2) Ticket list → 3) สรุปสถานะ → 4) แนวโน้ม */
+    #dashboardWrapper.split-active > .left-panel   { order: 1 !important; }
+    #dashboardWrapper.split-active > .right-panel  { order: 2 !important; }
+    #dashboardWrapper.split-active > .sidebar-left  { order: 3 !important; }
+    #dashboardWrapper.split-active > .sidebar-right { order: 4 !important; }
 
-    /* Show ticket list full-width, natural height */
-    .dashboard-wrapper.three-panel.split-active > .right-panel {
+    /* Show ticket list with spacing under the chart */
+    #dashboardWrapper.split-active > .right-panel {
         display: block !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        margin: 16px 0 0 0 !important;
-        opacity: 1 !important;
-        overflow: visible !important;
-        height: auto !important;
-        min-height: 0 !important;
+        margin-top: 16px !important;
         flex-shrink: 0 !important;
     }
-    .dashboard-wrapper.three-panel.split-active .ticket-list-card {
+    #dashboardWrapper.split-active .ticket-list-card {
         height: auto !important;
         min-height: 0 !important;
     }
-    .dashboard-wrapper.three-panel.split-active .ticket-container-scroll {
+    #dashboardWrapper.split-active .ticket-container-scroll {
         max-height: none !important;
         overflow-y: visible !important;
-    }
-
-    /* Keep both sidebars visible below the ticket list */
-    .dashboard-wrapper.three-panel.split-active > .sidebar-left,
-    .dashboard-wrapper.three-panel.split-active > .sidebar-right {
-        height: auto !important;
-        min-height: 0 !important;
-        opacity: 1 !important;
-        overflow: visible !important;
-        pointer-events: auto !important;
     }
 }
 
