@@ -2853,20 +2853,48 @@
         min-height: 0 !important;
     }
 
-    /* --- Toggle button: hide sidebar sections on mobile (like PC split mode) --- */
+    /* --- right-panel (ticket list): hidden until split-active --- */
+    .dashboard-wrapper.three-panel:not(.split-active) > .right-panel {
+        display: none !important;
+    }
+
+    /* ─── SPLIT-ACTIVE (กดปุ่ม power / เลือกสถานะ) ───
+       Insert ticket list right after the chart, then the two sidebars:
+       1) ฉาด (chart) → 2) Ticket list → 3) สรุปสถานะ → 4) แนวโน้ม */
+    .dashboard-wrapper.three-panel.split-active > .left-panel   { order: 1 !important; }
+    .dashboard-wrapper.three-panel.split-active > .right-panel  { order: 2 !important; }
+    .dashboard-wrapper.three-panel.split-active > .sidebar-left  { order: 3 !important; }
+    .dashboard-wrapper.three-panel.split-active > .sidebar-right { order: 4 !important; }
+
+    /* Show ticket list full-width, natural height */
+    .dashboard-wrapper.three-panel.split-active > .right-panel {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 16px 0 0 0 !important;
+        opacity: 1 !important;
+        overflow: visible !important;
+        height: auto !important;
+        min-height: 0 !important;
+        flex-shrink: 0 !important;
+    }
+    .dashboard-wrapper.three-panel.split-active .ticket-list-card {
+        height: auto !important;
+        min-height: 0 !important;
+    }
+    .dashboard-wrapper.three-panel.split-active .ticket-container-scroll {
+        max-height: none !important;
+        overflow-y: visible !important;
+    }
+
+    /* Keep both sidebars visible below the ticket list */
     .dashboard-wrapper.three-panel.split-active > .sidebar-left,
     .dashboard-wrapper.three-panel.split-active > .sidebar-right {
-        height: 0 !important;
+        height: auto !important;
         min-height: 0 !important;
-        overflow: hidden !important;
-        opacity: 0 !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        pointer-events: none !important;
-    }
-    /* Keep right-panel hidden on mobile even in split-active */
-    .dashboard-wrapper.three-panel.split-active > .right-panel {
-        display: none !important;
+        opacity: 1 !important;
+        overflow: visible !important;
+        pointer-events: auto !important;
     }
 }
 
