@@ -2875,5 +2875,52 @@
         max-height: none !important;
         overflow-y: visible !important;
     }
+
+    /* ─── Ticket list อ่านง่ายขึ้นบนมือถือ ───
+       กัน desktop rule `.split-active .right-panel { width: calc(60% - 5px) }` รั่วมาบีบ card */
+    #dashboardWrapper.split-active > .right-panel,
+    #dashboardWrapper.split-active .ticket-list-card {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        box-sizing: border-box !important;
+    }
+    /* เพิ่มพื้นที่เนื้อหา: ลด padding ซ้าย-ขวา */
+    #dashboardWrapper .ticket-container-scroll {
+        padding: 14px 12px !important;
+    }
+    #dashboardWrapper .ticket-header-sticky,
+    #dashboardWrapper .ticket-filter-bar {
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+    }
+    /* ชื่อ ticket: แสดงเต็ม ไม่ตัดบรรทัดเดียว */
+    #dashboardWrapper .ticket-title-row {
+        white-space: normal !important;
+        overflow: visible !important;
+        text-overflow: clip !important;
+        word-break: break-word !important;
+    }
+    /* โครงการ: ให้ลิงก์ตัด ellipsis ได้แต่ไม่ดันล้นจอ */
+    #dashboardWrapper .ticket-project a {
+        min-width: 0 !important;
+    }
+    /* filter bar: ปล่อยให้ wrap กัน horizontal overflow */
+    #dashboardWrapper .filter-row-bottom {
+        flex-wrap: wrap !important;
+    }
+    #dashboardWrapper .ticket-filter-bar input[type="date"] {
+        min-width: 0 !important;
+        flex: 1 1 120px !important;
+    }
+    /* ticket-item: เต็มความกว้าง padding กระชับ */
+    #dashboardWrapper .ticket-item {
+        padding: 14px !important;
+        box-sizing: border-box !important;
+    }
+    #dashboardWrapper .ticket-header-row {
+        padding-right: 30px !important;
+    }
 }
 
