@@ -11,11 +11,11 @@
         radial-gradient(circle 600px at 106% 106%, rgba(139, 92,  246, 0.50) 0%, transparent 60%),
         radial-gradient(circle 800px at 50%  50%,  rgba(99,  102, 241, 0.18) 0%, transparent 60%),
         radial-gradient(circle 420px at 90%  10%,  rgba(167, 139, 250, 0.42) 0%, transparent 60%);
-    --bg-card: rgba(255, 255, 255, 0.13);
+    --bg-card: rgba(255, 255, 255, 0.45);
     --bg-card-solid: rgba(255, 255, 255, 0.88);
     --text-main: #0f172a;
     --text-muted: #64748b;
-    --border-color: rgba(255, 255, 255, 0.75);
+    --border-color: rgba(255, 255, 255, 0.3);
     --border-solid: rgba(203, 213, 240, 0.6);
 
     /* Brand Colors */
@@ -35,8 +35,8 @@
     --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
     --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
     --shadow-lg: 0 10px 32px rgba(0, 0, 0, 0.1);
-    --shadow-glass: 0 8px 32px rgba(99, 102, 241, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.8);
-    --glass-blur: blur(20px) saturate(200%);
+    --shadow-glass: 0 4px 30px rgba(0, 0, 0, 0.1), inset 1px 1px 0 rgba(255, 255, 255, 0.5);
+    --glass-blur: blur(20px) saturate(180%);
 
     /* Layout */
     --nav-height: 72px;
@@ -49,7 +49,7 @@
         radial-gradient(circle 520px at -5%  -5%,  rgba(37,  99,  235, 0.60) 0%, transparent 70%),
         radial-gradient(circle 420px at 106% 106%, rgba(180, 83,   9,  0.40) 0%, transparent 70%),
         radial-gradient(circle 640px at 50%  55%,  rgba(109, 40,  217, 0.25) 0%, transparent 70%);
-    --bg-card: rgba(255, 255, 255, 0.05);
+    --bg-card: rgba(255, 255, 255, 0.06);
     --bg-card-solid: rgba(255, 255, 255, 0.08);
     --text-main: #e2e8f0;
     --text-muted: #94a3b8;
@@ -69,8 +69,8 @@
     --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.4);
     --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
     --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
-    --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.3);
-    --glass-blur: blur(16px);
+    --shadow-glass: 0 4px 30px rgba(0, 0, 0, 0.2), inset 1px 1px 0 rgba(255, 255, 255, 0.1);
+    --glass-blur: blur(20px) saturate(150%);
 }
 
 /* ==============================================
@@ -125,6 +125,10 @@ body::before {
         linear-gradient(90deg, rgba(59, 130, 246, 0.05) 1px, transparent 1px);
     background-size: 40px 40px;
     background-color: transparent;
+}
+
+[data-theme="dark"] body {
+    text-shadow: 0 1px 2px rgba(0,0,0,0.4);
 }
 
 /* ==============================================
