@@ -501,7 +501,8 @@
                                 date_open: t["15"] || t.date_creation || t.date || "-",
                                 date_close: t["16"] || t.closedate || "-",
                                 priority: String(t["3"] || t.priority || "low"),
-                                category: t["7"] || t.category || "-"
+                                category: t["7"] || t.category || "-",
+                                assignee: t["5"] || t.assignee || "-"
                             });
                         });
                         liveData = transformed;
@@ -528,7 +529,8 @@
                             date: new Date().toISOString().split('T')[0],
                             date_open: t.date_creation || "-",
                             date_close: t.closedate || "-",
-                            priority: t.priority || "low"
+                            priority: t.priority || "low",
+                            assignee: t.assignee || "-"
                         });
                     });
                     liveData = transformed;
