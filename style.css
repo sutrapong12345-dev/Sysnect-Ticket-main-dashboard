@@ -3177,5 +3177,17 @@
 
     body[data-pctab="tickets"] .ticket-list-card { height: 100%; }
     body[data-pctab="tickets"] .ticket-container-scroll { max-height: none; flex: 1; }
+
+    /* ── PC Tab mode: ซ่อน sub-tab bar ข้างใน sidebar แสดงเนื้อหาตรงๆ ── */
+    body[data-pctab="team"] .sidebar-tabs,
+    body[data-pctab="trend"] .sidebar-tabs { display: none !important; }
+
+    /* ทีมงาน tab → แสดง sidebarTabTeam เท่านั้น */
+    body[data-pctab="team"] #sidebarTabTeam    { display: block !important; }
+    body[data-pctab="team"] #sidebarTabAnalytics { display: none !important; }
+
+    /* แนวโน้ม tab → แสดง sidebarTabAnalytics เท่านั้น */
+    body[data-pctab="trend"] #sidebarTabAnalytics { display: block !important; }
+    body[data-pctab="trend"] #sidebarTabTeam      { display: none !important; }
 }
 
