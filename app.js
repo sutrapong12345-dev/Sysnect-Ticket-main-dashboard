@@ -2617,8 +2617,11 @@
         const canvas = document.getElementById('statusBarCanvas');
         if (!canvas || typeof Chart === 'undefined') return;
 
-        const statLabels = (labels || ['new','assigned','pending','solved','closed']).map(l => l.toUpperCase());
-        const statValues = values || [0, 0, 0, 0, 0];
+        const statusOrder = labels || ['new','assigned','pending','solved','closed'];
+        const statLabels = statusOrder.map(l => l.toUpperCase());
+        // ถ้าไม่ส่ง values มา (เช่นตอนกดแท็บ "แนวโน้ม") ให้คำนวณจากข้อมูลดิบเอง — กันกราฟว่างเปล่า
+        const _breakdown = mockDataRaw || {};
+        const statValues = values || statusOrder.map(s => (_breakdown[String(s).toLowerCase()] || []).length);
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
         const colorMap = {
             'NEW': isDark ? '#60a5fa' : '#3b82f6',
