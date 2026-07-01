@@ -1286,22 +1286,20 @@
             chartInstance.data.labels = chartLabels;
             chartInstance.data.datasets[0].data = chartData;
             chartInstance.data.datasets[0].backgroundColor = chartColors;
-            chartInstance.data.datasets[0].hoverOffset = hasData ? 16 : 0;
-            chartInstance.data.datasets[0].borderWidth = hasData ? 5 : 0;
-            chartInstance.data.datasets[0].borderRadius = hasData ? 6 : 0;
+            chartInstance.data.datasets[0].hoverOffset = hasData ? 22 : 0;
+            chartInstance.data.datasets[0].borderWidth = hasData ? 3 : 0;
             chartInstance.update();
         } else {
             chartInstance = new Chart(ctx, {
-                type: 'doughnut',
+                type: 'pie',
                 data: {
                     labels: chartLabels,
                     datasets: [{
                         data: chartData,
                         backgroundColor: chartColors,
-                        hoverOffset: hasData ? 16 : 0,
-                        borderWidth: hasData ? 5 : 0,
-                        borderColor: '#ffffff',
-                        borderRadius: hasData ? 6 : 0
+                        hoverOffset: hasData ? 22 : 0,
+                        borderWidth: hasData ? 3 : 0,
+                        borderColor: '#ffffff'
                     }]
                 },
                 plugins: [{
@@ -1310,11 +1308,10 @@
                         if (!hasData) return;
                         const ctx = chart.ctx;
                         ctx.save();
-                        // เงามิติ 3D แบบนูนลอย
-                        ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
-                        ctx.shadowBlur = 20;
-                        ctx.shadowOffsetX = 0;
-                        ctx.shadowOffsetY = 15;
+                        ctx.shadowColor = 'rgba(0, 0, 0, 0.28)';
+                        ctx.shadowBlur = 28;
+                        ctx.shadowOffsetX = 4;
+                        ctx.shadowOffsetY = 14;
                     },
                     afterDatasetsDraw: (chart) => {
                         chart.ctx.restore();
@@ -1323,8 +1320,7 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    cutout: '68%',
-                    layout: { padding: 12 },
+                    layout: { padding: 16 },
                     animation: {
                         animateScale: true,
                         animateRotate: true,
@@ -1346,7 +1342,8 @@
 
                         document.getElementById('dashboardWrapper').classList.add('split-active');
                         document.getElementById('statusName').innerText = currentStatus.toUpperCase();
-                        document.querySelector('.center-toggle-btn .btn-text').innerText = 'Close';
+                        const btnTxt = document.querySelector('.center-toggle-btn .btn-text');
+                        if (btnTxt) btnTxt.innerText = 'Close';
 
                         renderTicketList(currentStatus);
                         updateChartLegendActive();
