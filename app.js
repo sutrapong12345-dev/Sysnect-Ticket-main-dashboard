@@ -2510,12 +2510,12 @@
         const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
         const tickColor = isDark ? '#94a3b8' : '#64748b';
 
+        // log scale ต้องการค่า > 0 — แปลง 0 → null (Chart.js จะข้ามแท่งนั้น)
+        const safeValues = statValues.map(v => v > 0 ? v : null);
+
         if (window._statusBarChart) {
-            window._statusBarChart.data.datasets[0].data = statValues;
-            window._statusBarChart.data.datasets[0].backgroundColor = colors.map(c => c + 'bb');
-            window._statusBarChart.data.datasets[0].borderColor = colors;
-            window._statusBarChart.update('active');
-            return;
+            window._statusBarChart.destroy();
+            window._statusBarChart = null;
         }
 
         window._statusBarChart = new Chart(canvas, {
@@ -2523,42 +2523,44 @@
             data: {
                 labels: statLabels.map(l => shortMap[l] || l),
                 datasets: [{
-                    data: statValues,
-                    backgroundColor: colors.map(c => c + 'bb'),
+                    data: safeValues,
+                    backgroundColor: colors.map(c => c + 'cc'),
                     borderColor: colors,
                     borderWidth: 2,
                     borderRadius: { topLeft: 7, topRight: 7 },
                     borderSkipped: false,
-                    minBarLength: 6,
+                    minBarLength: 10,
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 animation: { duration: 700, easing: 'easeInOutQuart' },
-                layout: { padding: { top: 20, right: 4, left: 4, bottom: 0 } },
+                layout: { padding: { top: 24, right: 4, left: 4, bottom: 0 } },
                 plugins: {
                     legend: { display: false },
                     datalabels: {
                         anchor: 'end',
-                        align: 'end',
-                        offset: -1,
+                        align: 'top',
+                        offset: 2,
                         color: (ctx) => colors[ctx.dataIndex] || (isDark ? '#a78bfa' : '#6366f1'),
-                        font: { weight: '800', size: 10, family: 'JetBrains Mono' },
-                        formatter: (val) => val > 0 ? val : '0',
-                        clamp: true
+                        font: { weight: '800', size: 11, family: 'JetBrains Mono' },
+                        formatter: (val) => val != null ? val : '0',
+                        clamp: true,
+                        display: true
                     },
                     tooltip: {
                         callbacks: {
                             title: (items) => statLabels[items[0].dataIndex] || '',
-                            label: ctx => ` ${ctx.parsed.y} ใบ`
+                            label: ctx => ` ${statValues[ctx.dataIndex]} ใบ`
                         }
                     }
                 },
                 scales: {
                     y: {
+                        type: 'logarithmic',
                         display: false,
-                        beginAtZero: true,
+                        min: 0.5,
                     },
                     x: {
                         grid: { display: false },
