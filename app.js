@@ -1644,11 +1644,12 @@ function generateListItem(ticket) {
 
             ${ticket.name ? `<div class="ticket-title-row">${escapeHtml(ticket.name)}</div>` : ''}
 
-            <!-- แถว 2: location | open | close | status -->
+            <!-- แถว 2: location | assignee | open | close | status -->
             <div class="ticket-meta-row">
                 <span class="badge" style="font-size:11px; background: rgba(93,64,55,0.07); color:#795548; border:1px solid rgba(93,64,55,0.2); padding:3px 8px; border-radius:6px;">
                     <span class="material-symbols-outlined" style="font-size:12px; vertical-align:text-bottom;">location_on</span> ${locationDisplay}
                 </span>
+                ${ticket.assignee && ticket.assignee !== '-' ? `<span class="badge" style="font-size:11px; background:rgba(99,102,241,0.08); color:#6366f1; border:1px solid rgba(99,102,241,0.3); padding:3px 8px; border-radius:6px;"><span class="material-symbols-outlined" style="font-size:12px; vertical-align:text-bottom;">person</span> ${escapeHtml(ticket.assignee)}</span>` : ''}
                 <span class="badge badge-date" style="font-size:11px; border-color:rgba(59,130,246,0.3); background:rgba(59,130,246,0.05); color:#2563eb;">
                     <span class="material-symbols-outlined" style="font-size:12px; vertical-align:text-bottom;">calendar_today</span> เปิด: ${formatDateTime(ticket.date_open)}
                 </span>
@@ -1733,6 +1734,7 @@ function generateTableRow(t) {
             <td>${priorityBadge}</td>
             <td style="color: var(--text-muted);">${formatDateTime(t.date_open)}</td>
             <td style="color: var(--text-muted);">${formatDateTime(t.date_close)}</td>
+            <td style="color: var(--text-muted); font-size: 13px;">${escapeHtml(t.assignee && t.assignee !== '-' ? t.assignee : '-')}</td>
             <td>
                 <span class="table-status" style="background: ${t._statusData.color}20; color: ${t._statusData.color}; border: 1px solid ${t._statusData.color}40;">
                     ${t._statusData.label}
@@ -1757,6 +1759,7 @@ function generateTableContainer() {
                         <th>Priority</th>
                         <th>วันที่เปิด</th>
                         <th>วันที่ปิด</th>
+                        <th>ผู้รับผิดชอบ</th>
                         <th>Status</th>
                     </tr>
                 </thead>
