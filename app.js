@@ -1648,6 +1648,7 @@
                                     <span class="badge badge-location" style="display:inline-flex;align-items:center;gap:4px;">
                                         <span class="material-symbols-outlined" style="font-size:13px;">location_on</span>${escapeHtml(ticket.location)}
                                     </span>
+                                    ${ticket.assignee && ticket.assignee !== '-' ? `<span class="badge" style="display:inline-flex;align-items:center;gap:4px;background:rgba(99,102,241,0.08);color:#6366f1;border:1px solid rgba(99,102,241,0.3);"><span class="material-symbols-outlined" style="font-size:13px;">person</span>${escapeHtml(ticket.assignee)}</span>` : ''}
                                     <span class="badge" style="display:inline-flex;align-items:center;gap:4px;background:rgba(59,130,246,0.07);color:#2563eb;border:1px solid rgba(59,130,246,0.25);">
                                         <span class="material-symbols-outlined" style="font-size:13px;">calendar_today</span>เปิด: ${formatDateTime(ticket.date_open)}
                                     </span>
@@ -1826,6 +1827,7 @@
                                         <span class="badge badge-location" style="display:inline-flex;align-items:center;gap:4px;">
                                             <span class="material-symbols-outlined" style="font-size:13px;">location_on</span>${escapeHtml(ticket.location)}
                                         </span>
+                                        ${ticket.assignee && ticket.assignee !== '-' ? `<span class="badge" style="display:inline-flex;align-items:center;gap:4px;background:rgba(99,102,241,0.08);color:#6366f1;border:1px solid rgba(99,102,241,0.3);"><span class="material-symbols-outlined" style="font-size:13px;">person</span>${escapeHtml(ticket.assignee)}</span>` : ''}
                                         <span class="badge" style="display:inline-flex;align-items:center;gap:4px;background:rgba(59,130,246,0.07);color:#2563eb;border:1px solid rgba(59,130,246,0.25);">
                                             <span class="material-symbols-outlined" style="font-size:13px;">calendar_today</span>เปิด: ${formatDateTime(ticket.date_open)}
                                         </span>
