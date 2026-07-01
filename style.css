@@ -3040,80 +3040,93 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   💻 PC TAB BAR — ≥1025px เท่านั้น (mobile ใช้ bottom nav เดิม)
+   💻 PC VERTICAL NAV — ≥1025px เท่านั้น (fixed left pill, mobile unchanged)
    ═══════════════════════════════════════════════════════════════════════ */
 .pc-tabbar { display: none; }
 
 @media (min-width: 1025px) {
 
-    /* ── Tab bar container ── */
+    /* ── Vertical pill container: fixed ซ้ายขอบจอ ── */
     .pc-tabbar {
         display: flex;
-        align-items: flex-end;
-        justify-content: center;
-        gap: 3px;
-        padding: 10px 20px 0;
-        background: transparent;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        padding: 14px 8px;
+        position: fixed;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 200;
+        background: rgba(255,255,255,0.58);
+        backdrop-filter: blur(20px) saturate(180%);
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
+        border-radius: 30px;
+        border: 1.5px solid rgba(255,255,255,0.65);
+        box-shadow: 0 8px 32px rgba(99,102,241,0.13), inset 0 1px 0 rgba(255,255,255,0.85);
     }
 
-    /* ── Tab button ── */
+    /* ── แต่ละปุ่ม: วงกลม icon + label ── */
     .pctab-btn {
         display: flex;
+        flex-direction: column;
         align-items: center;
-        gap: 7px;
-        padding: 9px 22px 10px;
-        border: 1.5px solid rgba(99,102,241,0.15);
-        border-bottom: none;
-        border-radius: 14px 14px 0 0;
-        background: rgba(255,255,255,0.28);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
+        justify-content: center;
+        gap: 3px;
+        width: 52px;
+        height: 52px;
+        border-radius: 50%;
+        border: 1.5px solid transparent;
+        background: transparent;
         color: var(--text-sub, #64748b);
-        font-size: 13.5px;
-        font-weight: 600;
+        font-size: 9px;
+        font-weight: 700;
         cursor: pointer;
-        transition: background 0.2s, color 0.2s;
+        transition: all 0.22s ease;
         font-family: 'Prompt', sans-serif;
         white-space: nowrap;
-        position: relative;
-        bottom: -1px;
         user-select: none;
+        padding: 0;
+        letter-spacing: 0;
     }
-    .pctab-btn .material-symbols-outlined { font-size: 15px; }
+    .pctab-btn .material-symbols-outlined {
+        font-size: 22px;
+        line-height: 1;
+    }
     .pctab-btn:hover {
-        background: rgba(255,255,255,0.55);
+        background: rgba(99,102,241,0.10);
         color: var(--primary-color, #6366f1);
+        border-color: rgba(99,102,241,0.2);
+        transform: scale(1.08);
     }
     .pctab-btn.active {
-        background: rgba(255,255,255,0.82);
-        color: var(--primary-color, #6366f1);
-        border-color: rgba(99,102,241,0.28);
-        border-bottom-color: rgba(255,255,255,0.82);
-        box-shadow: 0 -4px 14px rgba(99,102,241,0.08);
-        z-index: 1;
+        background: var(--primary-color, #6366f1);
+        color: #ffffff !important;
+        border-color: transparent;
+        box-shadow: 0 4px 18px rgba(99,102,241,0.42);
     }
+    .pctab-btn.active .material-symbols-outlined { color: #fff; }
 
     /* Dark mode */
-    [data-theme="dark"] .pctab-btn {
-        background: rgba(15,23,42,0.45);
-        border-color: rgba(99,102,241,0.2);
-        color: #94a3b8;
+    [data-theme="dark"] .pc-tabbar {
+        background: rgba(15,23,42,0.72);
+        border-color: rgba(99,102,241,0.22);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.4);
     }
+    [data-theme="dark"] .pctab-btn { color: #94a3b8; }
     [data-theme="dark"] .pctab-btn:hover {
-        background: rgba(30,41,59,0.7);
+        background: rgba(99,102,241,0.18);
         color: #a5b4fc;
     }
     [data-theme="dark"] .pctab-btn.active {
-        background: rgba(30,41,59,0.92);
-        color: #a5b4fc;
-        border-color: rgba(99,102,241,0.35);
-        border-bottom-color: rgba(30,41,59,0.92);
+        background: var(--primary-color, #6366f1);
+        color: #fff !important;
     }
 
-    /* ── Dashboard wrapper: ลดความสูงเมื่อมี PC tab bar (≈44px) + เพิ่ม radius ด้าน TL ── */
+    /* ── Dashboard wrapper: คืนความสูงปกติ (sidebar ลอยออกจาก flow แล้ว) ── */
     body[data-pctab] .dashboard-wrapper {
-        height: calc(100vh - 212px);
-        border-radius: 0 20px 20px 20px;
+        height: calc(100vh - 168px);
+        border-radius: 20px;
     }
 
     /* ── Panel visibility: ซ่อนทุก panel ก่อน ── */
@@ -3124,7 +3137,7 @@
         display: none !important;
     }
 
-    /* Tab ภาพรวม → โดนัท + chart (left-panel) เต็มจอ */
+    /* Tab ภาพรวม → left-panel เต็มจอ */
     body[data-pctab="overview"] #dashboardWrapper > .left-panel {
         display: block !important;
         width: 100% !important;
@@ -3134,7 +3147,7 @@
         overflow-y: auto;
     }
 
-    /* Tab Tickets → ticket list (right-panel) เต็มจอ */
+    /* Tab Tickets → right-panel เต็มจอ */
     body[data-pctab="tickets"] #dashboardWrapper > .right-panel {
         display: block !important;
         width: 100% !important;
@@ -3149,7 +3162,6 @@
         opacity: 1 !important;
     }
 
-    /* ── Sidebar-right: เต็มจอ ── */
     body[data-pctab="team"] .sidebar-right .sidebar-card,
     body[data-pctab="trend"] .sidebar-right .sidebar-card {
         max-width: 960px;
@@ -3158,14 +3170,11 @@
         overflow-y: auto;
     }
 
-    /* Tab ทีมงาน: ขยาย sidebar-body ออก ไม่จำกัดความสูง */
     body[data-pctab="team"] .sidebar-body { max-height: none !important; }
 
-    /* Tab แนวโน้ม: chart ใหญ่ขึ้น */
     body[data-pctab="trend"] .sidebar-chart-area { height: 200px; }
     body[data-pctab="trend"] .trend-chart-area   { height: 300px; }
 
-    /* ── Ticket list ใน tab mode: ใช้ความสูง wrapper เต็ม ── */
     body[data-pctab="tickets"] .ticket-list-card { height: 100%; }
     body[data-pctab="tickets"] .ticket-container-scroll { max-height: none; flex: 1; }
 }
