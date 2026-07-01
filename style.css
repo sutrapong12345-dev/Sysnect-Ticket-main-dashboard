@@ -3172,8 +3172,8 @@
 
     body[data-pctab="team"] .sidebar-body { max-height: none !important; }
 
-    body[data-pctab="trend"] .sidebar-chart-area { height: 200px; }
-    body[data-pctab="trend"] .trend-chart-area   { height: 300px; }
+    body[data-pctab="team"] .sidebar-chart-area { height: 200px; }
+    body[data-pctab="team"] .trend-chart-area   { height: 300px; }
 
     body[data-pctab="tickets"] .ticket-list-card { height: 100%; }
     body[data-pctab="tickets"] .ticket-container-scroll { max-height: none; flex: 1; }

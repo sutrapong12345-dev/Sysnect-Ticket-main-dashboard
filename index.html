@@ -186,7 +186,7 @@
     <!-- Flatpickr for Date Inputs -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <link rel="stylesheet" href="style.css?v=15">
+    <link rel="stylesheet" href="style.css?v=16">
 </head>
 <body>
 
@@ -315,10 +315,6 @@
     <button class="pctab-btn" data-pctab="team" onclick="setPcTab('team')">
         <span class="material-symbols-outlined">group</span>
         ทีมงาน
-    </button>
-    <button class="pctab-btn" data-pctab="trend" onclick="setPcTab('trend')">
-        <span class="material-symbols-outlined">trending_up</span>
-        แนวโน้ม
     </button>
 </nav>
 
@@ -1032,9 +1028,6 @@ input:checked + .slider:before { transform: translateX(20px); }
         });
 
         if (tab === 'team') {
-            if (typeof switchSidebarTab === 'function') switchSidebarTab('team');
-        } else if (tab === 'trend') {
-            if (typeof switchSidebarTab === 'function') switchSidebarTab('analytics');
             setTimeout(function () {
                 if (typeof renderTrendLineChart === 'function') renderTrendLineChart();
                 if (typeof renderStatusBarChart === 'function') renderStatusBarChart();
@@ -1057,10 +1050,11 @@ input:checked + .slider:before { transform: translateX(20px); }
         document.querySelectorAll('#pcTabbar .pctab-btn').forEach(function (btn) {
             btn.classList.toggle('active', btn.getAttribute('data-pctab') === saved);
         });
-        if (saved === 'trend') {
-            if (typeof switchSidebarTab === 'function') switchSidebarTab('analytics');
-        } else if (saved === 'team') {
-            if (typeof switchSidebarTab === 'function') switchSidebarTab('team');
+        if (saved === 'team') {
+            setTimeout(function () {
+                if (typeof renderTrendLineChart === 'function') renderTrendLineChart();
+                if (typeof renderStatusBarChart === 'function') renderStatusBarChart();
+            }, 80);
         }
     }
 
