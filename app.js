@@ -726,6 +726,137 @@
     let currentStatus = null;
     const GLPI_BASE_URL = 'https://itservicedesk.sysnect.co.th';
 
+    // ====== 3D Pie Chart — custom Canvas 2D ======
+    function draw3DPie(cvs, labels, values, colors, isDataPresent) {
+        var c = cvs.getContext('2d');
+        var dpr = window.devicePixelRatio || 1;
+        var W = cvs.offsetWidth || 320;
+        var H = cvs.offsetHeight || 300;
+        cvs.width = W * dpr;
+        cvs.height = H * dpr;
+        c.scale(dpr, dpr);
+        c.clearRect(0, 0, W, H);
+        cvs._pie3dData = { labels: labels, values: values, colors: colors, isDataPresent: isDataPresent };
+
+        var total = 0;
+        if (isDataPresent) { for (var vi = 0; vi < values.length; vi++) total += values[vi]; }
+
+        if (!isDataPresent || total === 0) {
+            cvs._pie3dSlices = null;
+            var ex = W / 2, ey = H * 0.47, er = Math.min(W, H) * 0.3, ery2 = er * 0.38;
+            c.save(); c.shadowColor = 'rgba(0,0,0,0.12)'; c.shadowBlur = 18; c.shadowOffsetY = 8;
+            c.beginPath(); c.ellipse(ex, ey, er, ery2, 0, 0, Math.PI * 2);
+            c.fillStyle = '#e2e8f0'; c.fill(); c.restore();
+            return;
+        }
+
+        var cx = W / 2, cy = H * 0.43;
+        var rx = Math.min(W * 0.39, H * 0.52);
+        var ry = rx * 0.36;
+        var depth = rx * 0.19;
+
+        function epx(a) { return cx + rx * Math.cos(a); }
+        function epy(a) { return cy + ry * Math.sin(a); }
+        function dimCol(col, f) {
+            var n = parseInt(col.slice(1), 16);
+            return 'rgb(' + Math.min(255, Math.round(((n >> 16) & 255) * f)) + ',' +
+                Math.min(255, Math.round(((n >> 8) & 255) * f)) + ',' +
+                Math.min(255, Math.round((n & 255) * f)) + ')';
+        }
+
+        var startA = -Math.PI / 2, slices = [];
+        for (var i = 0; i < values.length; i++) {
+            if (!values[i] || values[i] <= 0) continue;
+            var sweep = (values[i] / total) * Math.PI * 2;
+            slices.push({ s: startA, e: startA + sweep, mid: startA + sweep / 2, color: colors[i], label: labels[i] });
+            startA += sweep;
+        }
+
+        // Sort back→front for depth walls
+        var sorted = slices.slice().sort(function (a, b) { return Math.sin(a.mid) - Math.sin(b.mid); });
+
+        // Drop shadow
+        c.save();
+        c.shadowColor = 'rgba(0,0,0,0.22)'; c.shadowBlur = 24; c.shadowOffsetY = depth + 10;
+        c.beginPath(); c.ellipse(cx, cy + depth + 4, rx * 0.88, ry * 0.55, 0, 0, Math.PI * 2);
+        c.fillStyle = 'rgba(0,0,0,0.001)'; c.fill(); c.restore();
+
+        // Side walls
+        for (var si = 0; si < sorted.length; si++) {
+            var sl = sorted[si];
+            c.save();
+            c.beginPath();
+            c.moveTo(epx(sl.s), epy(sl.s));
+            c.ellipse(cx, cy, rx, ry, 0, sl.s, sl.e);
+            c.lineTo(epx(sl.e), epy(sl.e) + depth);
+            c.ellipse(cx, cy + depth, rx, ry, 0, sl.e, sl.s, true);
+            c.closePath();
+            var gw = c.createLinearGradient(cx - rx, 0, cx + rx, 0);
+            gw.addColorStop(0, dimCol(sl.color, 0.52));
+            gw.addColorStop(0.5, dimCol(sl.color, 0.44));
+            gw.addColorStop(1, dimCol(sl.color, 0.52));
+            c.fillStyle = gw; c.fill();
+            c.strokeStyle = 'rgba(255,255,255,0.5)'; c.lineWidth = 1; c.stroke();
+            c.restore();
+        }
+
+        // Top faces
+        for (var fi = 0; fi < slices.length; fi++) {
+            var sl2 = slices[fi];
+            c.save();
+            c.beginPath(); c.moveTo(cx, cy);
+            c.ellipse(cx, cy, rx, ry, 0, sl2.s, sl2.e); c.closePath();
+            var gr = c.createRadialGradient(cx - rx * 0.2, cy - ry * 0.5, 0, cx, cy, rx);
+            gr.addColorStop(0, dimCol(sl2.color, 1.28));
+            gr.addColorStop(0.5, sl2.color);
+            gr.addColorStop(1, dimCol(sl2.color, 0.84));
+            c.fillStyle = gr; c.fill();
+            c.strokeStyle = '#ffffff'; c.lineWidth = 2.5; c.stroke();
+            c.restore();
+        }
+
+        // Specular sheen
+        c.save();
+        var sh = c.createLinearGradient(cx - rx, cy - ry, cx + rx, cy - ry);
+        sh.addColorStop(0, 'rgba(255,255,255,0)');
+        sh.addColorStop(0.5, 'rgba(255,255,255,0.22)');
+        sh.addColorStop(1, 'rgba(255,255,255,0)');
+        c.strokeStyle = sh; c.lineWidth = 2.5;
+        c.beginPath(); c.ellipse(cx, cy, rx, ry, 0, Math.PI, Math.PI * 2); c.stroke();
+        c.restore();
+
+        cvs._pie3dSlices = { cx: cx, cy: cy, rx: rx, ry: ry, depth: depth, slices: slices };
+    }
+
+    function _initPie3dClick(cvs, onLabel) {
+        if (cvs._pie3dListening) return;
+        cvs._pie3dListening = true;
+        cvs.addEventListener('click', function (e) {
+            if (!cvs._pie3dSlices) return;
+            var rect = cvs.getBoundingClientRect();
+            var mx = e.clientX - rect.left, my = e.clientY - rect.top;
+            var info = cvs._pie3dSlices;
+            var dx = mx - info.cx, dy = my - info.cy;
+            if ((dx * dx) / (info.rx * info.rx) + (dy * dy) / (info.ry * info.ry) > 1.5) return;
+            if (dy < -info.ry * 1.1) return;
+            var ang = Math.atan2(dy / info.ry, dx / info.rx);
+            if (ang < -Math.PI / 2) ang += Math.PI * 2;
+            for (var i = 0; i < info.slices.length; i++) {
+                var sl = info.slices[i];
+                if (ang >= sl.s && ang <= sl.e) { onLabel(sl.label); return; }
+            }
+        });
+        if (typeof ResizeObserver !== 'undefined' && !cvs._pie3dObserving) {
+            cvs._pie3dObserving = true;
+            new ResizeObserver(function () {
+                if (!cvs._pie3dData) return;
+                var d = cvs._pie3dData;
+                draw3DPie(cvs, d.labels, d.values, d.colors, d.isDataPresent);
+            }).observe(cvs);
+        }
+    }
+    // ====== End 3D Pie Chart ======
+
     function populateProjectFilter() {
         const projectFilterSelect = document.getElementById('projectFilter');
         const customDropdownList = document.getElementById('customDropdownList');
@@ -1282,74 +1413,36 @@
         const chartColors = hasData ? ['#3b82f6', '#f59e0b', '#ef4444', '#10b981', '#64748b'] : ['#e2e8f0'];
         const chartLabels = hasData ? data.labels.map(l => l.toUpperCase()) : ['NO DATA'];
 
-        if (chartInstance) {
+        // 3D Pie — redraw on every data update
+        draw3DPie(ctx.canvas, chartLabels, chartData, chartColors, hasData);
+
+        if (!chartInstance) {
+            chartInstance = {
+                data: { labels: chartLabels, datasets: [{ data: chartData, backgroundColor: chartColors }] },
+                update: function () {
+                    draw3DPie(ctx.canvas,
+                        chartInstance.data.labels,
+                        chartInstance.data.datasets[0].data,
+                        chartInstance.data.datasets[0].backgroundColor,
+                        chartInstance.data.datasets[0].backgroundColor[0] !== '#e2e8f0');
+                }
+            };
+            _initPie3dClick(ctx.canvas, function (label) {
+                if (!ctx.canvas._pie3dSlices) return;
+                if (window.lastChartClick && Date.now() - window.lastChartClick < 300) return;
+                window.lastChartClick = Date.now();
+                currentStatus = label;
+                document.getElementById('dashboardWrapper').classList.add('split-active');
+                document.getElementById('statusName').innerText = currentStatus.toUpperCase();
+                var btnTxt = document.querySelector('.center-toggle-btn .btn-text');
+                if (btnTxt) btnTxt.innerText = 'Close';
+                renderTicketList(currentStatus);
+                updateChartLegendActive();
+            });
+        } else {
             chartInstance.data.labels = chartLabels;
             chartInstance.data.datasets[0].data = chartData;
             chartInstance.data.datasets[0].backgroundColor = chartColors;
-            chartInstance.data.datasets[0].hoverOffset = hasData ? 22 : 0;
-            chartInstance.data.datasets[0].borderWidth = hasData ? 3 : 0;
-            chartInstance.update();
-        } else {
-            chartInstance = new Chart(ctx, {
-                type: 'pie',
-                data: {
-                    labels: chartLabels,
-                    datasets: [{
-                        data: chartData,
-                        backgroundColor: chartColors,
-                        hoverOffset: hasData ? 22 : 0,
-                        borderWidth: hasData ? 3 : 0,
-                        borderColor: '#ffffff'
-                    }]
-                },
-                plugins: [{
-                    id: 'customShadow',
-                    beforeDatasetsDraw: (chart) => {
-                        if (!hasData) return;
-                        const ctx = chart.ctx;
-                        ctx.save();
-                        ctx.shadowColor = 'rgba(0, 0, 0, 0.28)';
-                        ctx.shadowBlur = 28;
-                        ctx.shadowOffsetX = 4;
-                        ctx.shadowOffsetY = 14;
-                    },
-                    afterDatasetsDraw: (chart) => {
-                        chart.ctx.restore();
-                    }
-                }],
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    layout: { padding: 16 },
-                    animation: {
-                        animateScale: true,
-                        animateRotate: true,
-                        duration: 900,
-                        easing: 'easeOutQuart'
-                    },
-                    plugins: {
-                        legend: { display: false },
-                        datalabels: { display: false }
-                    },
-                    onClick: (event, activeElements) => {
-                        if (!hasData || activeElements.length === 0) return;
-
-                        if (window.lastChartClick && Date.now() - window.lastChartClick < 300) return;
-                        window.lastChartClick = Date.now();
-
-                        const index = activeElements[0].index;
-                        currentStatus = chartLabels[index];
-
-                        document.getElementById('dashboardWrapper').classList.add('split-active');
-                        document.getElementById('statusName').innerText = currentStatus.toUpperCase();
-                        const btnTxt = document.querySelector('.center-toggle-btn .btn-text');
-                        if (btnTxt) btnTxt.innerText = 'Close';
-
-                        renderTicketList(currentStatus);
-                        updateChartLegendActive();
-                    }
-                }
-            });
         }
 
         // ⚡ วาด legend ใต้กราฟ (จุดสี + สถานะ + จำนวน + %)
