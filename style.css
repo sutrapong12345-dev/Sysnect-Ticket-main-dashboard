@@ -472,22 +472,62 @@
             white-space: nowrap;
         }
 
-        /* ─── THREE-PANEL MODE (default) ─── */
+        /* ─── THREE-PANEL MODE (default) — no left sidebar ─── */
         .dashboard-wrapper.three-panel .sidebar-left {
-            width: 33.33%;
-            opacity: 1;
+            width: 0;
+            opacity: 0;
+            overflow: hidden;
         }
         .dashboard-wrapper.three-panel .left-panel {
-            width: 33.33%;
+            width: 58%;
             max-width: none;
             margin: 0;
             position: relative;
             z-index: 20;
         }
         .dashboard-wrapper.three-panel .sidebar-right {
-            width: calc(33.33% - 20px);
+            width: calc(42% - 10px);
             opacity: 1;
         }
+
+        /* ─── SIDEBAR TABS ─── */
+        .sidebar-tabs {
+            display: flex;
+            gap: 4px;
+            padding: 4px 4px 0;
+            border-bottom: 1px solid rgba(99,102,241,0.12);
+            margin-bottom: 10px;
+        }
+        .sidebar-tab {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            padding: 7px 6px;
+            border: none;
+            background: none;
+            border-radius: 8px 8px 0 0;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-sub, #94a3b8);
+            cursor: pointer;
+            transition: all 0.2s;
+            border-bottom: 2px solid transparent;
+            white-space: nowrap;
+        }
+        .sidebar-tab.active {
+            color: var(--primary-color, #6366f1);
+            border-bottom-color: var(--primary-color, #6366f1);
+            background: rgba(99,102,241,0.07);
+        }
+        .sidebar-tab:hover:not(.active) {
+            background: rgba(99,102,241,0.04);
+            color: var(--text-main, #1e293b);
+        }
+        [data-theme="dark"] .sidebar-tab:hover:not(.active) { color: #e2e8f0; }
+        .sidebar-tab-content { display: block; }
+        .sidebar-tab-content.hidden { display: none; }
         .dashboard-wrapper.three-panel .right-panel {
             width: 0;
             opacity: 0;

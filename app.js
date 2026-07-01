@@ -2573,6 +2573,27 @@
         });
     }
 
+    // ─── Sidebar Tab Switcher ─────────────────────────────────
+    window.switchSidebarTab = function(tab) {
+        const analytics = document.getElementById('sidebarTabAnalytics');
+        const team      = document.getElementById('sidebarTabTeam');
+        const btnA      = document.getElementById('tabBtnAnalytics');
+        const btnT      = document.getElementById('tabBtnTeam');
+        if (!analytics || !team) return;
+        if (tab === 'analytics') {
+            analytics.classList.remove('hidden');
+            team.classList.add('hidden');
+            btnA?.classList.add('active');
+            btnT?.classList.remove('active');
+            setTimeout(() => { if (typeof renderTrendLineChart === 'function') renderTrendLineChart(); }, 50);
+        } else {
+            team.classList.remove('hidden');
+            analytics.classList.add('hidden');
+            btnT?.classList.add('active');
+            btnA?.classList.remove('active');
+        }
+    };
+
     // ─── Sidebar Left: Assignee List ─────────────────────────
     window._activeAssigneeFilter = null;
 
