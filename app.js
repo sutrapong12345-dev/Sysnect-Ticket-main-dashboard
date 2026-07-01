@@ -753,23 +753,10 @@
         c.clearRect(0, 0, W, H);
         cvs._pie3dData = { labels: labels, values: values, colors: colors, isDataPresent: isDataPresent };
 
-        // ไอคอนใช้ฟอนต์ Material Symbols — ถ้ายังโหลดไม่เสร็จตอนวาดครั้งแรก ให้วาดซ้ำอีกทีตอนฟอนต์พร้อม กันโชว์เป็นตัวหนังสือดิบ
-        if (document.fonts && !document.fonts.check('16px "Material Symbols Outlined"') && !cvs._fontsWaiting) {
-            cvs._fontsWaiting = true;
-            document.fonts.ready.then(function () {
-                cvs._fontsWaiting = false;
-                if (cvs._pie3dData) {
-                    var d = cvs._pie3dData;
-                    draw3DPie(cvs, d.labels, d.values, d.colors, d.isDataPresent);
-                }
-            });
-        }
-
         var total = 0;
         if (isDataPresent) { for (var vi = 0; vi < values.length; vi++) total += values[vi]; }
 
         var cx = W / 2, cy = H / 2;
-        var r = Math.min(W, H) * 0.36;
 
         function dimCol(col, f) {
             var n = parseInt(col.slice(1), 16);
@@ -780,11 +767,12 @@
 
         if (!isDataPresent || total === 0) {
             cvs._pie3dSlices = null;
+            var emptyR = Math.min(W, H) * 0.32;
             var isDarkEmpty = document.documentElement.getAttribute('data-theme') === 'dark';
             c.save();
             c.shadowColor = isDarkEmpty ? 'rgba(80,80,180,0.25)' : 'rgba(100,116,139,0.25)';
             c.shadowBlur = 20; c.shadowOffsetY = 8;
-            c.beginPath(); c.arc(cx, cy, r, 0, Math.PI * 2);
+            c.beginPath(); c.arc(cx, cy, emptyR, 0, Math.PI * 2);
             c.fillStyle = isDarkEmpty ? 'rgba(100,116,139,0.35)' : 'rgba(226,232,240,0.9)';
             c.fill();
             c.restore();
@@ -792,7 +780,7 @@
             c.strokeStyle = isDarkEmpty ? 'rgba(148,163,184,0.55)' : 'rgba(148,163,184,0.9)';
             c.lineWidth = 2.5;
             c.setLineDash([6, 5]);
-            c.beginPath(); c.arc(cx, cy, r, 0, Math.PI * 2); c.stroke();
+            c.beginPath(); c.arc(cx, cy, emptyR, 0, Math.PI * 2); c.stroke();
             c.restore();
             c.save();
             c.fillStyle = isDarkEmpty ? 'rgba(203,213,225,0.9)' : 'rgba(100,116,139,0.9)';
@@ -803,143 +791,99 @@
             return;
         }
 
-        function toRgba(col, alpha) {
-            var n = parseInt(col.slice(1), 16);
-            return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + alpha + ')';
+        // สัดส่วนมุมตามค่าจริงเป๊ะ (pie มาตรฐาน) — floor มุมขั้นต่ำไว้แค่ "มองเห็นได้" เท่านั้น
+        // ไม่แตะค่า pct/label ที่แสดงจริง (ต่างจาก MIN_ARC เดิมที่ยัดค่าเข้าไปในตัวเลขจริงจนยอดรวมผิด)
+        var rx = Math.min(W * 0.40, H * 0.46);
+        var ry = rx * 0.58;
+        var depth = rx * 0.15;
+        var explode = rx * 0.055;
+        var MIN_SWEEP = Math.PI * 2 * 0.018;
+
+        var startA = -Math.PI / 2, slices = [];
+        for (var i = 0; i < values.length; i++) {
+            if (!values[i] || values[i] <= 0) continue;
+            var pct = values[i] / total;
+            var sweep = Math.max(pct * Math.PI * 2, MIN_SWEEP);
+            var mid = startA + sweep / 2;
+            slices.push({
+                s: startA, e: startA + sweep, mid: mid,
+                color: colors[i], label: labels[i], val: values[i], pct: pct,
+                ox: Math.cos(mid) * explode, oy: Math.sin(mid) * explode
+            });
+            startA += sweep;
         }
-        function annulusPath(rInner, rOuter, sA, eA) {
+
+        // Back→front sort for depth walls
+        var sorted = slices.slice().sort(function (a, b) { return Math.sin(a.mid) - Math.sin(b.mid); });
+
+        // Dramatic drop shadow
+        c.save();
+        c.shadowColor = 'rgba(30,30,100,0.35)'; c.shadowBlur = 34; c.shadowOffsetY = depth + 14;
+        c.beginPath(); c.ellipse(cx, cy + depth + 6, rx * 0.86, ry * 0.55, 0, 0, Math.PI * 2);
+        c.fillStyle = 'rgba(0,0,0,0.001)'; c.fill(); c.restore();
+
+        // Side walls — vertical gradient (top bright → bottom dark) + exploded
+        sorted.forEach(function (sl) {
+            var ox = sl.ox, oy = sl.oy;
+            c.save();
             c.beginPath();
-            c.arc(cx, cy, rOuter, sA, eA, false);
-            c.arc(cx, cy, rInner, eA, sA, true);
+            c.moveTo(cx + ox + rx * Math.cos(sl.s), cy + oy + ry * Math.sin(sl.s));
+            c.ellipse(cx + ox, cy + oy, rx, ry, 0, sl.s, sl.e);
+            c.lineTo(cx + ox + rx * Math.cos(sl.e), cy + oy + ry * Math.sin(sl.e) + depth);
+            c.ellipse(cx + ox, cy + oy + depth, rx, ry, 0, sl.e, sl.s, true);
             c.closePath();
-        }
-
-        var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        var n = values.length;
-        var maxVal = 0;
-        for (var mi = 0; mi < n; mi++) { if (values[mi] > maxVal) maxVal = values[mi]; }
-        if (maxVal <= 0) maxVal = 1;
-
-        var innerR = r * 0.44;
-        var outerMaxR = r;
-        var gap = 0.11; // เว้นช่องว่างเชิงมุมระหว่างกลีบ ให้ดูเป็นแท่งแยกกัน
-        var anglePer = (Math.PI * 2) / n;
-
-        var slices = [];
-        for (var i = 0; i < n; i++) {
-            var s = -Math.PI / 2 + i * anglePer + gap / 2;
-            var e = s + anglePer - gap;
-            var val = values[i] || 0;
-            var barR = innerR + (val / maxVal) * (outerMaxR - innerR);
-            slices.push({ s: s, e: e, mid: (s + e) / 2, color: colors[i], label: labels[i], val: val, barR: barR });
-        }
-
-        // Soft ambient drop shadow beneath the whole disc — gives depth
-        c.save();
-        c.shadowColor = 'rgba(30,27,80,0.45)';
-        c.shadowBlur = 30;
-        c.shadowOffsetY = 12;
-        c.beginPath(); c.arc(cx, cy, outerMaxR, 0, Math.PI * 2);
-        c.fillStyle = 'rgba(0,0,0,0.001)';
-        c.fill();
-        c.restore();
-
-        // Track — เต็มความยาวของแต่ละกลีบ สีจางตามโทนสถานะ ให้เห็น "ราง" เทียบสัดส่วน
-        slices.forEach(function (sl) {
-            c.save();
-            annulusPath(innerR, outerMaxR, sl.s, sl.e);
-            c.fillStyle = toRgba(sl.color, isDark ? 0.10 : 0.08);
-            c.fill();
+            var gv = c.createLinearGradient(cx + ox, cy + oy, cx + ox, cy + oy + depth);
+            gv.addColorStop(0, dimCol(sl.color, 0.78));
+            gv.addColorStop(0.5, dimCol(sl.color, 0.62));
+            gv.addColorStop(1, dimCol(sl.color, 0.46));
+            c.fillStyle = gv; c.fill();
+            c.strokeStyle = 'rgba(255,255,255,0.5)'; c.lineWidth = 1; c.stroke();
             c.restore();
         });
 
-        // Bar — ความยาวจริงตามค่าข้อมูล พร้อม glow แบบไฮเทค
+        // Top faces — radial gradient with specular highlight + exploded
         slices.forEach(function (sl) {
-            if (sl.val <= 0) return;
+            var ox = sl.ox, oy = sl.oy;
             c.save();
-            c.shadowColor = sl.color;
-            c.shadowBlur = 16;
-            annulusPath(innerR, sl.barR, sl.s, sl.e);
-            var g = c.createRadialGradient(cx, cy, innerR, cx, cy, sl.barR);
-            g.addColorStop(0, dimCol(sl.color, 0.55));
-            g.addColorStop(1, dimCol(sl.color, 1.25));
-            c.fillStyle = g;
-            c.fill();
-            c.restore();
-
-            // เส้นเรืองแสงที่ปลายแท่ง (glowing tip)
-            c.save();
-            c.strokeStyle = dimCol(sl.color, 1.6);
-            c.lineWidth = 2;
-            c.beginPath(); c.arc(cx, cy, sl.barR, sl.s, sl.e);
-            c.stroke();
+            c.beginPath(); c.moveTo(cx + ox, cy + oy);
+            c.ellipse(cx + ox, cy + oy, rx, ry, 0, sl.s, sl.e); c.closePath();
+            var gr = c.createRadialGradient(cx + ox - rx * 0.12, cy + oy - ry * 0.68, 0, cx + ox, cy + oy, rx * 1.08);
+            gr.addColorStop(0, dimCol(sl.color, 1.5));
+            gr.addColorStop(0.28, dimCol(sl.color, 1.18));
+            gr.addColorStop(0.6, sl.color);
+            gr.addColorStop(1, dimCol(sl.color, 0.8));
+            c.fillStyle = gr; c.fill();
+            c.strokeStyle = 'rgba(255,255,255,0.85)'; c.lineWidth = 2; c.stroke();
             c.restore();
         });
 
-        // ไอคอนกลางแต่ละกลีบ (ตำแหน่งคงที่กลาง track ไม่ขึ้นกับความยาวแท่ง) — ใช้ฟอนต์ Material Symbols ที่มีอยู่แล้วในเว็บ
-        var ICON_MAP = { 'NEW': 'fiber_new', 'ASSIGNED': 'assignment_ind', 'PENDING': 'hourglass_top', 'SOLVED': 'task_alt', 'CLOSED': 'lock' };
-        var iconSize = Math.max(14, Math.round(innerR * 0.42));
-        var iconR = (innerR + outerMaxR) / 2;
+        // ป้าย % กลางแต่ละชิ้น — ใช้ % จริงเสมอ (ไม่ผูกกับมุมที่ floor ไว้เพื่อการมองเห็น)
         slices.forEach(function (sl) {
-            var iconName = ICON_MAP[sl.label];
-            if (!iconName) return;
-            var ix = cx + Math.cos(sl.mid) * iconR;
-            var iy = cy + Math.sin(sl.mid) * iconR;
+            var labelRx = rx * 0.55, labelRy = ry * 0.55;
+            var lx = cx + sl.ox + Math.cos(sl.mid) * labelRx;
+            var ly = cy + sl.oy + Math.sin(sl.mid) * labelRy;
+            var pctText = sl.pct * 100 < 1 ? '<1%' : Math.round(sl.pct * 100) + '%';
             c.save();
-            c.font = iconSize + 'px "Material Symbols Outlined"';
             c.textAlign = 'center'; c.textBaseline = 'middle';
-            c.fillStyle = 'rgba(255,255,255,0.92)';
-            c.shadowColor = 'rgba(0,0,0,0.35)'; c.shadowBlur = 4;
-            c.fillText(iconName, ix, iy);
+            c.font = '800 ' + Math.max(12, Math.round(rx * 0.125)) + 'px sans-serif';
+            c.fillStyle = '#ffffff';
+            c.shadowColor = 'rgba(0,0,0,0.45)'; c.shadowBlur = 4;
+            c.fillText(pctText, lx, ly);
             c.restore();
         });
 
-        // จุดเรืองแสงรอบวง ตำแหน่งกลางกลีบแต่ละอัน — ดีเทลไฮเทค
-        slices.forEach(function (sl) {
-            var dotX = cx + Math.cos(sl.mid) * (outerMaxR + 9);
-            var dotY = cy + Math.sin(sl.mid) * (outerMaxR + 9);
-            c.save();
-            c.shadowColor = sl.color; c.shadowBlur = 7;
-            c.beginPath(); c.arc(dotX, dotY, 2.6, 0, Math.PI * 2);
-            c.fillStyle = sl.color;
-            c.fill();
-            c.restore();
-        });
-
-        // วงแหวนประรอบนอก — ลุคเรดาร์
+        // Luminous outer rim
         c.save();
-        c.setLineDash([4, 6]);
-        c.strokeStyle = isDark ? 'rgba(148,163,184,0.25)' : 'rgba(148,163,184,0.35)';
-        c.lineWidth = 1;
-        c.beginPath(); c.arc(cx, cy, outerMaxR + 16, 0, Math.PI * 2); c.stroke();
+        var rim = c.createLinearGradient(cx - rx, cy - ry, cx + rx, cy - ry);
+        rim.addColorStop(0, 'rgba(255,255,255,0)');
+        rim.addColorStop(0.35, 'rgba(255,255,255,0.45)');
+        rim.addColorStop(0.65, 'rgba(255,255,255,0.45)');
+        rim.addColorStop(1, 'rgba(255,255,255,0)');
+        c.strokeStyle = rim; c.lineWidth = 3;
+        c.beginPath(); c.ellipse(cx, cy, rx, ry, 0, Math.PI, Math.PI * 2); c.stroke();
         c.restore();
 
-        // วงกลมกลาง — กระจก + ขอบเรืองแสง
-        var holeR = innerR - 6;
-        c.save();
-        c.shadowColor = 'rgba(99,102,241,0.35)'; c.shadowBlur = 18;
-        c.beginPath(); c.arc(cx, cy, holeR, 0, Math.PI * 2);
-        c.fillStyle = isDark ? 'rgba(15,17,35,0.88)' : 'rgba(255,255,255,0.92)';
-        c.fill();
-        c.restore();
-        c.save();
-        c.strokeStyle = isDark ? 'rgba(129,140,248,0.55)' : 'rgba(99,102,241,0.4)';
-        c.lineWidth = 2;
-        c.beginPath(); c.arc(cx, cy, holeR, 0, Math.PI * 2); c.stroke();
-        c.restore();
-
-        // ตัวเลขรวมกลางวง
-        c.save();
-        c.textAlign = 'center'; c.textBaseline = 'middle';
-        c.fillStyle = isDark ? '#e2e8f0' : '#1e293b';
-        c.font = '800 ' + Math.round(holeR * 0.52) + 'px "JetBrains Mono", monospace';
-        c.fillText(String(total), cx, cy - holeR * 0.14);
-        c.fillStyle = isDark ? 'rgba(148,163,184,0.85)' : 'rgba(100,116,139,0.85)';
-        c.font = '700 ' + Math.round(holeR * 0.17) + 'px sans-serif';
-        c.fillText('TICKETS', cx, cy + holeR * 0.36);
-        c.restore();
-
-        cvs._pie3dSlices = { cx: cx, cy: cy, r: outerMaxR, slices: slices };
+        cvs._pie3dSlices = { cx: cx, cy: cy, rx: rx + explode, ry: ry + explode * (ry / rx), slices: slices };
     }
 
     function _initPie3dClick(cvs, onLabel) {
@@ -951,8 +895,8 @@
             var mx = e.clientX - rect.left, my = e.clientY - rect.top;
             var info = cvs._pie3dSlices;
             var dx = mx - info.cx, dy = my - info.cy;
-            if (Math.sqrt(dx * dx + dy * dy) > info.r) return;
-            var ang = Math.atan2(dy, dx);
+            if ((dx * dx) / (info.rx * info.rx) + (dy * dy) / (info.ry * info.ry) > 1.3) return;
+            var ang = Math.atan2(dy / info.ry, dx / info.rx);
             if (ang < -Math.PI / 2) ang += Math.PI * 2;
             for (var i = 0; i < info.slices.length; i++) {
                 var sl = info.slices[i];
@@ -968,7 +912,7 @@
             }).observe(cvs);
         }
     }
-    // ====== End Pie Chart (flat 2D, drop shadow) ======
+    // ====== End 3D Pie Chart ======
 
     function populateProjectFilter() {
         const projectFilterSelect = document.getElementById('projectFilter');
