@@ -791,61 +791,125 @@
             return;
         }
 
-        var startA = -Math.PI / 2, slices = [];
-        for (var i = 0; i < values.length; i++) {
-            if (!values[i] || values[i] <= 0) continue;
-            var sweep = (values[i] / total) * Math.PI * 2;
-            slices.push({ s: startA, e: startA + sweep, mid: startA + sweep / 2, color: colors[i], label: labels[i] });
-            startA += sweep;
+        function toRgba(col, alpha) {
+            var n = parseInt(col.slice(1), 16);
+            return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + alpha + ')';
+        }
+        function annulusPath(rInner, rOuter, sA, eA) {
+            c.beginPath();
+            c.arc(cx, cy, rOuter, sA, eA, false);
+            c.arc(cx, cy, rInner, eA, sA, true);
+            c.closePath();
         }
 
-        // Soft ambient drop shadow beneath the whole disc — gives depth without 3D geometry
+        var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        var n = values.length;
+        var maxVal = 0;
+        for (var mi = 0; mi < n; mi++) { if (values[mi] > maxVal) maxVal = values[mi]; }
+        if (maxVal <= 0) maxVal = 1;
+
+        var innerR = r * 0.44;
+        var outerMaxR = r;
+        var gap = 0.11; // เว้นช่องว่างเชิงมุมระหว่างกลีบ ให้ดูเป็นแท่งแยกกัน
+        var anglePer = (Math.PI * 2) / n;
+
+        var slices = [];
+        for (var i = 0; i < n; i++) {
+            var s = -Math.PI / 2 + i * anglePer + gap / 2;
+            var e = s + anglePer - gap;
+            var val = values[i] || 0;
+            var barR = innerR + (val / maxVal) * (outerMaxR - innerR);
+            slices.push({ s: s, e: e, mid: (s + e) / 2, color: colors[i], label: labels[i], val: val, barR: barR });
+        }
+
+        // Soft ambient drop shadow beneath the whole disc — gives depth
         c.save();
         c.shadowColor = 'rgba(30,27,80,0.45)';
         c.shadowBlur = 30;
         c.shadowOffsetY = 12;
-        c.beginPath(); c.arc(cx, cy, r, 0, Math.PI * 2);
+        c.beginPath(); c.arc(cx, cy, outerMaxR, 0, Math.PI * 2);
         c.fillStyle = 'rgba(0,0,0,0.001)';
         c.fill();
         c.restore();
 
-        // Slices — flat fill + subtle top-left gloss gradient for polish
+        // Track — เต็มความยาวของแต่ละกลีบ สีจางตามโทนสถานะ ให้เห็น "ราง" เทียบสัดส่วน
         slices.forEach(function (sl) {
             c.save();
-            c.beginPath();
-            c.moveTo(cx, cy);
-            c.arc(cx, cy, r, sl.s, sl.e);
-            c.closePath();
-            var g = c.createRadialGradient(cx - r * 0.25, cy - r * 0.35, r * 0.05, cx, cy, r * 1.05);
-            g.addColorStop(0, dimCol(sl.color, 1.22));
-            g.addColorStop(0.55, sl.color);
-            g.addColorStop(1, dimCol(sl.color, 0.85));
-            c.fillStyle = g;
+            annulusPath(innerR, outerMaxR, sl.s, sl.e);
+            c.fillStyle = toRgba(sl.color, isDark ? 0.10 : 0.08);
             c.fill();
             c.restore();
         });
 
-        // Thin white separators between slices — classic clean flat-pie look
+        // Bar — ความยาวจริงตามค่าข้อมูล พร้อม glow แบบไฮเทค
         slices.forEach(function (sl) {
+            if (sl.val <= 0) return;
             c.save();
-            c.strokeStyle = 'rgba(255,255,255,0.9)';
-            c.lineWidth = 2.5;
-            c.beginPath();
-            c.moveTo(cx, cy);
-            c.arc(cx, cy, r, sl.s, sl.e);
-            c.closePath();
+            c.shadowColor = sl.color;
+            c.shadowBlur = 16;
+            annulusPath(innerR, sl.barR, sl.s, sl.e);
+            var g = c.createRadialGradient(cx, cy, innerR, cx, cy, sl.barR);
+            g.addColorStop(0, dimCol(sl.color, 0.55));
+            g.addColorStop(1, dimCol(sl.color, 1.25));
+            c.fillStyle = g;
+            c.fill();
+            c.restore();
+
+            // เส้นเรืองแสงที่ปลายแท่ง (glowing tip)
+            c.save();
+            c.strokeStyle = dimCol(sl.color, 1.6);
+            c.lineWidth = 2;
+            c.beginPath(); c.arc(cx, cy, sl.barR, sl.s, sl.e);
             c.stroke();
             c.restore();
         });
 
-        // Glowing outer rim
+        // จุดเรืองแสงรอบวง ตำแหน่งกลางกลีบแต่ละอัน — ดีเทลไฮเทค
+        slices.forEach(function (sl) {
+            var dotX = cx + Math.cos(sl.mid) * (outerMaxR + 9);
+            var dotY = cy + Math.sin(sl.mid) * (outerMaxR + 9);
+            c.save();
+            c.shadowColor = sl.color; c.shadowBlur = 7;
+            c.beginPath(); c.arc(dotX, dotY, 2.6, 0, Math.PI * 2);
+            c.fillStyle = sl.color;
+            c.fill();
+            c.restore();
+        });
+
+        // วงแหวนประรอบนอก — ลุคเรดาร์
         c.save();
-        c.strokeStyle = 'rgba(255,255,255,0.3)';
-        c.lineWidth = 2;
-        c.beginPath(); c.arc(cx, cy, r, 0, Math.PI * 2); c.stroke();
+        c.setLineDash([4, 6]);
+        c.strokeStyle = isDark ? 'rgba(148,163,184,0.25)' : 'rgba(148,163,184,0.35)';
+        c.lineWidth = 1;
+        c.beginPath(); c.arc(cx, cy, outerMaxR + 16, 0, Math.PI * 2); c.stroke();
         c.restore();
 
-        cvs._pie3dSlices = { cx: cx, cy: cy, r: r, slices: slices };
+        // วงกลมกลาง — กระจก + ขอบเรืองแสง
+        var holeR = innerR - 6;
+        c.save();
+        c.shadowColor = 'rgba(99,102,241,0.35)'; c.shadowBlur = 18;
+        c.beginPath(); c.arc(cx, cy, holeR, 0, Math.PI * 2);
+        c.fillStyle = isDark ? 'rgba(15,17,35,0.88)' : 'rgba(255,255,255,0.92)';
+        c.fill();
+        c.restore();
+        c.save();
+        c.strokeStyle = isDark ? 'rgba(129,140,248,0.55)' : 'rgba(99,102,241,0.4)';
+        c.lineWidth = 2;
+        c.beginPath(); c.arc(cx, cy, holeR, 0, Math.PI * 2); c.stroke();
+        c.restore();
+
+        // ตัวเลขรวมกลางวง
+        c.save();
+        c.textAlign = 'center'; c.textBaseline = 'middle';
+        c.fillStyle = isDark ? '#e2e8f0' : '#1e293b';
+        c.font = '800 ' + Math.round(holeR * 0.52) + 'px "JetBrains Mono", monospace';
+        c.fillText(String(total), cx, cy - holeR * 0.14);
+        c.fillStyle = isDark ? 'rgba(148,163,184,0.85)' : 'rgba(100,116,139,0.85)';
+        c.font = '700 ' + Math.round(holeR * 0.17) + 'px sans-serif';
+        c.fillText('TICKETS', cx, cy + holeR * 0.36);
+        c.restore();
+
+        cvs._pie3dSlices = { cx: cx, cy: cy, r: outerMaxR, slices: slices };
     }
 
     function _initPie3dClick(cvs, onLabel) {
