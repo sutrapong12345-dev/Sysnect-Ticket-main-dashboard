@@ -186,7 +186,7 @@
     <!-- Flatpickr for Date Inputs -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <link rel="stylesheet" href="style.css?v=13">
+    <link rel="stylesheet" href="style.css?v=14">
 </head>
 <body>
 
@@ -301,6 +301,26 @@
         <span class="sc-sub">ปิดแล้ว</span>
     </div>
 </div>
+
+<!-- ═══ PC TAB BAR (Desktop ≥1025px เท่านั้น — mobile ใช้ bottom nav เดิม) ═══ -->
+<nav class="pc-tabbar" id="pcTabbar">
+    <button class="pctab-btn active" data-pctab="overview" onclick="setPcTab('overview')">
+        <span class="material-symbols-outlined">dashboard</span>
+        ภาพรวม
+    </button>
+    <button class="pctab-btn" data-pctab="tickets" onclick="setPcTab('tickets')">
+        <span class="material-symbols-outlined">confirmation_number</span>
+        Tickets
+    </button>
+    <button class="pctab-btn" data-pctab="team" onclick="setPcTab('team')">
+        <span class="material-symbols-outlined">group</span>
+        ทีมงาน
+    </button>
+    <button class="pctab-btn" data-pctab="trend" onclick="setPcTab('trend')">
+        <span class="material-symbols-outlined">trending_up</span>
+        แนวโน้ม
+    </button>
+</nav>
 
 <div class="dashboard-wrapper three-panel" id="dashboardWrapper">
 
@@ -743,9 +763,9 @@
 
         <div class="version-card">
             <div class="v-title">SYSNECT Dashboard</div>
-            <div class="v-tag">v2.4.3-MAIN</div>
-            <div class="v-detail">2026-06-26 / MAIN (n8n + Static)</div>
-            <div class="v-detail">3-Panel Equal 33.33% + Trend Breakdown List</div>
+            <div class="v-tag">v2.5.0-MAIN</div>
+            <div class="v-detail">2026-07-01 / MAIN (n8n + Static)</div>
+            <div class="v-detail">PC Tab Bar + Assignee Ranking</div>
         </div>
     </div>
 </div>
@@ -996,6 +1016,72 @@ input:checked + .slider:before { transform: translateX(20px); }
 </script>
 
 <script src="app.js?v=8" defer></script>
+
+<!-- ═══ PC Tab Controller ═══ -->
+<script>
+(function () {
+    // ── สลับ Tab บน PC (≥1025px เท่านั้น) ──
+    window.setPcTab = function (tab) {
+        if (window.innerWidth <= 1024) return;
+
+        document.body.setAttribute('data-pctab', tab);
+        sessionStorage.setItem('sysnect_pctab', tab);
+
+        document.querySelectorAll('#pcTabbar .pctab-btn').forEach(function (btn) {
+            btn.classList.toggle('active', btn.getAttribute('data-pctab') === tab);
+        });
+
+        if (tab === 'team') {
+            if (typeof switchSidebarTab === 'function') switchSidebarTab('team');
+        } else if (tab === 'trend') {
+            if (typeof switchSidebarTab === 'function') switchSidebarTab('analytics');
+            setTimeout(function () {
+                if (typeof renderTrendLineChart === 'function') renderTrendLineChart();
+                if (typeof renderStatusBarChart === 'function') renderStatusBarChart();
+            }, 80);
+        } else if (tab === 'tickets') {
+            var tc = document.getElementById('ticketContainer');
+            var isEmpty = !tc || tc.children.length <= 1;
+            if (isEmpty && typeof window._enterSplitMode === 'function') {
+                window._enterSplitMode('ALL');
+            }
+        }
+
+        setTimeout(function () { window.dispatchEvent(new Event('resize')); }, 80);
+    };
+
+    function initPcTab() {
+        if (window.innerWidth <= 1024) return;
+        var saved = sessionStorage.getItem('sysnect_pctab') || 'overview';
+        document.body.setAttribute('data-pctab', saved);
+        document.querySelectorAll('#pcTabbar .pctab-btn').forEach(function (btn) {
+            btn.classList.toggle('active', btn.getAttribute('data-pctab') === saved);
+        });
+        if (saved === 'trend') {
+            if (typeof switchSidebarTab === 'function') switchSidebarTab('analytics');
+        } else if (saved === 'team') {
+            if (typeof switchSidebarTab === 'function') switchSidebarTab('team');
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        initPcTab();
+
+        // กด stat-card บน PC → สลับไป Tickets tab ก่อน
+        document.querySelectorAll('.stat-card').forEach(function (card) {
+            card.addEventListener('click', function () {
+                if (window.innerWidth > 1024 && typeof window.setPcTab === 'function') {
+                    document.body.setAttribute('data-pctab', 'tickets');
+                    document.querySelectorAll('#pcTabbar .pctab-btn').forEach(function (btn) {
+                        btn.classList.toggle('active', btn.getAttribute('data-pctab') === 'tickets');
+                    });
+                    sessionStorage.setItem('sysnect_pctab', 'tickets');
+                }
+            }, true); // capture = fires ก่อน onclick
+        });
+    });
+})();
+</script>
 
 <!-- ═══ PWA: ลงทะเบียน Service Worker (เปิดเหมือนแอป + offline fallback) ═══ -->
 <script>
