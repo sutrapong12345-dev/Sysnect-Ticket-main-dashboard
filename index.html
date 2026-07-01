@@ -1076,8 +1076,12 @@ input:checked + .slider:before { transform: translateX(20px); }
     window.addEventListener('load', function () {
         var origSplit = window._enterSplitMode;
         if (origSplit) {
+            var _canAutoSwitch = false;
+            // ไม่ switch tab ช่วง 3 วิแรก (ป้องกัน auto-call ตอน render ครั้งแรก)
+            setTimeout(function () { _canAutoSwitch = true; }, 3000);
+
             window._enterSplitMode = function (status, opts) {
-                if (window.innerWidth > 1024) {
+                if (window.innerWidth > 1024 && _canAutoSwitch) {
                     document.body.setAttribute('data-pctab', 'tickets');
                     sessionStorage.setItem('sysnect_pctab', 'tickets');
                     document.querySelectorAll('#pcTabbar .pctab-btn').forEach(function (btn) {
