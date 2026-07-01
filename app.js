@@ -165,6 +165,7 @@
             if (window._statusBarChart) { window._statusBarChart.destroy(); window._statusBarChart = null; }
             if (window._trendLineChart) { window._trendLineChart.destroy(); window._trendLineChart = null; }
             if (typeof renderProjectSidebar === 'function') renderProjectSidebar();
+            if (typeof renderAssigneeSidebar === 'function') renderAssigneeSidebar();
             if (typeof renderTrendLineChart === 'function') renderTrendLineChart();
         }
 
@@ -977,7 +978,13 @@
                     matchProject = t.project === projectFilter;
                 }
 
-                return matchSearch && matchDate && matchPriority && matchProject;
+                // Assignee Filtering
+                let matchAssignee = true;
+                if (window._activeAssigneeFilter) {
+                    matchAssignee = t.assignee === window._activeAssigneeFilter;
+                }
+
+                return matchSearch && matchDate && matchPriority && matchProject && matchAssignee;
             });
 
             filteredData[status] = tickets;
@@ -1355,6 +1362,7 @@
         if (typeof updateStatBar === 'function') updateStatBar(data.values, data.labels, totalTickets);
         // อัปเดต sidebars (ถ้ามีข้อมูลใหม่)
         if (typeof renderProjectSidebar === 'function') renderProjectSidebar();
+        if (typeof renderAssigneeSidebar === 'function') renderAssigneeSidebar();
         if (typeof renderTrendLineChart === 'function') renderTrendLineChart();
     }
 
@@ -2565,6 +2573,73 @@
         });
     }
 
+    // ─── Sidebar Left: Assignee List ─────────────────────────
+    window._activeAssigneeFilter = null;
+
+    function renderAssigneeSidebar() {
+        const el = document.getElementById('assigneeSidebarList');
+        const badge = document.getElementById('assigneeSidebarCount');
+        if (!el) return;
+
+        const breakdown = mockDataRaw || {};
+        const assigneeMap = {};
+
+        Object.keys(breakdown).forEach(status => {
+            (breakdown[status] || []).forEach(ticket => {
+                const name = ticket.assignee && ticket.assignee !== '-' ? ticket.assignee : null;
+                if (!name) return;
+                if (!assigneeMap[name]) assigneeMap[name] = { total: 0, done: 0, pending: 0 };
+                assigneeMap[name].total++;
+                if (status === 'solved' || status === 'closed') assigneeMap[name].done++;
+                else assigneeMap[name].pending++;
+            });
+        });
+
+        const entries = Object.entries(assigneeMap).sort((a, b) => b[1].total - a[1].total);
+        if (badge) badge.textContent = entries.length;
+
+        if (entries.length === 0) {
+            el.innerHTML = '<div style="text-align:center;padding:20px 10px;color:var(--text-sub,#94a3b8);font-size:12px;"><span class="material-symbols-outlined" style="font-size:28px;display:block;margin-bottom:6px;opacity:0.35;">group</span>ไม่มีข้อมูล</div>';
+            return;
+        }
+
+        let html = '';
+        entries.forEach(([name, stats]) => {
+            const donePct = stats.total > 0 ? Math.round(stats.done / stats.total * 100) : 0;
+            const isActive = window._activeAssigneeFilter === name;
+            const safeNameAttr = escapeHtml(name).replace(/'/g, '&#39;');
+            html += `
+            <div class="proj-row${isActive ? ' proj-row-active' : ''}"
+                 onclick="filterByAssignee('${safeNameAttr}')"
+                 title="${safeNameAttr} — รับงาน ${stats.total} ใบ · เสร็จ ${stats.done} · ค้าง ${stats.pending}">
+                <span class="proj-name">${escapeHtml(name)}</span>
+                <div class="proj-bar-wrap">
+                    <div class="proj-bar-fill" data-pct="${donePct}"
+                         style="width:0%;background:${donePct === 100 ? '#10b981' : donePct >= 50 ? '#6366f1' : '#f59e0b'};transition:width 0.6s cubic-bezier(.4,0,.2,1);">
+                    </div>
+                </div>
+                <span class="proj-count" style="font-size:10px;white-space:nowrap;">${stats.done}/${stats.total}</span>
+            </div>`;
+        });
+        el.innerHTML = html;
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            el.querySelectorAll('.proj-bar-fill').forEach(bar => {
+                bar.style.width = bar.dataset.pct + '%';
+            });
+        }));
+    }
+
+    window.filterByAssignee = function(name) {
+        window._activeAssigneeFilter = (window._activeAssigneeFilter === name) ? null : name;
+        renderAssigneeSidebar();
+        if (window._activeAssigneeFilter && !window.currentStatus) {
+            document.querySelector('.status-btn[data-status="all"]')?.click();
+        }
+        if (typeof renderTicketList === 'function' && window.currentStatus) {
+            renderTicketList(window.currentStatus);
+        }
+    };
+
     // ─── Sidebar Left: Project List (display only) ────────────
     function renderProjectSidebar() {
         const el = document.getElementById('projectSidebarList');
@@ -2628,6 +2703,7 @@
         }
         sel.dispatchEvent(new Event('change'));
         renderProjectSidebar();
+        renderAssigneeSidebar();
     };
 
     // ─── Sidebar Right: Trend Line Chart ─────────────────
@@ -2913,6 +2989,7 @@
         if (window._statusBarChart) { window._statusBarChart.destroy(); window._statusBarChart = null; }
         if (window._trendLineChart) { window._trendLineChart.destroy(); window._trendLineChart = null; }
         if (typeof renderProjectSidebar === 'function') renderProjectSidebar();
+        if (typeof renderAssigneeSidebar === 'function') renderAssigneeSidebar();
         if (typeof renderTrendLineChart === 'function') renderTrendLineChart();
     });
 
