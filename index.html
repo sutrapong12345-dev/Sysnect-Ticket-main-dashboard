@@ -186,7 +186,7 @@
     <!-- Flatpickr for Date Inputs -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <link rel="stylesheet" href="style.css?v=18">
+    <link rel="stylesheet" href="style.css?v=19">
 </head>
 <body>
 
@@ -311,6 +311,10 @@
     <button class="pctab-btn" data-pctab="tickets" onclick="setPcTab('tickets')">
         <span class="material-symbols-outlined">confirmation_number</span>
         Tickets
+    </button>
+    <button class="pctab-btn" data-pctab="project" onclick="setPcTab('project')">
+        <span class="material-symbols-outlined">folder_open</span>
+        โครงการ
     </button>
     <button class="pctab-btn" data-pctab="team" onclick="setPcTab('team')">
         <span class="material-symbols-outlined">group</span>
@@ -444,7 +448,7 @@
 
             <!-- TAB 2: Project & Team -->
             <div id="sidebarTabTeam" class="sidebar-tab-content hidden">
-                <div class="sidebar-section-head">
+                <div class="sidebar-section-head" id="projSectionHead">
                     <span class="material-symbols-outlined" style="font-size:13px;color:var(--primary-color,#6366f1);flex-shrink:0;">folder_open</span>
                     <span>โครงการ</span>
                     <span class="sidebar-count-badge" id="projSidebarCount">0</span>
@@ -455,7 +459,7 @@
                         กำลังโหลด...
                     </div>
                 </div>
-                <div class="sidebar-section-head" style="margin-top:8px;">
+                <div class="sidebar-section-head" id="assigneeSectionHead" style="margin-top:8px;">
                     <span class="material-symbols-outlined" style="font-size:13px;color:var(--primary-color,#6366f1);flex-shrink:0;">group</span>
                     <span>ทีมงาน</span>
                     <span class="sidebar-count-badge" id="assigneeSidebarCount">0</span>
@@ -1031,7 +1035,7 @@ input:checked + .slider:before { transform: translateX(20px); }
             btn.classList.toggle('active', btn.getAttribute('data-pctab') === tab);
         });
 
-        if (tab === 'team') {
+        if (tab === 'team' || tab === 'project') {
             if (typeof switchSidebarTab === 'function') switchSidebarTab('team');
         } else if (tab === 'trend') {
             if (typeof switchSidebarTab === 'function') switchSidebarTab('analytics');
@@ -1059,7 +1063,7 @@ input:checked + .slider:before { transform: translateX(20px); }
         });
         if (saved === 'trend') {
             if (typeof switchSidebarTab === 'function') switchSidebarTab('analytics');
-        } else if (saved === 'team') {
+        } else if (saved === 'team' || saved === 'project') {
             if (typeof switchSidebarTab === 'function') switchSidebarTab('team');
         }
     }

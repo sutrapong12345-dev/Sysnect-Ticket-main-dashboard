@@ -3154,8 +3154,9 @@
         opacity: 1 !important;
     }
 
-    /* Tab ทีมงาน + แนวโน้ม → sidebar-right เต็มจอ */
+    /* Tab ทีมงาน + โครงการ + แนวโน้ม → sidebar-right เต็มจอ */
     body[data-pctab="team"] #dashboardWrapper > .sidebar-right,
+    body[data-pctab="project"] #dashboardWrapper > .sidebar-right,
     body[data-pctab="trend"] #dashboardWrapper > .sidebar-right {
         display: block !important;
         width: 100% !important;
@@ -3163,6 +3164,7 @@
     }
 
     body[data-pctab="team"] .sidebar-right .sidebar-card,
+    body[data-pctab="project"] .sidebar-right .sidebar-card,
     body[data-pctab="trend"] .sidebar-right .sidebar-card {
         max-width: 960px;
         margin: 0 auto;
@@ -3170,7 +3172,8 @@
         overflow-y: auto;
     }
 
-    body[data-pctab="team"] .sidebar-body { max-height: none !important; }
+    body[data-pctab="team"] .sidebar-body,
+    body[data-pctab="project"] .sidebar-body { max-height: none !important; }
 
     body[data-pctab="trend"] .sidebar-chart-area { height: 200px; }
     body[data-pctab="trend"] .trend-chart-area   { height: 300px; }
@@ -3180,11 +3183,22 @@
 
     /* ── PC Tab mode: ซ่อน sub-tab bar ข้างใน sidebar แสดงเนื้อหาตรงๆ ── */
     body[data-pctab="team"] .sidebar-tabs,
+    body[data-pctab="project"] .sidebar-tabs,
     body[data-pctab="trend"] .sidebar-tabs { display: none !important; }
 
-    /* ทีมงาน tab → แสดง sidebarTabTeam เท่านั้น */
-    body[data-pctab="team"] #sidebarTabTeam    { display: block !important; }
-    body[data-pctab="team"] #sidebarTabAnalytics { display: none !important; }
+    /* โครงการ tab → แสดงเฉพาะ project section */
+    body[data-pctab="project"] #sidebarTabTeam      { display: block !important; }
+    body[data-pctab="project"] #sidebarTabAnalytics  { display: none !important; }
+    body[data-pctab="project"] #assigneeSectionHead,
+    body[data-pctab="project"] #assigneeSidebarList  { display: none !important; }
+    body[data-pctab="project"] #projSectionHead      { display: flex !important; }
+
+    /* ทีมงาน tab → แสดงเฉพาะ team section */
+    body[data-pctab="team"] #sidebarTabTeam      { display: block !important; }
+    body[data-pctab="team"] #sidebarTabAnalytics  { display: none !important; }
+    body[data-pctab="team"] #projSectionHead,
+    body[data-pctab="team"] #projectSidebarList   { display: none !important; }
+    body[data-pctab="team"] #assigneeSectionHead  { display: flex !important; }
 
     /* แนวโน้ม tab → แสดง sidebarTabAnalytics เท่านั้น */
     body[data-pctab="trend"] #sidebarTabAnalytics { display: block !important; }
