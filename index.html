@@ -371,17 +371,9 @@
         </div>
     </div>
 
-    <!-- ═══ SIDEBAR LEFT — Status Bar Chart + Project List ═══ -->
+    <!-- ═══ SIDEBAR LEFT — Project List + Assignee ═══ -->
     <div class="sidebar-left" id="sidebarLeft">
         <div class="sidebar-card">
-            <div class="sidebar-header">
-                <span class="material-symbols-outlined" style="font-size:16px;color:var(--primary-color,#6366f1);">bar_chart</span>
-                <span class="sidebar-title">สรุปสถานะ</span>
-            </div>
-            <!-- Status vertical bar chart -->
-            <div class="sidebar-chart-area">
-                <canvas id="statusBarCanvas"></canvas>
-            </div>
             <!-- Project list section -->
             <div class="sidebar-section-head">
                 <span class="material-symbols-outlined" style="font-size:13px;color:var(--primary-color,#6366f1);flex-shrink:0;">folder_open</span>
@@ -409,12 +401,20 @@
         </div>
     </div>
 
-    <!-- ═══ SIDEBAR RIGHT — Trend Line Chart ═══ -->
+    <!-- ═══ SIDEBAR RIGHT — Status Summary + Trend Line Chart ═══ -->
     <div class="sidebar-right" id="sidebarRight">
         <div class="sidebar-card">
+            <!-- Status summary section -->
             <div class="sidebar-header">
+                <span class="material-symbols-outlined" style="font-size:16px;color:var(--primary-color,#6366f1);">bar_chart</span>
+                <span class="sidebar-title">สรุปสถานะ</span>
+            </div>
+            <div class="sidebar-chart-area">
+                <canvas id="statusBarCanvas"></canvas>
+            </div>
+            <div class="sidebar-section-head" style="margin-top:8px;">
                 <span class="material-symbols-outlined" style="font-size:16px;color:var(--primary-color,#6366f1);">trending_up</span>
-                <span class="sidebar-title">แนวโน้มทิกเก็ต</span>
+                <span>แนวโน้มทิกเก็ต</span>
             </div>
             <!-- Period selector buttons -->
             <div class="period-selector" id="periodSelector">
