@@ -186,7 +186,7 @@
     <!-- Flatpickr for Date Inputs -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <link rel="stylesheet" href="style.css?v=20">
+    <link rel="stylesheet" href="style.css?v=21">
 </head>
 <body>
 
@@ -1025,6 +1025,8 @@ input:checked + .slider:before { transform: translateX(20px); }
             }
             if ((tab === 'project' || tab === 'team') && typeof window.switchSidebarTab === 'function') {
                 window.switchSidebarTab('team');
+            } else if ((tab === 'status' || tab === 'trend') && typeof window.switchSidebarTab === 'function') {
+                window.switchSidebarTab('analytics');
             }
             window.scrollTo({ top: 0, behavior: 'auto' });
             // ให้ Chart.js ในแท็บที่เพิ่งโชว์ปรับขนาดให้พอดี container
@@ -1040,7 +1042,7 @@ input:checked + .slider:before { transform: translateX(20px); }
 })();
 </script>
 
-<script src="app.js?v=14" defer></script>
+<script src="app.js?v=15" defer></script>
 
 <!-- ═══ PC Tab Controller ═══ -->
 <script>

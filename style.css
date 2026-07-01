@@ -3064,9 +3064,8 @@
     body.mtab-on[data-mtab="overview"] #dashboardWrapper > .left-panel { display: block !important; }
     /* Tickets: รายการเต็มจอ */
     body.mtab-on[data-mtab="tickets"] #dashboardWrapper > .right-panel { display: block !important; }
-    /* สถานะ: bar chart + โครงการ */
-    body.mtab-on[data-mtab="status"] #dashboardWrapper > .sidebar-left { display: block !important; }
-    /* แนวโน้ม: trend chart */
+    /* สถานะ + แนวโน้ม: bar chart & trend chart ย้ายมาอยู่ใน sidebar-right (แท็บ สรุป & แนวโน้ม) แล้ว — .sidebar-left เป็น div ว่างเก่า ไม่ใช้แล้ว */
+    body.mtab-on[data-mtab="status"] #dashboardWrapper > .sidebar-right,
     body.mtab-on[data-mtab="trend"] #dashboardWrapper > .sidebar-right { display: block !important; }
 
     /* โครงการ / ทีมงาน: sidebar-right เต็มจอ แสดงเฉพาะ section ที่ตรงกับแท็บ */

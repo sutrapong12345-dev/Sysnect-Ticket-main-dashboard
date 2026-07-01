@@ -286,28 +286,40 @@
         }
     };
 
-    function showNotificationToast(count) {
+    function showNotificationToast(ticketIds) {
         const prev = document.getElementById('notifToast');
         if (prev) prev.remove();
+        const ids = Array.isArray(ticketIds) ? ticketIds : [];
+        const count = ids.length;
+        const jumpId = ids[0];
         const toast = document.createElement('div');
         toast.id = 'notifToast';
         toast.style.cssText = [
             'position:fixed', 'top:72px', 'right:24px',
             'background:#2563eb', 'color:#fff',
-            'padding:14px 20px', 'border-radius:14px',
+            'padding:14px 42px 14px 20px', 'border-radius:14px',
             'font-size:14px', 'font-weight:600',
             'box-shadow:0 4px 20px rgba(37,99,235,0.35)',
             'z-index:9999', 'display:flex', 'align-items:center',
-            'gap:10px', 'opacity:1', 'transition:opacity 0.4s'
+            'gap:10px', 'cursor:pointer'
         ].join(';');
-        toast.innerHTML = '<span class="material-symbols-outlined"'
-            + ' style="font-size:20px">notification_add</span>'
-            + 'มี Ticket ใหม่ <strong style="margin-left:4px">'
-            + count + ' ใบ</strong>';
+        toast.innerHTML = '<span class="material-symbols-outlined" style="font-size:20px">notification_add</span>'
+            + 'มี Ticket ใหม่ <strong style="margin-left:4px">' + count + ' ใบ</strong>'
+            + '<button type="button" id="notifToastClose" title="ปิด" style="position:absolute;top:6px;right:8px;background:none;border:none;color:#fff;opacity:0.75;cursor:pointer;padding:2px;line-height:0;">'
+            + '<span class="material-symbols-outlined" style="font-size:16px;">close</span></button>';
+        toast.addEventListener('click', (e) => {
+            if (e.target.closest('#notifToastClose')) return;
+            toast.remove();
+            if (jumpId && typeof window.jumpToTicket === 'function') window.jumpToTicket(jumpId);
+        });
         document.body.appendChild(toast);
-        setTimeout(() => { toast.style.opacity = '0'; }, 3600);
-        setTimeout(() => { if (toast.parentNode) toast.remove(); }, 4000);
+        toast.querySelector('#notifToastClose').addEventListener('click', (e) => {
+            e.stopPropagation();
+            toast.remove();
+        });
+        // ไม่ auto-dismiss แล้ว — อยู่จนกว่าจะกดปิดหรือกดดู ticket
     }
+    window.showNotificationToast = showNotificationToast;
 
     // Store previous ticket IDs to detect new ones
     let previousNewTicketIds = new Set();
@@ -579,7 +591,7 @@
                 const prevIds = new Set(JSON.parse(prevIdsRaw));
                 const newOnes = [...currentNewIds].filter(id => !prevIds.has(id));
                 if (newOnes.length > 0) {
-                    showNotificationToast(newOnes.length);
+                    showNotificationToast(newOnes);
                     const notifToggle = document.getElementById('toggleNotifications');
                     if (notifToggle && notifToggle.checked) {
                         playNotificationSound();
@@ -756,14 +768,25 @@
 
         if (!isDataPresent || total === 0) {
             cvs._pie3dSlices = null;
+            var isDarkEmpty = document.documentElement.getAttribute('data-theme') === 'dark';
             c.save();
-            c.shadowColor = 'rgba(80,80,180,0.25)'; c.shadowBlur = 22; c.shadowOffsetY = 10;
+            c.shadowColor = isDarkEmpty ? 'rgba(80,80,180,0.25)' : 'rgba(100,116,139,0.25)';
+            c.shadowBlur = 20; c.shadowOffsetY = 8;
             c.beginPath(); c.arc(cx, cy, r, 0, Math.PI * 2);
-            c.fillStyle = 'rgba(148,163,184,0.22)'; c.fill();
+            c.fillStyle = isDarkEmpty ? 'rgba(100,116,139,0.35)' : 'rgba(226,232,240,0.9)';
+            c.fill();
             c.restore();
             c.save();
-            c.strokeStyle = 'rgba(148,163,184,0.4)'; c.lineWidth = 2;
+            c.strokeStyle = isDarkEmpty ? 'rgba(148,163,184,0.55)' : 'rgba(148,163,184,0.9)';
+            c.lineWidth = 2.5;
+            c.setLineDash([6, 5]);
             c.beginPath(); c.arc(cx, cy, r, 0, Math.PI * 2); c.stroke();
+            c.restore();
+            c.save();
+            c.fillStyle = isDarkEmpty ? 'rgba(203,213,225,0.9)' : 'rgba(100,116,139,0.9)';
+            c.font = '600 13px sans-serif';
+            c.textAlign = 'center'; c.textBaseline = 'middle';
+            c.fillText('ไม่มีข้อมูล', cx, cy);
             c.restore();
             return;
         }
