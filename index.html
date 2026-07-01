@@ -1066,19 +1066,23 @@ input:checked + .slider:before { transform: translateX(20px); }
 
     document.addEventListener('DOMContentLoaded', function () {
         initPcTab();
+    });
 
-        // กด stat-card บน PC → สลับไป Tickets tab ก่อน
-        document.querySelectorAll('.stat-card').forEach(function (card) {
-            card.addEventListener('click', function () {
-                if (window.innerWidth > 1024 && typeof window.setPcTab === 'function') {
+    // wrap _enterSplitMode หลัง app.js (defer) โหลดเสร็จ
+    window.addEventListener('load', function () {
+        var origSplit = window._enterSplitMode;
+        if (origSplit) {
+            window._enterSplitMode = function (status, opts) {
+                if (window.innerWidth > 1024) {
                     document.body.setAttribute('data-pctab', 'tickets');
+                    sessionStorage.setItem('sysnect_pctab', 'tickets');
                     document.querySelectorAll('#pcTabbar .pctab-btn').forEach(function (btn) {
                         btn.classList.toggle('active', btn.getAttribute('data-pctab') === 'tickets');
                     });
-                    sessionStorage.setItem('sysnect_pctab', 'tickets');
                 }
-            }, true); // capture = fires ก่อน onclick
-        });
+                return origSplit(status, opts);
+            };
+        }
     });
 })();
 </script>
