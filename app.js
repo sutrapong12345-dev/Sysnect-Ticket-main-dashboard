@@ -753,6 +753,18 @@
         c.clearRect(0, 0, W, H);
         cvs._pie3dData = { labels: labels, values: values, colors: colors, isDataPresent: isDataPresent };
 
+        // ไอคอนใช้ฟอนต์ Material Symbols — ถ้ายังโหลดไม่เสร็จตอนวาดครั้งแรก ให้วาดซ้ำอีกทีตอนฟอนต์พร้อม กันโชว์เป็นตัวหนังสือดิบ
+        if (document.fonts && !document.fonts.check('16px "Material Symbols Outlined"') && !cvs._fontsWaiting) {
+            cvs._fontsWaiting = true;
+            document.fonts.ready.then(function () {
+                cvs._fontsWaiting = false;
+                if (cvs._pie3dData) {
+                    var d = cvs._pie3dData;
+                    draw3DPie(cvs, d.labels, d.values, d.colors, d.isDataPresent);
+                }
+            });
+        }
+
         var total = 0;
         if (isDataPresent) { for (var vi = 0; vi < values.length; vi++) total += values[vi]; }
 
@@ -861,6 +873,24 @@
             c.lineWidth = 2;
             c.beginPath(); c.arc(cx, cy, sl.barR, sl.s, sl.e);
             c.stroke();
+            c.restore();
+        });
+
+        // ไอคอนกลางแต่ละกลีบ (ตำแหน่งคงที่กลาง track ไม่ขึ้นกับความยาวแท่ง) — ใช้ฟอนต์ Material Symbols ที่มีอยู่แล้วในเว็บ
+        var ICON_MAP = { 'NEW': 'fiber_new', 'ASSIGNED': 'assignment_ind', 'PENDING': 'hourglass_top', 'SOLVED': 'task_alt', 'CLOSED': 'lock' };
+        var iconSize = Math.max(14, Math.round(innerR * 0.42));
+        var iconR = (innerR + outerMaxR) / 2;
+        slices.forEach(function (sl) {
+            var iconName = ICON_MAP[sl.label];
+            if (!iconName) return;
+            var ix = cx + Math.cos(sl.mid) * iconR;
+            var iy = cy + Math.sin(sl.mid) * iconR;
+            c.save();
+            c.font = iconSize + 'px "Material Symbols Outlined"';
+            c.textAlign = 'center'; c.textBaseline = 'middle';
+            c.fillStyle = 'rgba(255,255,255,0.92)';
+            c.shadowColor = 'rgba(0,0,0,0.35)'; c.shadowBlur = 4;
+            c.fillText(iconName, ix, iy);
             c.restore();
         });
 
@@ -1488,11 +1518,9 @@
         }
         // -----------------------------------------
 
-        // ขยาย slice เล็กให้มองเห็นได้ (min 2.5% ของ total) — legend ยังใช้ค่าจริง
-        const MIN_ARC = hasData ? totalTickets * 0.025 : 0;
-        const chartData = hasData
-            ? data.values.map(v => v > 0 ? Math.max(v, MIN_ARC) : 0)
-            : [1];
+        // radial chart ใช้ความยาวแท่งตามค่าจริงอยู่แล้ว (ไม่ใช่มุม) จึงไม่ต้องยัดค่าขั้นต่ำเทียม
+        // เหมือน pie มุมสัดส่วนแบบเดิม — ค่าที่ส่งเข้า draw3DPie ต้องเป็นค่าจริงเป๊ะ (ใช้รวมเป็นยอดรวมกลางวงด้วย)
+        const chartData = hasData ? data.values.slice() : [1];
         const chartColors = hasData ? ['#3b82f6', '#f59e0b', '#ef4444', '#10b981', '#818cf8'] : ['#e2e8f0'];
         const chartLabels = hasData ? data.labels.map(l => l.toUpperCase()) : ['NO DATA'];
 
@@ -2666,7 +2694,14 @@
     // ─── Sidebar Left: Status Bar Chart (vertical cylinders) ────
     function renderStatusBarChart(values, labels) {
         const canvas = document.getElementById('statusBarCanvas');
-        if (!canvas || typeof Chart === 'undefined') return;
+        if (!canvas) return;
+
+        // เลิกใช้ Chart.js log-scale (ทำให้แท่งดูสูงใกล้เคียงกันหมด ไม่สื่อสัดส่วนจริง) — วาดเอง
+        // แบบ linear ให้ความสูงสอดคล้องกับค่าจริง + สไตล์ glow เดียวกับ radial chart ภาพรวม
+        if (window._statusBarChart) {
+            window._statusBarChart.destroy();
+            window._statusBarChart = null;
+        }
 
         const statusOrder = labels || ['new','assigned','pending','solved','closed'];
         const statLabels = statusOrder.map(l => l.toUpperCase());
@@ -2674,81 +2709,110 @@
         const _breakdown = mockDataRaw || {};
         const statValues = values || statusOrder.map(s => (_breakdown[String(s).toLowerCase()] || []).length);
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        const colorMap = {
-            'NEW': isDark ? '#60a5fa' : '#3b82f6',
-            'ASSIGNED': isDark ? '#fbbf24' : '#f59e0b',
-            'PENDING': isDark ? '#f87171' : '#ef4444',
-            'SOLVED': isDark ? '#34d399' : '#10b981',
-            'CLOSED': isDark ? '#94a3b8' : '#64748b'
-        };
+        // สีเดียวกับ radial chart ภาพรวม (CLOSED = อินดิโก้ #818cf8) ให้สอดคล้องกันทั้งแดชบอร์ด
+        const colorMap = { 'NEW': '#3b82f6', 'ASSIGNED': '#f59e0b', 'PENDING': '#ef4444', 'SOLVED': '#10b981', 'CLOSED': '#818cf8' };
         const shortMap = { 'NEW': 'New', 'ASSIGNED': 'Assgn', 'PENDING': 'Pend', 'SOLVED': 'Solv', 'CLOSED': 'Clsd' };
         const colors = statLabels.map(l => colorMap[l] || '#6366f1');
-        const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
-        const tickColor = isDark ? '#94a3b8' : '#64748b';
 
-        // log scale ต้องการค่า > 0 — แปลง 0 → null (Chart.js จะข้ามแท่งนั้น)
-        const safeValues = statValues.map(v => v > 0 ? v : null);
-
-        if (window._statusBarChart) {
-            window._statusBarChart.destroy();
-            window._statusBarChart = null;
+        function dimCol(col, f) {
+            const n = parseInt(col.slice(1), 16);
+            return 'rgb(' + Math.min(255, Math.round(((n >> 16) & 255) * f)) + ',' +
+                Math.min(255, Math.round(((n >> 8) & 255) * f)) + ',' +
+                Math.min(255, Math.round((n & 255) * f)) + ')';
+        }
+        function toRgba(col, alpha) {
+            const n = parseInt(col.slice(1), 16);
+            return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + alpha + ')';
+        }
+        function roundRectTop(ctx, x, y, w, h, rad) {
+            var rr = Math.min(rad, w / 2, Math.max(h, 0.01));
+            ctx.beginPath();
+            ctx.moveTo(x, y + h);
+            ctx.lineTo(x, y + rr);
+            ctx.arcTo(x, y, x + rr, y, rr);
+            ctx.lineTo(x + w - rr, y);
+            ctx.arcTo(x + w, y, x + w, y + rr, rr);
+            ctx.lineTo(x + w, y + h);
+            ctx.closePath();
         }
 
-        window._statusBarChart = new Chart(canvas, {
-            type: 'bar',
-            data: {
-                labels: statLabels.map(l => shortMap[l] || l),
-                datasets: [{
-                    data: safeValues,
-                    backgroundColor: colors.map(c => c + 'cc'),
-                    borderColor: colors,
-                    borderWidth: 2,
-                    borderRadius: { topLeft: 7, topRight: 7 },
-                    borderSkipped: false,
-                    minBarLength: 10,
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                animation: { duration: 700, easing: 'easeInOutQuart' },
-                layout: { padding: { top: 24, right: 4, left: 4, bottom: 0 } },
-                plugins: {
-                    legend: { display: false },
-                    datalabels: {
-                        anchor: 'end',
-                        align: 'top',
-                        offset: 2,
-                        color: (ctx) => colors[ctx.dataIndex] || (isDark ? '#a78bfa' : '#6366f1'),
-                        font: { weight: '800', size: 11, family: 'JetBrains Mono' },
-                        formatter: (val) => val != null ? val : '0',
-                        clamp: true,
-                        display: true
-                    },
-                    tooltip: {
-                        callbacks: {
-                            title: (items) => statLabels[items[0].dataIndex] || '',
-                            label: ctx => ` ${statValues[ctx.dataIndex]} ใบ`
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        type: 'logarithmic',
-                        display: false,
-                        min: 0.5,
-                    },
-                    x: {
-                        grid: { display: false },
-                        border: { display: false },
-                        ticks: {
-                            color: tickColor,
-                            font: { size: 9.5, weight: '600' }
-                        }
-                    }
-                }
+        const c = canvas.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+        const W = canvas.offsetWidth || 300;
+        const H = canvas.offsetHeight || 150;
+        canvas.width = W * dpr;
+        canvas.height = H * dpr;
+        c.scale(dpr, dpr);
+        c.clearRect(0, 0, W, H);
+
+        const nBars = statValues.length;
+        let maxVal = 1;
+        for (let mi = 0; mi < nBars; mi++) { if (statValues[mi] > maxVal) maxVal = statValues[mi]; }
+
+        const padTop = 22, padBottom = 20, padSide = 8, gap = 12;
+        const plotH = H - padTop - padBottom;
+        const barW = (W - padSide * 2 - gap * (nBars - 1)) / nBars;
+        const baseY = H - padBottom;
+
+        for (let i = 0; i < nBars; i++) {
+            const val = statValues[i] || 0;
+            const x = padSide + i * (barW + gap);
+            const radius = Math.min(7, barW / 2);
+            const col = colors[i];
+
+            // track — เต็มความสูง สีจางบอกขอบเขตสูงสุด
+            c.save();
+            roundRectTop(c, x, padTop, barW, plotH, radius);
+            c.fillStyle = toRgba(col, isDark ? 0.08 : 0.07);
+            c.fill();
+            c.restore();
+
+            if (val > 0) {
+                const barH = Math.max((val / maxVal) * plotH, 6);
+                const y = baseY - barH;
+                c.save();
+                c.shadowColor = col; c.shadowBlur = 12;
+                roundRectTop(c, x, y, barW, barH, radius);
+                const g = c.createLinearGradient(x, y, x, baseY);
+                g.addColorStop(0, dimCol(col, 1.25));
+                g.addColorStop(1, dimCol(col, 0.75));
+                c.fillStyle = g;
+                c.fill();
+                c.restore();
+
+                c.save();
+                c.strokeStyle = dimCol(col, 1.6);
+                c.lineWidth = 1.6;
+                c.beginPath();
+                c.moveTo(x + radius, y);
+                c.lineTo(x + barW - radius, y);
+                c.stroke();
+                c.restore();
+
+                c.save();
+                c.fillStyle = col;
+                c.font = '800 11px "JetBrains Mono", monospace';
+                c.textAlign = 'center';
+                c.fillText(String(val), x + barW / 2, Math.max(y - 8, padTop - 6));
+                c.restore();
+            } else {
+                c.save();
+                c.fillStyle = toRgba(col, 0.4);
+                c.fillRect(x, baseY - 2, barW, 2);
+                c.fillStyle = isDark ? 'rgba(148,163,184,0.7)' : 'rgba(100,116,139,0.7)';
+                c.font = '700 11px "JetBrains Mono", monospace';
+                c.textAlign = 'center';
+                c.fillText('0', x + barW / 2, padTop - 6);
+                c.restore();
             }
-        });
+
+            c.save();
+            c.fillStyle = isDark ? '#94a3b8' : '#64748b';
+            c.font = '600 9.5px sans-serif';
+            c.textAlign = 'center';
+            c.fillText(shortMap[statLabels[i]] || statLabels[i], x + barW / 2, H - 7);
+            c.restore();
+        }
     }
 
     // ─── Sidebar Tab Switcher ─────────────────────────────────

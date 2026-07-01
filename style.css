@@ -935,6 +935,15 @@
             justify-content: center;
             align-items: center;
         }
+        /* สำคัญ: ต้อง pin ขนาด CSS ของ canvas ให้ตายตัวตาม container เสมอ
+           ไม่งั้นตอนสคริปต์ตั้งค่า cvs.width/height (สำหรับ devicePixelRatio) จะดันขนาด
+           แสดงผลของ canvas เองให้เปลี่ยนตามไปด้วย เกิด resize loop ไม่รู้จบ
+           (พังเฉพาะจอมือถือจริงที่ devicePixelRatio > 1 — จอคอมปกติ dpr=1 เลยไม่เจอบั๊กนี้) */
+        #ticketChart, #statusBarCanvas, #trendLineCanvas {
+            width: 100% !important;
+            height: 100% !important;
+            display: block;
+        }
 
         /* ตั้งค่าปุ่มวงกลมให้อยู่ตรงกลางเป๊ะๆ (ตรงกลางรูกราฟพอดี 100% เสมอ) */
         .center-toggle-btn {
@@ -3246,6 +3255,7 @@
     body[data-pctab="project"] #sidebarTabTeam      { display: block !important; }
     body[data-pctab="project"] #sidebarTabAnalytics  { display: none !important; }
     body[data-pctab="project"] #assigneeSectionHead,
+    body[data-pctab="project"] #assigneeEntityHead,
     body[data-pctab="project"] #assigneeSidebarList  { display: none !important; }
     body[data-pctab="project"] #projSectionHead      { display: flex !important; }
 
@@ -3253,6 +3263,7 @@
     body[data-pctab="team"] #sidebarTabTeam      { display: block !important; }
     body[data-pctab="team"] #sidebarTabAnalytics  { display: none !important; }
     body[data-pctab="team"] #projSectionHead,
+    body[data-pctab="team"] #projEntityHead,
     body[data-pctab="team"] #projectSidebarList   { display: none !important; }
     body[data-pctab="team"] #assigneeSectionHead  { display: flex !important; }
 
