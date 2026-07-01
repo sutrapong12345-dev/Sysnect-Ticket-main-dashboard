@@ -726,6 +726,9 @@
     let currentStatus = null;
     const GLPI_BASE_URL = 'https://itservicedesk.sysnect.co.th';
 
+    // สีตามสถานะ ใช้ร่วมกันทุกจุดที่ render ticket (list, ค้นหา, accordion โครงการ/ทีมงาน)
+    const STATUS_COLOR_MAP = { 'new': '#3b82f6', 'assigned': '#f59e0b', 'pending': '#ef4444', 'solved': '#10b981', 'closed': '#64748b' };
+
     // ====== 3D Pie Chart — Grand Edition ======
     function draw3DPie(cvs, labels, values, colors, isDataPresent) {
         var c = cvs.getContext('2d');
@@ -1752,7 +1755,7 @@
                         const _closeDisplay = formatDateTime(ticket.date_close||'-');
 
                         htmlString += `
-                            <div class="ticket-item" style="animation-delay: ${delay}s; border-left-color: ${ticket._statusColor};">
+                            <div class="ticket-item" data-ticket-id="${escapeHtml(ticket.id)}" style="animation-delay: ${delay}s; border-left-color: ${ticket._statusColor};">
                                 <div class="ticket-checkbox-container">
                                     <input type="checkbox" class="ticket-checkbox" value="${escapeHtml(ticket.id)}" onchange="toggleSelection('${escapeHtml(ticket.id)}')">
                                 </div>
@@ -1933,7 +1936,7 @@
                             const _closeDisplay2 = formatDateTime(ticket.date_close||'-');
 
                             htmlString += `
-                                <div class="ticket-item" style="animation-delay: ${delay}s; border-left-color: ${ticket._statusColor};">
+                                <div class="ticket-item" data-ticket-id="${escapeHtml(ticket.id)}" style="animation-delay: ${delay}s; border-left-color: ${ticket._statusColor};">
                                     <div class="ticket-checkbox-container">
                                         <input type="checkbox" class="ticket-checkbox" value="${escapeHtml(ticket.id)}" onchange="toggleSelection('${escapeHtml(ticket.id)}')">
                                     </div>
@@ -2715,65 +2718,180 @@
         }
     };
 
-    // ─── Sidebar Left: Assignee List ─────────────────────────
+    // ─── โครงการ & ทีมงาน: Expandable Accordion ─────────────────
     window._activeAssigneeFilter = null;
+    window._entityExpanded = window._entityExpanded || { project: null, team: null };
 
-    function renderAssigneeSidebar() {
-        const el = document.getElementById('assigneeSidebarList');
-        const badge = document.getElementById('assigneeSidebarCount');
-        if (!el) return;
-
+    function buildEntityGroups(kind) {
         const breakdown = mockDataRaw || {};
-        const assigneeMap = {};
-
+        const groups = {};
         Object.keys(breakdown).forEach(status => {
             (breakdown[status] || []).forEach(ticket => {
-                const name = ticket.assignee && ticket.assignee !== '-' ? ticket.assignee : null;
-                if (!name) return;
-                if (!assigneeMap[name]) assigneeMap[name] = { total: 0, done: 0, pending: 0 };
-                assigneeMap[name].total++;
-                if (status === 'solved' || status === 'closed') assigneeMap[name].done++;
-                else assigneeMap[name].pending++;
+                let name;
+                if (kind === 'team') {
+                    name = ticket.assignee && ticket.assignee !== '-' ? ticket.assignee : null;
+                    if (!name) return;
+                } else {
+                    name = ticket.project || 'ไม่ระบุ';
+                }
+                if (!groups[name]) groups[name] = [];
+                groups[name].push({ ...ticket, _statusKey: status });
             });
         });
 
-        const entries = Object.entries(assigneeMap).sort((a, b) => b[1].total - a[1].total);
+        return Object.entries(groups).map(([name, tickets]) => {
+            const active = tickets.filter(t => t._statusKey === 'new' || t._statusKey === 'assigned' || t._statusKey === 'pending').length;
+            const doneTickets = tickets.filter(t => t._statusKey === 'solved' || t._statusKey === 'closed');
+            let latestClosed = null;
+            doneTickets.forEach(t => {
+                if (!t.date_close || t.date_close === '-') return;
+                const d = new Date(String(t.date_close).replace('T', ' '));
+                if (isNaN(d.getTime())) return;
+                if (!latestClosed || d > latestClosed.date) latestClosed = { date: d, display: formatDateTime(t.date_close) };
+            });
+            return {
+                name, tickets,
+                total: tickets.length,
+                active,
+                done: doneTickets.length,
+                progressPct: tickets.length ? Math.round(doneTickets.length / tickets.length * 100) : 0,
+                latestClosed: latestClosed ? latestClosed.display : null,
+            };
+        }).sort((a, b) => b.total - a.total);
+    }
+
+    function renderEntityTickets(tickets) {
+        if (!tickets || tickets.length === 0) {
+            return '<div class="entity-tickets"><div style="padding:10px 4px;font-size:12px;color:var(--text-sub,#94a3b8);">ไม่มี ticket</div></div>';
+        }
+        const sorted = [...tickets].sort((a, b) => {
+            const da = new Date(String(a.date_open || 0).replace('T', ' ')).getTime() || 0;
+            const db = new Date(String(b.date_open || 0).replace('T', ' ')).getTime() || 0;
+            return db - da;
+        });
+        let html = '<div class="entity-tickets">';
+        sorted.forEach(t => {
+            const shortId = extractShortId(t);
+            const color = STATUS_COLOR_MAP[t._statusKey] || '#6366f1';
+            const pRaw = String(t.priority || 'low').toLowerCase().trim();
+            const isHigh = ['critical', 'เร่งด่วนที่สุด', 'สูงมาก', '6', '5', 'high', 'สูง', '4'].includes(pRaw);
+            const isMed = ['medium', 'ปานกลาง', '3'].includes(pRaw);
+            const pColor = isHigh ? '#ef4444' : isMed ? '#f59e0b' : '#9ca3af';
+            const isDone = t._statusKey === 'solved' || t._statusKey === 'closed';
+            const dateLabel = isDone ? `ปิดเมื่อ ${formatDateTime(t.date_close || t.date_open)}` : `เปิดเมื่อ ${formatDateTime(t.date_open)}`;
+            html += `
+                <div class="entity-ticket-card">
+                    <div class="entity-ticket-top">
+                        <button type="button" class="entity-ticket-id" onclick="jumpToTicket('${escapeHtml(String(t.id))}')">#${escapeHtml(shortId)}</button>
+                        <span class="status-pill" style="color:${color};background:${color}18;border:1px solid ${color}40;">${(t._statusKey || '').toUpperCase()}</span>
+                    </div>
+                    ${t.name ? `<div class="entity-ticket-title">${escapeHtml(t.name)}</div>` : ''}
+                    <div class="entity-ticket-meta">
+                        <span style="color:${pColor};font-weight:700;">● ${escapeHtml(t.priority || '-')}</span>
+                        <span>${dateLabel}</span>
+                    </div>
+                </div>`;
+        });
+        html += '</div>';
+        return html;
+    }
+
+    function renderEntityAccordion(kind) {
+        const el = document.getElementById(kind === 'team' ? 'assigneeSidebarList' : 'projectSidebarList');
+        const badge = document.getElementById(kind === 'team' ? 'assigneeSidebarCount' : 'projSidebarCount');
+        if (!el) return;
+
+        if (kind === 'project') {
+            // สถานะบาร์ชาร์ตด้านบน sidebar — นับจากข้อมูลดิบทั้งหมด ไม่ผูกกับ filter กลางจอ
+            const breakdown = mockDataRaw || {};
+            const statusOrder = ['new', 'assigned', 'pending', 'solved', 'closed'];
+            renderStatusBarChart(statusOrder.map(s => (breakdown[s] || []).length), statusOrder);
+        }
+
+        const entries = buildEntityGroups(kind);
         if (badge) badge.textContent = entries.length;
 
         if (entries.length === 0) {
-            el.innerHTML = '<div style="text-align:center;padding:20px 10px;color:var(--text-sub,#94a3b8);font-size:12px;"><span class="material-symbols-outlined" style="font-size:28px;display:block;margin-bottom:6px;opacity:0.35;">group</span>ไม่มีข้อมูล</div>';
+            const emptyIcon = kind === 'team' ? 'group' : 'folder_open';
+            el.innerHTML = `<div style="text-align:center;padding:20px 10px;color:var(--text-sub,#94a3b8);font-size:12px;"><span class="material-symbols-outlined" style="font-size:28px;display:block;margin-bottom:6px;opacity:0.35;">${emptyIcon}</span>ไม่มีข้อมูล</div>`;
             return;
         }
 
+        const expandedId = window._entityExpanded[kind];
         let html = '';
-        entries.forEach(([name, stats]) => {
-            const donePct = stats.total > 0 ? Math.round(stats.done / stats.total * 100) : 0;
-            const isActive = window._activeAssigneeFilter === name;
-            const safeNameAttr = escapeHtml(name).replace(/'/g, '&#39;');
+        entries.forEach((entity, idx) => {
+            const rowId = `${kind}-${idx}`;
+            const isOpen = expandedId === rowId;
+            const avatarLetter = escapeHtml((entity.name || '?').trim().charAt(0) || '?');
+            const avatarHtml = kind === 'team' ? avatarLetter : '<span class="material-symbols-outlined" style="font-size:16px;">folder_open</span>';
+
             html += `
-            <div class="proj-row${isActive ? ' proj-row-active' : ''}"
-                 onclick="filterByAssignee('${safeNameAttr}')"
-                 title="${safeNameAttr} — รับงาน ${stats.total} ใบ · เสร็จ ${stats.done} · ค้าง ${stats.pending}">
-                <span class="proj-name">${escapeHtml(name)}</span>
-                <div class="proj-bar-wrap">
-                    <div class="proj-bar-fill" data-pct="${donePct}"
-                         style="width:0%;background:${donePct === 100 ? '#10b981' : donePct >= 50 ? '#6366f1' : '#f59e0b'};transition:width 0.6s cubic-bezier(.4,0,.2,1);">
+            <div class="entity-row${isOpen ? ' entity-row-open' : ''}">
+                <div class="entity-row-main" onclick="toggleEntityRow('${kind}','${rowId}')" title="${escapeHtml(entity.name)} — ทั้งหมด ${entity.total} ใบ · ยังไม่เสร็จ ${entity.active} · เสร็จ ${entity.done}">
+                    <div class="entity-name-cell">
+                        <div class="entity-avatar${kind === 'team' ? ' entity-avatar-round' : ''}">${avatarHtml}</div>
+                        <div class="entity-info">
+                            <div class="entity-name">${escapeHtml(entity.name)}</div>
+                            <div class="entity-progress-row">
+                                <div class="entity-progress-wrap"><div class="entity-progress-fill" style="width:${entity.progressPct}%;"></div></div>
+                                <span class="entity-progress-pct">${entity.progressPct}% เสร็จ</span>
+                            </div>
+                        </div>
                     </div>
+                    <div class="entity-stat"><span class="entity-stat-value">${entity.total}</span><span class="entity-stat-label">ทั้งหมด</span></div>
+                    <div class="entity-stat"><span class="entity-stat-value entity-stat-active">${entity.active}</span><span class="entity-stat-label">ยังไม่เสร็จ</span></div>
+                    <div class="entity-stat entity-stat-date">${entity.latestClosed ? `<span class="entity-stat-label">เสร็จล่าสุด</span><span class="entity-stat-value-sm">${entity.latestClosed}</span>` : `<span class="entity-stat-label" style="opacity:.6;">ยังไม่มีงานเสร็จ</span>`}</div>
+                    <div class="entity-chevron"><span class="material-symbols-outlined">${isOpen ? 'expand_less' : 'expand_more'}</span></div>
                 </div>
-                <span class="proj-count" style="font-size:10px;white-space:nowrap;">${stats.done}/${stats.total}</span>
+                ${isOpen ? renderEntityTickets(entity.tickets) : ''}
             </div>`;
         });
         el.innerHTML = html;
-        requestAnimationFrame(() => requestAnimationFrame(() => {
-            el.querySelectorAll('.proj-bar-fill').forEach(bar => {
-                bar.style.width = bar.dataset.pct + '%';
-            });
-        }));
     }
+
+    window.toggleEntityRow = function(kind, rowId) {
+        window._entityExpanded[kind] = (window._entityExpanded[kind] === rowId) ? null : rowId;
+        renderEntityAccordion(kind);
+    };
+
+    window.jumpToTicket = function(ticketId) {
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput && searchInput.value) searchInput.value = '';
+
+        // เคลียร์ filter วันที่/priority/โครงการทั้งหมดก่อน กัน ticket เป้าหมายหลุดขอบเขต filter ปัจจุบัน
+        document.getElementById('btnClearDateRange')?.click();
+
+        if (typeof window._enterSplitMode === 'function') window._enterSplitMode('ALL');
+        if (window.innerWidth > 1024 && typeof window.setPcTab === 'function') {
+            window.setPcTab('tickets');
+        } else if (typeof window.setMobileTab === 'function' && document.body.classList.contains('mtab-on')) {
+            window.setMobileTab('tickets', false);
+        }
+
+        let attempts = 0;
+        const poll = setInterval(() => {
+            attempts++;
+            const nodes = document.querySelectorAll('#ticketContainer .ticket-item[data-ticket-id]');
+            let target = null;
+            for (const node of nodes) {
+                if (node.dataset.ticketId === String(ticketId)) { target = node; break; }
+            }
+            if (target) {
+                clearInterval(poll);
+                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                target.classList.add('ticket-item-highlight');
+                setTimeout(() => target.classList.remove('ticket-item-highlight'), 2500);
+            } else if (attempts >= 30) {
+                clearInterval(poll);
+            }
+        }, 100);
+    };
+
+    function renderAssigneeSidebar() { renderEntityAccordion('team'); }
+    function renderProjectSidebar() { renderEntityAccordion('project'); }
 
     window.filterByAssignee = function(name) {
         window._activeAssigneeFilter = (window._activeAssigneeFilter === name) ? null : name;
-        renderAssigneeSidebar();
         if (window._activeAssigneeFilter && !window.currentStatus) {
             document.querySelector('.status-btn[data-status="all"]')?.click();
         }
@@ -2781,55 +2899,6 @@
             renderTicketList(window.currentStatus);
         }
     };
-
-    // ─── Sidebar Left: Project List (display only) ────────────
-    function renderProjectSidebar() {
-        const el = document.getElementById('projectSidebarList');
-        const badge = document.getElementById('projSidebarCount');
-        if (!el) return;
-
-        // Use ALL raw data — independent of center panel filters
-        const breakdown = mockDataRaw || {};
-        const statusOrder = ['new', 'assigned', 'pending', 'solved', 'closed'];
-        const rawValues = statusOrder.map(s => (breakdown[s] || []).length);
-
-        const projMap = {};
-        Object.keys(breakdown).forEach(status => {
-            (breakdown[status] || []).forEach(ticket => {
-                const proj = ticket.project || 'ไม่ระบุ';
-                projMap[proj] = (projMap[proj] || 0) + 1;
-            });
-        });
-
-        const entries = Object.entries(projMap).sort((a, b) => b[1] - a[1]);
-        if (badge) badge.textContent = entries.length;
-
-        // Render status bar chart at top of left sidebar (raw counts, not filtered)
-        renderStatusBarChart(rawValues, statusOrder);
-
-        if (entries.length === 0) {
-            el.innerHTML = '<div style="text-align:center;padding:20px 10px;color:var(--text-sub,#94a3b8);font-size:12px;"><span class="material-symbols-outlined" style="font-size:28px;display:block;margin-bottom:6px;opacity:0.35;">folder_open</span>ไม่มีข้อมูล</div>';
-            return;
-        }
-
-        const maxCount = entries[0][1];
-        let html = '';
-        entries.forEach(([name, count]) => {
-            const pct = (count / maxCount * 100).toFixed(1);
-            html += `
-            <div class="proj-row" title="${escapeHtml(name)} — ${count} ใบ">
-                <span class="proj-name">${escapeHtml(name)}</span>
-                <div class="proj-bar-wrap"><div class="proj-bar-fill" data-pct="${pct}" style="width:0%"></div></div>
-                <span class="proj-count">${count}</span>
-            </div>`;
-        });
-        el.innerHTML = html;
-        requestAnimationFrame(() => requestAnimationFrame(() => {
-            el.querySelectorAll('.proj-bar-fill').forEach(bar => {
-                bar.style.width = bar.dataset.pct + '%';
-            });
-        }));
-    }
 
     window.filterByProject = function(name) {
         const sel = document.getElementById('projectFilter');
@@ -2844,8 +2913,6 @@
             if (customSel) customSel.textContent = name;
         }
         sel.dispatchEvent(new Event('change'));
-        renderProjectSidebar();
-        renderAssigneeSidebar();
     };
 
     // ─── Sidebar Right: Trend Line Chart ─────────────────

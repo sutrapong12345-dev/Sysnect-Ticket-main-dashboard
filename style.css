@@ -307,65 +307,113 @@
         .sidebar-body::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.2); border-radius: 4px; }
         [data-theme="dark"] .sidebar-body::-webkit-scrollbar-thumb { background: rgba(167,139,250,0.2); }
 
-        /* Project rows */
-        .proj-row {
-            display: flex;
-            align-items: center;
+        /* ─── โครงการ & ทีมงาน: Expandable Accordion ─── */
+        .entity-head-row {
+            display: grid;
+            grid-template-columns: 1.7fr 56px 72px 96px 22px;
             gap: 8px;
-            padding: 7px 8px;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: background 0.15s ease;
-            border: 1px solid transparent;
-        }
-        .proj-row:hover {
-            background: rgba(99,102,241,0.06);
-            border-color: rgba(99,102,241,0.15);
-        }
-        .proj-row.active {
-            background: rgba(99,102,241,0.1);
-            border-color: rgba(99,102,241,0.25);
-        }
-        [data-theme="dark"] .proj-row:hover { background: rgba(167,139,250,0.08); border-color: rgba(167,139,250,0.2); }
-        [data-theme="dark"] .proj-row.active { background: rgba(167,139,250,0.12); border-color: rgba(167,139,250,0.3); }
-        .proj-name {
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text-main, #1e293b);
-            width: 90px;
-            flex-shrink: 0;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        [data-theme="dark"] .proj-name { color: #cbd5e1; }
-        .proj-bar-wrap {
-            flex: 1;
-            height: 5px;
-            background: rgba(0,0,0,0.06);
-            border-radius: 999px;
-            overflow: hidden;
-            min-width: 0;
-        }
-        [data-theme="dark"] .proj-bar-wrap { background: rgba(255,255,255,0.08); }
-        .proj-bar-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #6366f1, #8b5cf6);
-            border-radius: 999px;
-            width: 0%;
-            transition: width 0.65s cubic-bezier(0.4,0,0.2,1);
-        }
-        [data-theme="dark"] .proj-bar-fill { background: linear-gradient(90deg, #a78bfa, #7c3aed); }
-        .proj-count {
-            font-size: 12px;
+            padding: 6px 10px;
+            font-size: 10.5px;
             font-weight: 700;
-            font-family: 'JetBrains Mono', monospace;
             color: var(--primary-color, #6366f1);
-            min-width: 22px;
-            text-align: right;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+        .entity-head-row span:nth-child(2),
+        .entity-head-row span:nth-child(3) { text-align: center; }
+        .entity-list { gap: 2px; }
+        .entity-row {
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .entity-row-open { background: rgba(99,102,241,0.05); }
+        [data-theme="dark"] .entity-row-open { background: rgba(167,139,250,0.06); }
+        .entity-row-main {
+            display: grid;
+            grid-template-columns: 1.7fr 56px 72px 96px 22px;
+            gap: 8px;
+            align-items: center;
+            padding: 9px 10px;
+            cursor: pointer;
+            border-radius: 12px;
+            transition: background 0.15s ease;
+        }
+        .entity-row-main:hover { background: rgba(99,102,241,0.06); }
+        [data-theme="dark"] .entity-row-main:hover { background: rgba(167,139,250,0.08); }
+        .entity-avatar {
+            width: 30px; height: 30px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf688);
+            color: #fff;
+            font-weight: 800;
+            font-size: 13px;
+            display: flex; align-items: center; justify-content: center;
             flex-shrink: 0;
         }
-        [data-theme="dark"] .proj-count { color: #a78bfa; }
+        .entity-avatar-round { border-radius: 50%; }
+        .entity-name-cell { display: flex; align-items: center; gap: 8px; min-width: 0; }
+        .entity-info { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 4px; }
+        .entity-name {
+            font-size: 12.5px;
+            font-weight: 700;
+            color: var(--text-main, #1e293b);
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        [data-theme="dark"] .entity-name { color: #e2e8f0; }
+        .entity-progress-row { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
+        .entity-progress-wrap {
+            flex: 1; height: 5px; border-radius: 999px; overflow: hidden;
+            background: rgba(0,0,0,0.06); min-width: 24px;
+        }
+        [data-theme="dark"] .entity-progress-wrap { background: rgba(255,255,255,0.08); }
+        .entity-progress-fill {
+            height: 100%; border-radius: 999px;
+            background: linear-gradient(90deg, #22c55e, #16a34a);
+            transition: width 0.5s cubic-bezier(.4,0,.2,1);
+        }
+        .entity-progress-pct { font-size: 10px; color: var(--text-sub, #64748b); white-space: nowrap; flex-shrink: 0; }
+        .entity-stat { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 1px; }
+        .entity-stat-value { font-size: 15px; font-weight: 800; font-family: 'JetBrains Mono', monospace; color: var(--text-main, #1e293b); }
+        [data-theme="dark"] .entity-stat-value { color: #e2e8f0; }
+        .entity-stat-active { color: #f59e0b; }
+        .entity-stat-label { font-size: 9px; color: var(--text-sub, #94a3b8); white-space: nowrap; }
+        .entity-stat-date { align-items: flex-start; text-align: left; }
+        .entity-stat-value-sm { font-size: 11.5px; font-weight: 700; color: #22c55e; white-space: nowrap; }
+        .entity-chevron { display: flex; align-items: center; justify-content: flex-end; color: var(--text-sub, #94a3b8); }
+        .entity-chevron .material-symbols-outlined { font-size: 18px; }
+
+        .entity-tickets {
+            padding: 4px 10px 10px;
+            display: flex; flex-direction: column; gap: 6px;
+        }
+        .entity-ticket-card {
+            background: var(--card-bg-solid, #fff);
+            border: 1px solid rgba(99,102,241,0.12);
+            border-radius: 10px;
+            padding: 8px 10px;
+        }
+        [data-theme="dark"] .entity-ticket-card { border-color: rgba(255,255,255,0.08); background: rgba(255,255,255,0.03); }
+        .entity-ticket-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+        .entity-ticket-id {
+            background: none; border: none; padding: 0; cursor: pointer;
+            color: var(--primary-color, #6366f1); font-weight: 700; font-size: 12.5px;
+            text-decoration: underline; text-underline-offset: 2px;
+        }
+        .status-pill { border-radius: 6px; padding: 2px 8px; font-size: 10.5px; font-weight: 700; white-space: nowrap; }
+        .entity-ticket-title { font-size: 12.5px; line-height: 1.4; color: var(--text-main, #334155); margin-bottom: 6px; }
+        [data-theme="dark"] .entity-ticket-title { color: #cbd5e1; }
+        .entity-ticket-meta { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-sub, #64748b); gap: 8px; }
+
+        /* ไฮไลต์ ticket ที่ถูกเด้งมาจาก accordion โครงการ/ทีมงาน */
+        @keyframes ticketJumpPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(99,102,241,0.55); }
+            50% { box-shadow: 0 0 0 8px rgba(99,102,241,0); }
+        }
+        .ticket-item-highlight {
+            animation: ticketJumpPulse 1.1s ease-out 2;
+            outline: 2px solid #6366f1;
+            outline-offset: 2px;
+        }
 
         /* ─── SIDEBAR RIGHT (Compact tickets) ─── */
         .sidebar-right {
@@ -2510,24 +2558,6 @@
     border-top-color: rgba(255,255,255,0.06);
 }
 
-/* Project rows — display only, no interaction */
-.proj-row {
-    cursor: default !important;
-}
-.proj-row:hover {
-    background: transparent !important;
-    border-color: transparent !important;
-    transform: none !important;
-}
-[data-theme="dark"] .proj-row:hover {
-    background: transparent !important;
-    border-color: transparent !important;
-}
-.proj-row.active {
-    background: transparent !important;
-    border-color: transparent !important;
-}
-
 /* ==============================================
    Sidebar Right — Period Selector + Line Chart
    ============================================== */
@@ -2735,7 +2765,6 @@
     .dashboard-wrapper.three-panel .left-panel    { width: 33.33%; }
     .dashboard-wrapper.three-panel .sidebar-right { width: calc(33.33% - 20px); }
     .sidebar-chart-area { height: 140px; }
-    .proj-name { width: 76px; }
 }
 
 /* ── Tablet landscape (≤1024px): stack vertically ── */
@@ -2781,8 +2810,6 @@
     .sidebar-chart-area { height: 180px; }
     .trend-chart-area   { height: 230px; }
     .trend-list { max-height: 180px; }
-    /* Project name wider when full width */
-    .proj-name { width: 110px; }
 }
 
 /* ── Mobile (≤640px) ── */
@@ -2796,8 +2823,6 @@
         font-size: 10px;
         padding: 6px 12px 4px;
     }
-    /* Project rows: full width */
-    .proj-name { width: 90px; }
     /* Period selector: pill row, wrap OK */
     .period-selector { gap: 4px; padding: 8px 10px; flex-wrap: wrap; }
     .period-btn {
@@ -2818,6 +2843,15 @@
     .stat-bar { padding: 6px 10px; gap: 6px; }
     .stat-card { min-width: 88px; padding: 8px 10px; }
     .stat-card .sc-value { font-size: 18px; }
+
+    /* โครงการ & ทีมงาน accordion: ตัดคอลัมน์ "เสร็จล่าสุด" ทิ้ง ประหยัดที่บนจอแคบ */
+    .entity-head-row,
+    .entity-row-main { grid-template-columns: 1.6fr 40px 56px 20px; }
+    .entity-head-row span:nth-child(4),
+    .entity-stat-date { display: none; }
+    .entity-name { max-width: 56%; font-size: 12px; }
+    .entity-avatar { width: 26px; height: 26px; font-size: 12px; }
+    .entity-stat-value { font-size: 13px; }
 }
 
 /* ── Small mobile (≤420px) ── */
@@ -2825,7 +2859,6 @@
     .sidebar-chart-area { height: 130px; }
     .trend-chart-area   { height: 200px; }
     .period-btn { font-size: 9.5px; padding: 5px 2px; }
-    .proj-name  { width: 74px; }
     /* Stat card even more compact */
     .stat-card  { min-width: 74px; padding: 6px 8px; }
     .stat-card .sc-value { font-size: 16px; }
@@ -3004,8 +3037,8 @@
         transition: color 0.2s, background 0.2s;
         -webkit-tap-highlight-color: transparent;
     }
-    .mtab-btn .material-symbols-outlined { font-size: 23px; }
-    .mtab-label { font-size: 10.5px; font-weight: 600; white-space: nowrap; }
+    .mtab-btn .material-symbols-outlined { font-size: 20px; }
+    .mtab-label { font-size: 9.5px; font-weight: 600; white-space: nowrap; }
     .mtab-btn.active { color: #4f46e5; background: rgba(99,102,241,0.10); }
     .mtab-btn:active { transform: scale(0.94); }
 
@@ -3035,6 +3068,30 @@
     body.mtab-on[data-mtab="status"] #dashboardWrapper > .sidebar-left { display: block !important; }
     /* แนวโน้ม: trend chart */
     body.mtab-on[data-mtab="trend"] #dashboardWrapper > .sidebar-right { display: block !important; }
+
+    /* โครงการ / ทีมงาน: sidebar-right เต็มจอ แสดงเฉพาะ section ที่ตรงกับแท็บ */
+    body.mtab-on[data-mtab="project"] #dashboardWrapper > .sidebar-right,
+    body.mtab-on[data-mtab="team"] #dashboardWrapper > .sidebar-right {
+        display: block !important;
+    }
+    body.mtab-on[data-mtab="project"] .sidebar-tabs,
+    body.mtab-on[data-mtab="team"] .sidebar-tabs { display: none !important; }
+    body.mtab-on[data-mtab="project"] #sidebarTabTeam,
+    body.mtab-on[data-mtab="team"] #sidebarTabTeam { display: block !important; }
+    body.mtab-on[data-mtab="project"] #sidebarTabAnalytics,
+    body.mtab-on[data-mtab="team"] #sidebarTabAnalytics { display: none !important; }
+    body.mtab-on[data-mtab="project"] .sidebar-body,
+    body.mtab-on[data-mtab="team"] .sidebar-body { max-height: none !important; }
+
+    body.mtab-on[data-mtab="project"] #assigneeSectionHead,
+    body.mtab-on[data-mtab="project"] #assigneeEntityHead,
+    body.mtab-on[data-mtab="project"] #assigneeSidebarList { display: none !important; }
+    body.mtab-on[data-mtab="project"] #projSectionHead { display: flex !important; }
+
+    body.mtab-on[data-mtab="team"] #projSectionHead,
+    body.mtab-on[data-mtab="team"] #projEntityHead,
+    body.mtab-on[data-mtab="team"] #projectSidebarList { display: none !important; }
+    body.mtab-on[data-mtab="team"] #assigneeSectionHead { display: flex !important; }
 
     /* ในโหมดแอป: ปุ่ม power กลางโดนัทไม่จำเป็น (นำทางด้วย tab แทน) แต่ยังกดดู ticket ได้ */
 }

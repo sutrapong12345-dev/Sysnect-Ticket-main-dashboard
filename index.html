@@ -186,7 +186,7 @@
     <!-- Flatpickr for Date Inputs -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <link rel="stylesheet" href="style.css?v=19">
+    <link rel="stylesheet" href="style.css?v=20">
 </head>
 <body>
 
@@ -449,7 +449,14 @@
                     <span>โครงการ</span>
                     <span class="sidebar-count-badge" id="projSidebarCount">0</span>
                 </div>
-                <div class="sidebar-body" id="projectSidebarList">
+                <div class="entity-head-row" id="projEntityHead">
+                    <span>โครงการ</span>
+                    <span>ทั้งหมด</span>
+                    <span>ยังไม่เสร็จ</span>
+                    <span>เสร็จล่าสุด</span>
+                    <span></span>
+                </div>
+                <div class="sidebar-body entity-list" id="projectSidebarList">
                     <div style="text-align:center;padding:20px 10px;color:var(--text-sub,#94a3b8);font-size:12px;">
                         <span class="material-symbols-outlined" style="font-size:28px;display:block;margin-bottom:6px;opacity:0.4;">folder_open</span>
                         กำลังโหลด...
@@ -460,7 +467,14 @@
                     <span>ทีมงาน</span>
                     <span class="sidebar-count-badge" id="assigneeSidebarCount">0</span>
                 </div>
-                <div class="sidebar-body" id="assigneeSidebarList">
+                <div class="entity-head-row" id="assigneeEntityHead">
+                    <span>ชื่อ</span>
+                    <span>ทั้งหมด</span>
+                    <span>ยังไม่เสร็จ</span>
+                    <span>เสร็จล่าสุด</span>
+                    <span></span>
+                </div>
+                <div class="sidebar-body entity-list" id="assigneeSidebarList">
                     <div style="text-align:center;padding:20px 10px;color:var(--text-sub,#94a3b8);font-size:12px;">
                         <span class="material-symbols-outlined" style="font-size:28px;display:block;margin-bottom:6px;opacity:0.4;">group</span>
                         กำลังโหลด...
@@ -968,6 +982,14 @@ input:checked + .slider:before { transform: translateX(20px); }
         <span class="material-symbols-outlined">confirmation_number</span>
         <span class="mtab-label">Tickets</span>
     </button>
+    <button class="mtab-btn" type="button" data-mtab-target="project">
+        <span class="material-symbols-outlined">folder_open</span>
+        <span class="mtab-label">โครงการ</span>
+    </button>
+    <button class="mtab-btn" type="button" data-mtab-target="team">
+        <span class="material-symbols-outlined">group</span>
+        <span class="mtab-label">ทีมงาน</span>
+    </button>
     <button class="mtab-btn" type="button" data-mtab-target="status">
         <span class="material-symbols-outlined">bar_chart</span>
         <span class="mtab-label">สถานะ</span>
@@ -1001,6 +1023,9 @@ input:checked + .slider:before { transform: translateX(20px); }
                 var isEmpty = !tc || tc.children.length === 0;
                 if (isEmpty && typeof window._enterSplitMode === 'function') window._enterSplitMode('ALL');
             }
+            if ((tab === 'project' || tab === 'team') && typeof window.switchSidebarTab === 'function') {
+                window.switchSidebarTab('team');
+            }
             window.scrollTo({ top: 0, behavior: 'auto' });
             // ให้ Chart.js ในแท็บที่เพิ่งโชว์ปรับขนาดให้พอดี container
             setTimeout(function () { window.dispatchEvent(new Event('resize')); }, 60);
@@ -1015,7 +1040,7 @@ input:checked + .slider:before { transform: translateX(20px); }
 })();
 </script>
 
-<script src="app.js?v=11" defer></script>
+<script src="app.js?v=12" defer></script>
 
 <!-- ═══ PC Tab Controller ═══ -->
 <script>
