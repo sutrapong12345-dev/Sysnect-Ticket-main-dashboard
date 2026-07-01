@@ -726,11 +726,11 @@
     let currentStatus = null;
     const GLPI_BASE_URL = 'https://itservicedesk.sysnect.co.th';
 
-    // ====== 3D Pie Chart — custom Canvas 2D ======
+    // ====== 3D Pie Chart — Grand Edition ======
     function draw3DPie(cvs, labels, values, colors, isDataPresent) {
         var c = cvs.getContext('2d');
         var dpr = window.devicePixelRatio || 1;
-        var W = cvs.offsetWidth || 320;
+        var W = cvs.offsetWidth || 340;
         var H = cvs.offsetHeight || 300;
         cvs.width = W * dpr;
         cvs.height = H * dpr;
@@ -743,20 +743,19 @@
 
         if (!isDataPresent || total === 0) {
             cvs._pie3dSlices = null;
-            var ex = W / 2, ey = H * 0.47, er = Math.min(W, H) * 0.3, ery2 = er * 0.38;
-            c.save(); c.shadowColor = 'rgba(0,0,0,0.12)'; c.shadowBlur = 18; c.shadowOffsetY = 8;
+            var ex = W / 2, ey = H * 0.47, er = Math.min(W, H) * 0.32, ery2 = er * 0.42;
+            c.save(); c.shadowColor = 'rgba(80,80,180,0.18)'; c.shadowBlur = 24; c.shadowOffsetY = 10;
             c.beginPath(); c.ellipse(ex, ey, er, ery2, 0, 0, Math.PI * 2);
-            c.fillStyle = '#e2e8f0'; c.fill(); c.restore();
+            c.fillStyle = '#dde3f0'; c.fill(); c.restore();
             return;
         }
 
-        var cx = W / 2, cy = H * 0.43;
-        var rx = Math.min(W * 0.39, H * 0.52);
-        var ry = rx * 0.36;
-        var depth = rx * 0.19;
+        var cx = W / 2, cy = H * 0.41;
+        var rx = Math.min(W * 0.41, H * 0.52);
+        var ry = rx * 0.43;
+        var depth = rx * 0.16;
+        var explode = rx * 0.045;
 
-        function epx(a) { return cx + rx * Math.cos(a); }
-        function epy(a) { return cy + ry * Math.sin(a); }
         function dimCol(col, f) {
             var n = parseInt(col.slice(1), 16);
             return 'rgb(' + Math.min(255, Math.round(((n >> 16) & 255) * f)) + ',' +
@@ -768,64 +767,94 @@
         for (var i = 0; i < values.length; i++) {
             if (!values[i] || values[i] <= 0) continue;
             var sweep = (values[i] / total) * Math.PI * 2;
-            slices.push({ s: startA, e: startA + sweep, mid: startA + sweep / 2, color: colors[i], label: labels[i] });
+            var mid = startA + sweep / 2;
+            slices.push({
+                s: startA, e: startA + sweep, mid: mid,
+                color: colors[i], label: labels[i],
+                ox: Math.cos(mid) * explode, oy: Math.sin(mid) * explode
+            });
             startA += sweep;
         }
 
-        // Sort back→front for depth walls
+        // Back→front sort for depth walls
         var sorted = slices.slice().sort(function (a, b) { return Math.sin(a.mid) - Math.sin(b.mid); });
 
-        // Drop shadow
+        // Dramatic drop shadow (2 layers)
         c.save();
-        c.shadowColor = 'rgba(0,0,0,0.22)'; c.shadowBlur = 24; c.shadowOffsetY = depth + 10;
-        c.beginPath(); c.ellipse(cx, cy + depth + 4, rx * 0.88, ry * 0.55, 0, 0, Math.PI * 2);
+        c.shadowColor = 'rgba(30,30,100,0.35)'; c.shadowBlur = 40; c.shadowOffsetY = depth + 18;
+        c.beginPath(); c.ellipse(cx, cy + depth + 8, rx * 0.86, ry * 0.50, 0, 0, Math.PI * 2);
+        c.fillStyle = 'rgba(0,0,0,0.001)'; c.fill(); c.restore();
+        c.save();
+        c.shadowColor = 'rgba(0,0,0,0.18)'; c.shadowBlur = 16; c.shadowOffsetY = depth + 4;
+        c.beginPath(); c.ellipse(cx, cy + depth + 2, rx * 0.80, ry * 0.40, 0, 0, Math.PI * 2);
         c.fillStyle = 'rgba(0,0,0,0.001)'; c.fill(); c.restore();
 
-        // Side walls
+        // Side walls — vertical gradient (top bright → bottom dark) + exploded
         for (var si = 0; si < sorted.length; si++) {
             var sl = sorted[si];
+            var ox = sl.ox, oy = sl.oy;
             c.save();
             c.beginPath();
-            c.moveTo(epx(sl.s), epy(sl.s));
-            c.ellipse(cx, cy, rx, ry, 0, sl.s, sl.e);
-            c.lineTo(epx(sl.e), epy(sl.e) + depth);
-            c.ellipse(cx, cy + depth, rx, ry, 0, sl.e, sl.s, true);
+            c.moveTo(cx + ox + rx * Math.cos(sl.s), cy + oy + ry * Math.sin(sl.s));
+            c.ellipse(cx + ox, cy + oy, rx, ry, 0, sl.s, sl.e);
+            c.lineTo(cx + ox + rx * Math.cos(sl.e), cy + oy + ry * Math.sin(sl.e) + depth);
+            c.ellipse(cx + ox, cy + oy + depth, rx, ry, 0, sl.e, sl.s, true);
             c.closePath();
-            var gw = c.createLinearGradient(cx - rx, 0, cx + rx, 0);
-            gw.addColorStop(0, dimCol(sl.color, 0.52));
-            gw.addColorStop(0.5, dimCol(sl.color, 0.44));
-            gw.addColorStop(1, dimCol(sl.color, 0.52));
-            c.fillStyle = gw; c.fill();
-            c.strokeStyle = 'rgba(255,255,255,0.5)'; c.lineWidth = 1; c.stroke();
+            var gv = c.createLinearGradient(cx + ox, cy + oy, cx + ox, cy + oy + depth);
+            gv.addColorStop(0, dimCol(sl.color, 0.78));
+            gv.addColorStop(0.5, dimCol(sl.color, 0.62));
+            gv.addColorStop(1, dimCol(sl.color, 0.46));
+            c.fillStyle = gv; c.fill();
+            c.strokeStyle = 'rgba(255,255,255,0.55)'; c.lineWidth = 1.2; c.stroke();
             c.restore();
         }
 
-        // Top faces
+        // Top faces — radial gradient with specular highlight + exploded
         for (var fi = 0; fi < slices.length; fi++) {
             var sl2 = slices[fi];
+            var ox2 = sl2.ox, oy2 = sl2.oy;
             c.save();
-            c.beginPath(); c.moveTo(cx, cy);
-            c.ellipse(cx, cy, rx, ry, 0, sl2.s, sl2.e); c.closePath();
-            var gr = c.createRadialGradient(cx - rx * 0.2, cy - ry * 0.5, 0, cx, cy, rx);
-            gr.addColorStop(0, dimCol(sl2.color, 1.28));
-            gr.addColorStop(0.5, sl2.color);
-            gr.addColorStop(1, dimCol(sl2.color, 0.84));
+            c.beginPath(); c.moveTo(cx + ox2, cy + oy2);
+            c.ellipse(cx + ox2, cy + oy2, rx, ry, 0, sl2.s, sl2.e); c.closePath();
+            var gr = c.createRadialGradient(
+                cx + ox2 - rx * 0.12, cy + oy2 - ry * 0.68, 0,
+                cx + ox2, cy + oy2, rx * 1.08
+            );
+            gr.addColorStop(0,    dimCol(sl2.color, 1.55));
+            gr.addColorStop(0.28, dimCol(sl2.color, 1.22));
+            gr.addColorStop(0.60, sl2.color);
+            gr.addColorStop(1,    dimCol(sl2.color, 0.78));
             c.fillStyle = gr; c.fill();
-            c.strokeStyle = '#ffffff'; c.lineWidth = 2.5; c.stroke();
+            c.strokeStyle = 'rgba(255,255,255,0.90)'; c.lineWidth = 2.8; c.stroke();
             c.restore();
         }
 
-        // Specular sheen
+        // Glass lens overlay — clip to pie bounds, draw white sheen
         c.save();
-        var sh = c.createLinearGradient(cx - rx, cy - ry, cx + rx, cy - ry);
-        sh.addColorStop(0, 'rgba(255,255,255,0)');
-        sh.addColorStop(0.5, 'rgba(255,255,255,0.22)');
-        sh.addColorStop(1, 'rgba(255,255,255,0)');
-        c.strokeStyle = sh; c.lineWidth = 2.5;
+        c.beginPath(); c.ellipse(cx, cy, rx + explode + 3, ry + explode * 0.4 + 3, 0, 0, Math.PI * 2);
+        c.clip();
+        var glass = c.createRadialGradient(cx - rx * 0.18, cy - ry * 0.88, 0, cx, cy, rx * 1.1);
+        glass.addColorStop(0,    'rgba(255,255,255,0.42)');
+        glass.addColorStop(0.30, 'rgba(255,255,255,0.14)');
+        glass.addColorStop(0.60, 'rgba(255,255,255,0.03)');
+        glass.addColorStop(1,    'rgba(255,255,255,0)');
+        c.fillStyle = glass;
+        c.beginPath(); c.ellipse(cx, cy - ry * 0.10, rx + explode, ry * 1.15 + explode * 0.4, 0, 0, Math.PI * 2);
+        c.fill();
+        c.restore();
+
+        // Luminous outer rim
+        c.save();
+        var rim = c.createLinearGradient(cx - rx, cy - ry, cx + rx, cy - ry);
+        rim.addColorStop(0,    'rgba(255,255,255,0)');
+        rim.addColorStop(0.35, 'rgba(255,255,255,0.50)');
+        rim.addColorStop(0.65, 'rgba(255,255,255,0.50)');
+        rim.addColorStop(1,    'rgba(255,255,255,0)');
+        c.strokeStyle = rim; c.lineWidth = 3.5;
         c.beginPath(); c.ellipse(cx, cy, rx, ry, 0, Math.PI, Math.PI * 2); c.stroke();
         c.restore();
 
-        cvs._pie3dSlices = { cx: cx, cy: cy, rx: rx, ry: ry, depth: depth, slices: slices };
+        cvs._pie3dSlices = { cx: cx, cy: cy, rx: rx + explode, ry: ry + explode * 0.4, depth: depth, slices: slices };
     }
 
     function _initPie3dClick(cvs, onLabel) {
@@ -1410,7 +1439,7 @@
         const chartData = hasData
             ? data.values.map(v => v > 0 ? Math.max(v, MIN_ARC) : 0)
             : [1];
-        const chartColors = hasData ? ['#3b82f6', '#f59e0b', '#ef4444', '#10b981', '#64748b'] : ['#e2e8f0'];
+        const chartColors = hasData ? ['#3b82f6', '#f59e0b', '#ef4444', '#10b981', '#818cf8'] : ['#e2e8f0'];
         const chartLabels = hasData ? data.labels.map(l => l.toUpperCase()) : ['NO DATA'];
 
         // 3D Pie — redraw on every data update
@@ -1447,7 +1476,7 @@
 
         // ⚡ วาด legend ใต้กราฟ (จุดสี + สถานะ + จำนวน + %)
         const legendLabels = data.labels.map(l => l.toUpperCase());
-        const legendColors = ['#3b82f6', '#f59e0b', '#ef4444', '#10b981', '#64748b'];
+        const legendColors = ['#3b82f6', '#f59e0b', '#ef4444', '#10b981', '#818cf8'];
         renderChartLegend(legendLabels, data.values, legendColors, totalTickets);
         if (typeof updateStatBar === 'function') updateStatBar(data.values, data.labels, totalTickets);
         // อัปเดต sidebars (ถ้ามีข้อมูลใหม่)
@@ -1483,10 +1512,10 @@
         html += `
             <button type="button" class="cl-row${allActive}" data-status="ALL" onclick="handleLegendClick('ALL')"
                 style="margin-top:4px; border-top:1px dashed rgba(99,102,241,0.12); padding-top:8px; --cl-color:#6366f1">
-                <span class="cl-dot" style="background:conic-gradient(#3b82f6 0% 20%,#f59e0b 20% 40%,#ef4444 40% 60%,#10b981 60% 80%,#64748b 80% 100%);border-radius:50%;"></span>
+                <span class="cl-dot" style="background:conic-gradient(#3b82f6 0% 20%,#f59e0b 20% 40%,#ef4444 40% 60%,#10b981 60% 80%,#818cf8 80% 100%);border-radius:50%;"></span>
                 <span class="cl-label" style="font-weight:800;">ALL</span>
                 <div class="cl-bar-wrap">
-                    <div class="cl-bar-fill" style="width:0%;background:linear-gradient(90deg,#3b82f6,#f59e0b,#ef4444,#10b981,#64748b)" data-pct="100"></div>
+                    <div class="cl-bar-fill" style="width:0%;background:linear-gradient(90deg,#3b82f6,#f59e0b,#ef4444,#10b981,#818cf8)" data-pct="100"></div>
                 </div>
                 <span class="cl-count">${total}</span>
                 <span class="cl-pct">100%</span>
