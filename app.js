@@ -744,20 +744,8 @@
         var total = 0;
         if (isDataPresent) { for (var vi = 0; vi < values.length; vi++) total += values[vi]; }
 
-        if (!isDataPresent || total === 0) {
-            cvs._pie3dSlices = null;
-            var ex = W / 2, ey = H * 0.47, er = Math.min(W, H) * 0.32, ery2 = er * 0.42;
-            c.save(); c.shadowColor = 'rgba(80,80,180,0.18)'; c.shadowBlur = 24; c.shadowOffsetY = 10;
-            c.beginPath(); c.ellipse(ex, ey, er, ery2, 0, 0, Math.PI * 2);
-            c.fillStyle = '#dde3f0'; c.fill(); c.restore();
-            return;
-        }
-
-        var cx = W / 2, cy = H * 0.41;
-        var rx = Math.min(W * 0.41, H * 0.52);
-        var ry = rx * 0.43;
-        var depth = rx * 0.16;
-        var explode = rx * 0.045;
+        var cx = W / 2, cy = H / 2;
+        var r = Math.min(W, H) * 0.36;
 
         function dimCol(col, f) {
             var n = parseInt(col.slice(1), 16);
@@ -766,98 +754,75 @@
                 Math.min(255, Math.round((n & 255) * f)) + ')';
         }
 
+        if (!isDataPresent || total === 0) {
+            cvs._pie3dSlices = null;
+            c.save();
+            c.shadowColor = 'rgba(80,80,180,0.25)'; c.shadowBlur = 22; c.shadowOffsetY = 10;
+            c.beginPath(); c.arc(cx, cy, r, 0, Math.PI * 2);
+            c.fillStyle = 'rgba(148,163,184,0.22)'; c.fill();
+            c.restore();
+            c.save();
+            c.strokeStyle = 'rgba(148,163,184,0.4)'; c.lineWidth = 2;
+            c.beginPath(); c.arc(cx, cy, r, 0, Math.PI * 2); c.stroke();
+            c.restore();
+            return;
+        }
+
         var startA = -Math.PI / 2, slices = [];
         for (var i = 0; i < values.length; i++) {
             if (!values[i] || values[i] <= 0) continue;
             var sweep = (values[i] / total) * Math.PI * 2;
-            var mid = startA + sweep / 2;
-            slices.push({
-                s: startA, e: startA + sweep, mid: mid,
-                color: colors[i], label: labels[i],
-                ox: Math.cos(mid) * explode, oy: Math.sin(mid) * explode
-            });
+            slices.push({ s: startA, e: startA + sweep, mid: startA + sweep / 2, color: colors[i], label: labels[i] });
             startA += sweep;
         }
 
-        // Back→front sort for depth walls
-        var sorted = slices.slice().sort(function (a, b) { return Math.sin(a.mid) - Math.sin(b.mid); });
-
-        // Dramatic drop shadow (2 layers)
+        // Soft ambient drop shadow beneath the whole disc — gives depth without 3D geometry
         c.save();
-        c.shadowColor = 'rgba(30,30,100,0.35)'; c.shadowBlur = 40; c.shadowOffsetY = depth + 18;
-        c.beginPath(); c.ellipse(cx, cy + depth + 8, rx * 0.86, ry * 0.50, 0, 0, Math.PI * 2);
-        c.fillStyle = 'rgba(0,0,0,0.001)'; c.fill(); c.restore();
-        c.save();
-        c.shadowColor = 'rgba(0,0,0,0.18)'; c.shadowBlur = 16; c.shadowOffsetY = depth + 4;
-        c.beginPath(); c.ellipse(cx, cy + depth + 2, rx * 0.80, ry * 0.40, 0, 0, Math.PI * 2);
-        c.fillStyle = 'rgba(0,0,0,0.001)'; c.fill(); c.restore();
-
-        // Side walls — vertical gradient (top bright → bottom dark) + exploded
-        for (var si = 0; si < sorted.length; si++) {
-            var sl = sorted[si];
-            var ox = sl.ox, oy = sl.oy;
-            c.save();
-            c.beginPath();
-            c.moveTo(cx + ox + rx * Math.cos(sl.s), cy + oy + ry * Math.sin(sl.s));
-            c.ellipse(cx + ox, cy + oy, rx, ry, 0, sl.s, sl.e);
-            c.lineTo(cx + ox + rx * Math.cos(sl.e), cy + oy + ry * Math.sin(sl.e) + depth);
-            c.ellipse(cx + ox, cy + oy + depth, rx, ry, 0, sl.e, sl.s, true);
-            c.closePath();
-            var gv = c.createLinearGradient(cx + ox, cy + oy, cx + ox, cy + oy + depth);
-            gv.addColorStop(0, dimCol(sl.color, 0.78));
-            gv.addColorStop(0.5, dimCol(sl.color, 0.62));
-            gv.addColorStop(1, dimCol(sl.color, 0.46));
-            c.fillStyle = gv; c.fill();
-            c.strokeStyle = 'rgba(255,255,255,0.55)'; c.lineWidth = 1.2; c.stroke();
-            c.restore();
-        }
-
-        // Top faces — radial gradient with specular highlight + exploded
-        for (var fi = 0; fi < slices.length; fi++) {
-            var sl2 = slices[fi];
-            var ox2 = sl2.ox, oy2 = sl2.oy;
-            c.save();
-            c.beginPath(); c.moveTo(cx + ox2, cy + oy2);
-            c.ellipse(cx + ox2, cy + oy2, rx, ry, 0, sl2.s, sl2.e); c.closePath();
-            var gr = c.createRadialGradient(
-                cx + ox2 - rx * 0.12, cy + oy2 - ry * 0.68, 0,
-                cx + ox2, cy + oy2, rx * 1.08
-            );
-            gr.addColorStop(0,    dimCol(sl2.color, 1.55));
-            gr.addColorStop(0.28, dimCol(sl2.color, 1.22));
-            gr.addColorStop(0.60, sl2.color);
-            gr.addColorStop(1,    dimCol(sl2.color, 0.78));
-            c.fillStyle = gr; c.fill();
-            c.strokeStyle = 'rgba(255,255,255,0.90)'; c.lineWidth = 2.8; c.stroke();
-            c.restore();
-        }
-
-        // Glass lens overlay — clip to pie bounds, draw white sheen
-        c.save();
-        c.beginPath(); c.ellipse(cx, cy, rx + explode + 3, ry + explode * 0.4 + 3, 0, 0, Math.PI * 2);
-        c.clip();
-        var glass = c.createRadialGradient(cx - rx * 0.18, cy - ry * 0.88, 0, cx, cy, rx * 1.1);
-        glass.addColorStop(0,    'rgba(255,255,255,0.42)');
-        glass.addColorStop(0.30, 'rgba(255,255,255,0.14)');
-        glass.addColorStop(0.60, 'rgba(255,255,255,0.03)');
-        glass.addColorStop(1,    'rgba(255,255,255,0)');
-        c.fillStyle = glass;
-        c.beginPath(); c.ellipse(cx, cy - ry * 0.10, rx + explode, ry * 1.15 + explode * 0.4, 0, 0, Math.PI * 2);
+        c.shadowColor = 'rgba(30,27,80,0.45)';
+        c.shadowBlur = 30;
+        c.shadowOffsetY = 12;
+        c.beginPath(); c.arc(cx, cy, r, 0, Math.PI * 2);
+        c.fillStyle = 'rgba(0,0,0,0.001)';
         c.fill();
         c.restore();
 
-        // Luminous outer rim
+        // Slices — flat fill + subtle top-left gloss gradient for polish
+        slices.forEach(function (sl) {
+            c.save();
+            c.beginPath();
+            c.moveTo(cx, cy);
+            c.arc(cx, cy, r, sl.s, sl.e);
+            c.closePath();
+            var g = c.createRadialGradient(cx - r * 0.25, cy - r * 0.35, r * 0.05, cx, cy, r * 1.05);
+            g.addColorStop(0, dimCol(sl.color, 1.22));
+            g.addColorStop(0.55, sl.color);
+            g.addColorStop(1, dimCol(sl.color, 0.85));
+            c.fillStyle = g;
+            c.fill();
+            c.restore();
+        });
+
+        // Thin white separators between slices — classic clean flat-pie look
+        slices.forEach(function (sl) {
+            c.save();
+            c.strokeStyle = 'rgba(255,255,255,0.9)';
+            c.lineWidth = 2.5;
+            c.beginPath();
+            c.moveTo(cx, cy);
+            c.arc(cx, cy, r, sl.s, sl.e);
+            c.closePath();
+            c.stroke();
+            c.restore();
+        });
+
+        // Glowing outer rim
         c.save();
-        var rim = c.createLinearGradient(cx - rx, cy - ry, cx + rx, cy - ry);
-        rim.addColorStop(0,    'rgba(255,255,255,0)');
-        rim.addColorStop(0.35, 'rgba(255,255,255,0.50)');
-        rim.addColorStop(0.65, 'rgba(255,255,255,0.50)');
-        rim.addColorStop(1,    'rgba(255,255,255,0)');
-        c.strokeStyle = rim; c.lineWidth = 3.5;
-        c.beginPath(); c.ellipse(cx, cy, rx, ry, 0, Math.PI, Math.PI * 2); c.stroke();
+        c.strokeStyle = 'rgba(255,255,255,0.3)';
+        c.lineWidth = 2;
+        c.beginPath(); c.arc(cx, cy, r, 0, Math.PI * 2); c.stroke();
         c.restore();
 
-        cvs._pie3dSlices = { cx: cx, cy: cy, rx: rx + explode, ry: ry + explode * 0.4, depth: depth, slices: slices };
+        cvs._pie3dSlices = { cx: cx, cy: cy, r: r, slices: slices };
     }
 
     function _initPie3dClick(cvs, onLabel) {
@@ -869,9 +834,8 @@
             var mx = e.clientX - rect.left, my = e.clientY - rect.top;
             var info = cvs._pie3dSlices;
             var dx = mx - info.cx, dy = my - info.cy;
-            if ((dx * dx) / (info.rx * info.rx) + (dy * dy) / (info.ry * info.ry) > 1.5) return;
-            if (dy < -info.ry * 1.1) return;
-            var ang = Math.atan2(dy / info.ry, dx / info.rx);
+            if (Math.sqrt(dx * dx + dy * dy) > info.r) return;
+            var ang = Math.atan2(dy, dx);
             if (ang < -Math.PI / 2) ang += Math.PI * 2;
             for (var i = 0; i < info.slices.length; i++) {
                 var sl = info.slices[i];
@@ -887,7 +851,7 @@
             }).observe(cvs);
         }
     }
-    // ====== End 3D Pie Chart ======
+    // ====== End Pie Chart (flat 2D, drop shadow) ======
 
     function populateProjectFilter() {
         const projectFilterSelect = document.getElementById('projectFilter');
@@ -2933,25 +2897,31 @@
 
         if (period === 'week') {
             for (let i = 6; i >= 0; i--) {
-                const d = new Date(now);
-                d.setDate(now.getDate() - i);
-                const key = d.toISOString().slice(0, 10);
-                buckets[key] = { label: `${d.getDate()}/${d.getMonth()+1}`, count: 0 };
+                const dEnd = new Date(now);
+                dEnd.setDate(now.getDate() - i);
+                dEnd.setHours(23, 59, 59, 999);
+                const dStart = new Date(dEnd);
+                dStart.setHours(0, 0, 0, 0);
+                buckets[`d${i}`] = { label: `${dStart.getDate()}/${dStart.getMonth()+1}`, count: 0, start: dStart, end: dEnd };
             }
             tickets.forEach(t => {
-                const key = (t.date_open || '').slice(0, 10);
-                if (buckets[key]) buckets[key].count++;
+                const d = t.date_open ? new Date(String(t.date_open).replace('T', ' ')) : null;
+                if (!d || isNaN(d)) return;
+                Object.values(buckets).forEach(b => { if (d >= b.start && d <= b.end) b.count++; });
             });
         } else if (period === 'month') {
             for (let i = 29; i >= 0; i--) {
-                const d = new Date(now);
-                d.setDate(now.getDate() - i);
-                const key = d.toISOString().slice(0, 10);
-                buckets[key] = { label: (i % 5 === 0 || i === 0) ? `${d.getDate()}/${d.getMonth()+1}` : '', count: 0 };
+                const dEnd = new Date(now);
+                dEnd.setDate(now.getDate() - i);
+                dEnd.setHours(23, 59, 59, 999);
+                const dStart = new Date(dEnd);
+                dStart.setHours(0, 0, 0, 0);
+                buckets[`m${i}`] = { label: (i % 5 === 0 || i === 0) ? `${dStart.getDate()}/${dStart.getMonth()+1}` : '', count: 0, start: dStart, end: dEnd };
             }
             tickets.forEach(t => {
-                const key = (t.date_open || '').slice(0, 10);
-                if (buckets[key]) buckets[key].count++;
+                const d = t.date_open ? new Date(String(t.date_open).replace('T', ' ')) : null;
+                if (!d || isNaN(d)) return;
+                Object.values(buckets).forEach(b => { if (d >= b.start && d <= b.end) b.count++; });
             });
         } else if (period === '3month') {
             for (let i = 12; i >= 0; i--) {
