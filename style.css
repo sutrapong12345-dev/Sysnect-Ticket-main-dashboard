@@ -3400,8 +3400,8 @@
         position: fixed;
         left: 0; right: 0; bottom: 0;
         z-index: 1200;
-        transform: translateZ(0);
-        will-change: transform;
+        /* ห้ามใส่ transform/will-change ที่นี่ — iOS WebKit จะทำ position:fixed พังทั้งแถบ
+           (เคยใส่แล้วแถบไปโผล่ท้ายหน้าเว็บแทนที่จะติดจอ) */
         background: rgba(255,255,255,0.92);
         -webkit-backdrop-filter: blur(18px) saturate(180%);
         backdrop-filter: blur(18px) saturate(180%);
@@ -3426,8 +3426,11 @@
 /* 3) โลโก้ขอบโค้งมน (เห็นชัดใน dark ที่พื้นโลโก้เป็นกล่องขาว) */
 .brand-logo { border-radius: 12px; }
 
-/* 5) loader อยู่กลางจอเสมอ + การ์ดไม่ล้นขอบจอมือถือ */
-.sysnect-loader { padding: 16px; box-sizing: border-box; }
+/* 5) loader อยู่กลางจอเสมอ + การ์ดไม่ล้นขอบจอมือถือ
+   height:100dvh = viewport ที่มองเห็นจริงบน iOS (100% เดิมอ้างอิง viewport ใหญ่รวมพื้นที่หลัง
+   toolbar ทำให้การ์ดจมลงล่างจอ) · margin:auto กันการ์ดหลุดกลางเมื่อสูงเกินจอ */
+.sysnect-loader { padding: 16px; box-sizing: border-box; height: 100vh; height: 100dvh; }
+.enterprise-loader-container { margin: auto; }
 @media (max-width: 600px) {
     .enterprise-loader-container { padding: 28px 20px; width: min(88vw, 340px); }
     .el-footer { letter-spacing: 1px; font-size: 9px; }
