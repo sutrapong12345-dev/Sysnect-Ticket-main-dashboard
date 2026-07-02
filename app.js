@@ -793,10 +793,12 @@
 
         // สัดส่วนมุมตามค่าจริงเป๊ะ (pie มาตรฐาน) — floor มุมขั้นต่ำไว้แค่ "มองเห็นได้" เท่านั้น
         // ไม่แตะค่า pct/label ที่แสดงจริง (ต่างจาก MIN_ARC เดิมที่ยัดค่าเข้าไปในตัวเลขจริงจนยอดรวมผิด)
-        var rx = Math.min(W * 0.40, H * 0.46);
-        var ry = rx * 0.58;
-        var depth = rx * 0.15;
-        var explode = rx * 0.055;
+        // candy 3D: อ้วนหนา กลมขึ้น แยกชิ้นชัด — ยก cy ขึ้นเผื่อที่ให้ความหนาด้านล่าง
+        var rx = Math.min(W * 0.38, H * 0.40);
+        var ry = rx * 0.70;
+        var depth = rx * 0.34;
+        var explode = rx * 0.07;
+        cy = H * 0.44;
         var MIN_SWEEP = Math.PI * 2 * 0.018;
 
         var startA = -Math.PI / 2, slices = [];
@@ -818,8 +820,8 @@
 
         // Dramatic drop shadow
         c.save();
-        c.shadowColor = 'rgba(30,30,100,0.35)'; c.shadowBlur = 34; c.shadowOffsetY = depth + 14;
-        c.beginPath(); c.ellipse(cx, cy + depth + 6, rx * 0.86, ry * 0.55, 0, 0, Math.PI * 2);
+        c.shadowColor = 'rgba(0,0,30,0.5)'; c.shadowBlur = 42; c.shadowOffsetY = depth + 18;
+        c.beginPath(); c.ellipse(cx, cy + depth + 4, rx * 0.82, ry * 0.5, 0, 0, Math.PI * 2);
         c.fillStyle = 'rgba(0,0,0,0.001)'; c.fill(); c.restore();
 
         // Side walls — vertical gradient (top bright → bottom dark) + exploded
@@ -833,11 +835,10 @@
             c.ellipse(cx + ox, cy + oy + depth, rx, ry, 0, sl.e, sl.s, true);
             c.closePath();
             var gv = c.createLinearGradient(cx + ox, cy + oy, cx + ox, cy + oy + depth);
-            gv.addColorStop(0, dimCol(sl.color, 0.78));
-            gv.addColorStop(0.5, dimCol(sl.color, 0.62));
-            gv.addColorStop(1, dimCol(sl.color, 0.46));
+            gv.addColorStop(0, dimCol(sl.color, 0.92));
+            gv.addColorStop(0.45, dimCol(sl.color, 0.68));
+            gv.addColorStop(1, dimCol(sl.color, 0.40));
             c.fillStyle = gv; c.fill();
-            c.strokeStyle = 'rgba(255,255,255,0.5)'; c.lineWidth = 1; c.stroke();
             c.restore();
         });
 
@@ -847,13 +848,21 @@
             c.save();
             c.beginPath(); c.moveTo(cx + ox, cy + oy);
             c.ellipse(cx + ox, cy + oy, rx, ry, 0, sl.s, sl.e); c.closePath();
-            var gr = c.createRadialGradient(cx + ox - rx * 0.12, cy + oy - ry * 0.68, 0, cx + ox, cy + oy, rx * 1.08);
-            gr.addColorStop(0, dimCol(sl.color, 1.5));
-            gr.addColorStop(0.28, dimCol(sl.color, 1.18));
-            gr.addColorStop(0.6, sl.color);
-            gr.addColorStop(1, dimCol(sl.color, 0.8));
+            var gr = c.createRadialGradient(cx + ox - rx * 0.18, cy + oy - ry * 0.75, 0, cx + ox, cy + oy, rx * 1.1);
+            gr.addColorStop(0, dimCol(sl.color, 1.72));
+            gr.addColorStop(0.3, dimCol(sl.color, 1.28));
+            gr.addColorStop(0.62, sl.color);
+            gr.addColorStop(1, dimCol(sl.color, 0.82));
             c.fillStyle = gr; c.fill();
-            c.strokeStyle = 'rgba(255,255,255,0.85)'; c.lineWidth = 2; c.stroke();
+            // bevel สีตัวเอง (ไม่ใช่ขอบขาวแบบสติกเกอร์) + sheen แสงเฉียงพาดบนแบบลูกกวาด
+            c.strokeStyle = dimCol(sl.color, 1.35); c.lineWidth = 2.5; c.stroke();
+            c.clip();
+            var sh = c.createLinearGradient(cx + ox - rx, cy + oy - ry, cx + ox + rx * 0.2, cy + oy + ry * 0.4);
+            sh.addColorStop(0, 'rgba(255,255,255,0.34)');
+            sh.addColorStop(0.45, 'rgba(255,255,255,0.10)');
+            sh.addColorStop(0.7, 'rgba(255,255,255,0)');
+            c.fillStyle = sh;
+            c.fillRect(cx + ox - rx, cy + oy - ry, rx * 2, ry * 2);
             c.restore();
         });
 
@@ -871,17 +880,6 @@
             c.fillText(pctText, lx, ly);
             c.restore();
         });
-
-        // Luminous outer rim
-        c.save();
-        var rim = c.createLinearGradient(cx - rx, cy - ry, cx + rx, cy - ry);
-        rim.addColorStop(0, 'rgba(255,255,255,0)');
-        rim.addColorStop(0.35, 'rgba(255,255,255,0.45)');
-        rim.addColorStop(0.65, 'rgba(255,255,255,0.45)');
-        rim.addColorStop(1, 'rgba(255,255,255,0)');
-        c.strokeStyle = rim; c.lineWidth = 3;
-        c.beginPath(); c.ellipse(cx, cy, rx, ry, 0, Math.PI, Math.PI * 2); c.stroke();
-        c.restore();
 
         cvs._pie3dSlices = { cx: cx, cy: cy, rx: rx + explode, ry: ry + explode * (ry / rx), slices: slices };
     }
