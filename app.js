@@ -1988,7 +1988,7 @@
                         else slaHours = 48; // Low
                         
                         let slaBadge = '';
-                        if (!_isResolved && ticket.date_open) {
+                        if (String(ticket._statusName||'').toUpperCase() === 'NEW' && ticket.date_open) {
                             const dateOpen = new Date(String(ticket.date_open).replace('T', ' '));
                             if (!isNaN(dateOpen)) {
                                 const diffHours = (new Date(dateOpen.getTime() + slaHours * 60 * 60 * 1000) - new Date()) / 3600000;
@@ -2195,7 +2195,7 @@
                             else slaHours2 = 48; // Low
                             
                             let slaBadge2 = '';
-                            if (!_isResolved2 && ticket.date_open) {
+                            if (String(ticket._statusName||'').toUpperCase() === 'NEW' && ticket.date_open) {
                                 const dateOpen2 = new Date(String(ticket.date_open).replace('T', ' '));
                                 if (!isNaN(dateOpen2)) {
                                     const diffHours2 = (new Date(dateOpen2.getTime() + slaHours2 * 60 * 60 * 1000) - new Date()) / 3600000;
