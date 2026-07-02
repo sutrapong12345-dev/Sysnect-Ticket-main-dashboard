@@ -820,13 +820,24 @@
             var sweep = a.floored ? MIN_SWEEP : (a.pct / freePct) * freeSpace;
             var mid = startA + sweep / 2;
             slices.push({
+                origIdx: slices.length,
                 s: startA, e: startA + sweep, mid: mid,
                 color: colors[a.idx], label: labels[a.idx], val: values[a.idx], pct: a.pct
             });
             startA += sweep;
         });
 
-        // Back→front sort for depth walls
+        // จัดเรียง scale ตามลำดับความมากน้อย (Staircase/Stepped Pie)
+        var uniqueVals = [];
+        slices.forEach(function(sl) { if (uniqueVals.indexOf(sl.val) === -1) uniqueVals.push(sl.val); });
+        uniqueVals.sort(function(a, b) { return b - a; });
+        slices.forEach(function(sl) {
+            var rank = uniqueVals.indexOf(sl.val);
+            sl.scale = 1.0 - (rank * 0.15); 
+            if (sl.scale < 0.45) sl.scale = 0.45;
+        });
+
+        // Back→front sort for drawing
         var sorted = slices.slice().sort(function (a, b) { return Math.sin(a.mid) - Math.sin(b.mid); });
 
         // ===== chart motion =====
@@ -850,69 +861,69 @@
             c.clearRect(0, 0, W, H);
             var L = -Math.PI / 2 + prog * Math.PI * 2;
 
-            // มุม/ระยะแยกตัวของชิ้น ณ เฟรมนี้ (ตัดปลายตามแนวกวาด + เด้งออกตอน hover)
-            function geo(sl, i) {
-                var de = Math.min(sl.e, L);
-                if (de - sl.s <= 0.0005) return null;
-                var lift = explode * prog + explode * 0.7 * amts[i];
-                return { ds: sl.s, de: de, ox: Math.cos(sl.mid) * lift, oy: Math.sin(sl.mid) * lift };
-            }
-
-            // เงานุ่มใต้ก้อน
+            // เงานุ่มใต้ก้อน (วาดที่ฐานล่างสุดเสมอ)
             c.save();
             c.globalAlpha = prog;
             c.shadowColor = 'rgba(0,0,25,0.42)'; c.shadowBlur = 30; c.shadowOffsetY = depth + 14;
             c.beginPath(); c.ellipse(cx, cy + depth, rx * 0.85, ry * 0.55, 0, 0, Math.PI * 2);
             c.fillStyle = 'rgba(0,0,0,0.001)'; c.fill(); c.restore();
 
-            // Side walls — vertical gradient (top bright → bottom dark)
+            // วาดทีละชิ้น (เรียงจากหลังมาหน้าเพื่อจัดการ Z-order ของชิ้นที่ความสูงต่างกัน)
             sorted.forEach(function (sl) {
-                var g = geo(sl, slices.indexOf(sl));
-                if (!g) return;
+                var de = Math.min(sl.e, L);
+                if (de - sl.s <= 0.0005) return;
+
+                var i = sl.origIdx;
+                var lift = explode * prog + explode * 0.7 * amts[i];
+                var ox = Math.cos(sl.mid) * lift;
+                var oy = Math.sin(sl.mid) * lift;
+
+                var sr = sl.scale;
+                var s_rx = rx * sr;
+                var s_ry = ry * sr;
+                var s_depth = depth * sr;
+                var bot_y = cy + depth;
+                var top_y = bot_y - s_depth;
+
+                // 1. Side walls
                 c.save();
                 c.beginPath();
-                c.moveTo(cx + g.ox + rx * Math.cos(g.ds), cy + g.oy + ry * Math.sin(g.ds));
-                c.ellipse(cx + g.ox, cy + g.oy, rx, ry, 0, g.ds, g.de);
-                c.lineTo(cx + g.ox + rx * Math.cos(g.de), cy + g.oy + ry * Math.sin(g.de) + depth);
-                c.ellipse(cx + g.ox, cy + g.oy + depth, rx, ry, 0, g.de, g.ds, true);
+                c.moveTo(cx + ox + s_rx * Math.cos(sl.s), top_y + oy + s_ry * Math.sin(sl.s));
+                c.ellipse(cx + ox, top_y + oy, s_rx, s_ry, 0, sl.s, de);
+                c.lineTo(cx + ox + s_rx * Math.cos(de), bot_y + oy + s_ry * Math.sin(de));
+                c.ellipse(cx + ox, bot_y + oy, s_rx, s_ry, 0, de, sl.s, true);
                 c.closePath();
-                var gv = c.createLinearGradient(cx + g.ox, cy + g.oy, cx + g.ox, cy + g.oy + depth);
+                var gv = c.createLinearGradient(cx + ox, top_y + oy, cx + ox, bot_y + oy);
                 gv.addColorStop(0, dimCol(sl.color, 0.85));
                 gv.addColorStop(0.55, dimCol(sl.color, 0.62));
                 gv.addColorStop(1, dimCol(sl.color, 0.46));
                 c.fillStyle = gv; c.fill();
                 c.restore();
-            });
 
-            // radial cut faces (หน้าตัดด้านในของชิ้นที่หันเข้าหากล้อง) — ขอบที่กำลังกวาดโชว์หน้าตัดเสมอ
-            slices.forEach(function (sl, i) {
-                var g = geo(sl, i);
-                if (!g) return;
-                [g.ds, g.de].forEach(function (ang, k) {
+                // 2. Radial cut faces
+                [sl.s, de].forEach(function (ang, k) {
                     var facing = (k === 0) ? Math.sin(ang - 0.02) : Math.sin(ang + 0.02);
                     if (facing <= 0.02 && !(k === 1 && prog < 1)) return;
-                    var ex = cx + g.ox + rx * Math.cos(ang), ey = cy + g.oy + ry * Math.sin(ang);
+                    var ex = cx + ox + s_rx * Math.cos(ang);
+                    var ey_top = top_y + oy + s_ry * Math.sin(ang);
+                    var ey_bot = bot_y + oy + s_ry * Math.sin(ang);
                     c.save();
                     c.beginPath();
-                    c.moveTo(cx + g.ox, cy + g.oy);
-                    c.lineTo(ex, ey);
-                    c.lineTo(ex, ey + depth);
-                    c.lineTo(cx + g.ox, cy + g.oy + depth);
+                    c.moveTo(cx + ox, top_y + oy);
+                    c.lineTo(ex, ey_top);
+                    c.lineTo(ex, ey_bot);
+                    c.lineTo(cx + ox, bot_y + oy);
                     c.closePath();
                     c.fillStyle = dimCol(sl.color, 0.72);
                     c.fill();
                     c.restore();
                 });
-            });
 
-            // Top faces — matte: ไล่แสงนุ่มจากบนซ้าย ไม่มี sheen วาวแบบลูกกวาด
-            slices.forEach(function (sl, i) {
-                var g = geo(sl, i);
-                if (!g) return;
+                // 3. Top face
                 c.save();
-                c.beginPath(); c.moveTo(cx + g.ox, cy + g.oy);
-                c.ellipse(cx + g.ox, cy + g.oy, rx, ry, 0, g.ds, g.de); c.closePath();
-                var gr = c.createRadialGradient(cx + g.ox - rx * 0.25, cy + g.oy - ry * 0.9, rx * 0.1, cx + g.ox, cy + g.oy, rx * 1.15);
+                c.beginPath(); c.moveTo(cx + ox, top_y + oy);
+                c.ellipse(cx + ox, top_y + oy, s_rx, s_ry, 0, sl.s, de); c.closePath();
+                var gr = c.createRadialGradient(cx + ox - s_rx * 0.25, top_y + oy - s_ry * 0.9, s_rx * 0.1, cx + ox, top_y + oy, s_rx * 1.15);
                 gr.addColorStop(0, dimCol(sl.color, 1.32));
                 gr.addColorStop(0.4, dimCol(sl.color, 1.1));
                 gr.addColorStop(0.75, sl.color);
@@ -920,25 +931,22 @@
                 c.fillStyle = gr; c.fill();
                 c.strokeStyle = dimCol(sl.color, 1.18); c.lineWidth = 1.5; c.stroke();
                 c.restore();
-            });
 
-            // ป้าย % กลางชิ้น — % จริงเสมอ, ค่อยๆ โผล่หลังแนวกวาดผ่านกลางชิ้น
-            slices.forEach(function (sl, i) {
-                var g = geo(sl, i);
-                if (!g) return;
-                var alpha = sl.e > sl.mid ? clamp01((L - sl.mid) / (sl.e - sl.mid)) : 1;
-                if (alpha <= 0) return;
-                var lx = cx + g.ox + Math.cos(sl.mid) * rx * 0.58;
-                var ly = cy + g.oy + Math.sin(sl.mid) * ry * 0.58;
-                var pctText = sl.pct * 100 < 1 ? '<1%' : Math.round(sl.pct * 100) + '%';
-                c.save();
-                c.globalAlpha = alpha;
-                c.textAlign = 'center'; c.textBaseline = 'middle';
-                c.font = '800 ' + Math.max(11, Math.round(rx * 0.115)) + 'px sans-serif';
-                c.fillStyle = '#ffffff';
-                c.shadowColor = 'rgba(0,0,0,0.45)'; c.shadowBlur = 4;
-                c.fillText(pctText, lx, ly);
-                c.restore();
+                // 4. Percentage text
+                var alpha = de > sl.mid ? clamp01((L - sl.mid) / (sl.e - sl.mid)) : 1;
+                if (alpha > 0) {
+                    var lx = cx + ox + Math.cos(sl.mid) * s_rx * 0.58;
+                    var ly = top_y + oy + Math.sin(sl.mid) * s_ry * 0.58;
+                    var pctText = sl.pct * 100 < 1 ? '<1%' : Math.round(sl.pct * 100) + '%';
+                    c.save();
+                    c.globalAlpha = alpha;
+                    c.textAlign = 'center'; c.textBaseline = 'middle';
+                    c.font = '800 ' + Math.max(11, Math.round(s_rx * 0.115)) + 'px sans-serif';
+                    c.fillStyle = '#ffffff';
+                    c.shadowColor = 'rgba(0,0,0,0.45)'; c.shadowBlur = 4;
+                    c.fillText(pctText, lx, ly);
+                    c.restore();
+                }
             });
         }
 
@@ -971,13 +979,22 @@
                 var rect = cvs.getBoundingClientRect();
                 var dx = e.clientX - rect.left - info.cx, dy = e.clientY - rect.top - info.cy;
                 var idx = -1;
-                if ((dx * dx) / (info.rx * info.rx) + (dy * dy) / (info.ry * info.ry) <= 1.3) {
-                    var ang = Math.atan2(dy / info.ry, dx / info.rx);
-                    if (ang < -Math.PI / 2) ang += Math.PI * 2;
-                    for (var i = 0; i < info.slices.length; i++) {
-                        if (ang >= info.slices[i].s && ang <= info.slices[i].e) { idx = i; break; }
+                
+                // ตรวจสอบแบบแยกสัดส่วนตาม scale ของแต่ละชิ้นเพื่อให้ hover แม่นยำขึ้น
+                var ang = Math.atan2(dy / info.ry, dx / info.rx);
+                if (ang < -Math.PI / 2) ang += Math.PI * 2;
+                for (var i = 0; i < info.slices.length; i++) {
+                    var sl = info.slices[i];
+                    if (ang >= sl.s && ang <= sl.e) {
+                        var s_rx = info.rx * sl.scale;
+                        var s_ry = info.ry * sl.scale;
+                        if ((dx * dx) / (s_rx * s_rx) + (dy * dy) / (s_ry * s_ry) <= 1.4) {
+                            idx = i;
+                        }
+                        break;
                     }
                 }
+                
                 if (cvs._pieHoverIdx !== idx) {
                     cvs._pieHoverIdx = idx;
                     cvs.style.cursor = idx >= 0 ? 'pointer' : '';
@@ -1277,7 +1294,12 @@
                 // Assignee Filtering
                 let matchAssignee = true;
                 if (window._activeAssigneeFilter) {
-                    matchAssignee = t.assignee === window._activeAssigneeFilter;
+                    if (t.assignee && t.assignee !== '-') {
+                        const assigneesList = String(t.assignee).split(',').map(n => n.trim());
+                        matchAssignee = assigneesList.includes(window._activeAssigneeFilter);
+                    } else {
+                        matchAssignee = false;
+                    }
                 }
 
                 return matchSearch && matchDate && matchPriority && matchProject && matchAssignee;
@@ -2897,15 +2919,20 @@
         const groups = {};
         Object.keys(breakdown).forEach(status => {
             (breakdown[status] || []).forEach(ticket => {
-                let name;
                 if (kind === 'team') {
-                    name = ticket.assignee && ticket.assignee !== '-' ? ticket.assignee : null;
-                    if (!name) return;
+                    const assigneesStr = ticket.assignee && ticket.assignee !== '-' ? ticket.assignee : null;
+                    if (!assigneesStr) return;
+                    
+                    const assigneesList = String(assigneesStr).split(',').map(n => n.trim()).filter(n => n);
+                    assigneesList.forEach(name => {
+                        if (!groups[name]) groups[name] = [];
+                        groups[name].push({ ...ticket, _statusKey: status });
+                    });
                 } else {
-                    name = ticket.project || 'ไม่ระบุ';
+                    const name = ticket.project || 'ไม่ระบุ';
+                    if (!groups[name]) groups[name] = [];
+                    groups[name].push({ ...ticket, _statusKey: status });
                 }
-                if (!groups[name]) groups[name] = [];
-                groups[name].push({ ...ticket, _statusKey: status });
             });
         });
 
@@ -2972,10 +2999,7 @@
         if (!el) return;
 
         if (kind === 'project') {
-            // สถานะบาร์ชาร์ตด้านบน sidebar — นับจากข้อมูลดิบทั้งหมด ไม่ผูกกับ filter กลางจอ
-            const breakdown = mockDataRaw || {};
-            const statusOrder = ['new', 'assigned', 'pending', 'solved', 'closed'];
-            renderStatusBarChart(statusOrder.map(s => (breakdown[s] || []).length), statusOrder);
+            // (Summary Status Bar Chart is now driven by renderTrendLineChart)
         }
 
         const entries = buildEntityGroups(kind);
@@ -3089,10 +3113,11 @@
     let currentTrendPeriod = 'week';
 
     function aggregateByPeriod(period) {
-        // Use ALL raw data — independent of center panel filters
+        // Use raw data (ignore center filters) and keep track of status
+        const breakdown = mockDataRaw || {};
         let tickets = [];
-        Object.values(mockDataRaw || {}).forEach(arr => {
-            (arr || []).forEach(t => tickets.push(t));
+        Object.keys(breakdown).forEach(status => {
+            (breakdown[status] || []).forEach(t => tickets.push({ ...t, _statusKey: status }));
         });
 
         const now = new Date();
@@ -3176,10 +3201,40 @@
         }
 
         const entries = Object.values(buckets);
+        
+        let minStart = null;
+        let maxEnd = null;
+        entries.forEach(b => {
+            if (b.start) {
+                if (!minStart || b.start < minStart) minStart = b.start;
+                if (!maxEnd || b.end > maxEnd) maxEnd = b.end;
+            }
+        });
+        
+        const statusCounts = { 'new': 0, 'assigned': 0, 'pending': 0, 'solved': 0, 'closed': 0 };
+        
+        if (period === 'year') {
+            const curYear = now.getFullYear();
+            tickets.forEach(t => {
+                const d = t.date_open ? new Date(t.date_open) : null;
+                if (d && !isNaN(d) && d.getFullYear() === curYear) {
+                    if (statusCounts[t._statusKey] !== undefined) statusCounts[t._statusKey]++;
+                }
+            });
+        } else {
+            tickets.forEach(t => {
+                const d = t.date_open ? new Date(String(t.date_open).replace('T', ' ')) : null;
+                if (d && !isNaN(d) && minStart && maxEnd && d >= minStart && d <= maxEnd) {
+                    if (statusCounts[t._statusKey] !== undefined) statusCounts[t._statusKey]++;
+                }
+            });
+        }
+
         return {
             labels: entries.map(b => b.label),
             counts: entries.map(b => b.count),
-            total: entries.reduce((s, b) => s + b.count, 0)
+            total: entries.reduce((s, b) => s + b.count, 0),
+            statusCounts
         };
     }
 
@@ -3226,9 +3281,15 @@
         const totalEl = document.getElementById('trendTotal');
         if (!canvas || typeof Chart === 'undefined') return;
 
-        const { labels, counts, total } = aggregateByPeriod(currentTrendPeriod);
+        const { labels, counts, total, statusCounts } = aggregateByPeriod(currentTrendPeriod);
         if (totalEl) totalEl.textContent = total;
         renderTrendList(labels, counts, currentTrendPeriod);
+        
+        // Update Status Bar Chart to Co-op with Trend (and ignore center filters)
+        if (statusCounts) {
+            const statusOrder = ['new', 'assigned', 'pending', 'solved', 'closed'];
+            renderStatusBarChart(statusOrder.map(s => statusCounts[s] || 0), statusOrder);
+        }
 
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
         const lineColor = isDark ? '#a78bfa' : '#6366f1';
