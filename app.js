@@ -791,37 +791,46 @@
             return;
         }
 
-        // สัดส่วนมุมตามค่าจริงเป๊ะ (pie มาตรฐาน) — floor มุมขั้นต่ำไว้แค่ "มองเห็นได้" เท่านั้น
-        // ไม่แตะค่า pct/label ที่แสดงจริง (ต่างจาก MIN_ARC เดิมที่ยัดค่าเข้าไปในตัวเลขจริงจนยอดรวมผิด)
-        // candy 3D: อ้วนหนา กลมขึ้น แยกชิ้นชัด — ยก cy ขึ้นเผื่อที่ให้ความหนาด้านล่าง
-        var rx = Math.min(W * 0.38, H * 0.40);
-        var ry = rx * 0.70;
-        var depth = rx * 0.34;
-        var explode = rx * 0.07;
-        cy = H * 0.44;
-        var MIN_SWEEP = Math.PI * 2 * 0.018;
+        // มุมชิ้นจิ๋วถูกขยายขั้นต่ำเพื่อการมองเห็น (ดู MIN_SWEEP ด้านล่าง) — ตัวเลข pct/label ยังเป็นค่าจริงเสมอ
+        // matte 3D: หนา แยกชิ้นชัด ผิวด้านแบบพลาสติก — ยก cy ขึ้นเผื่อความหนาด้านล่าง
+        var rx = Math.min(W * 0.38, H * 0.42);
+        var ry = rx * 0.58;
+        var depth = rx * 0.30;
+        var explode = rx * 0.09;
+        cy = H * 0.45;
 
-        var startA = -Math.PI / 2, slices = [];
+        // มุมขั้นต่ำ 7% ของวง ให้ชิ้นจิ๋วยังเป็น "ชิ้น" มองเห็น/คลิกได้ แล้ว renormalize
+        // ชิ้นที่เหลือให้รวมครบวงพอดี — % ที่แสดงเป็นค่าจริงเสมอ ไม่ผูกกับมุม
+        var MIN_SWEEP = Math.PI * 2 * 0.07;
+        var active = [];
         for (var i = 0; i < values.length; i++) {
-            if (!values[i] || values[i] <= 0) continue;
-            var pct = values[i] / total;
-            var sweep = Math.max(pct * Math.PI * 2, MIN_SWEEP);
+            if (values[i] > 0) active.push({ idx: i, pct: values[i] / total });
+        }
+        var floorSum = 0, freePct = 0;
+        active.forEach(function (a) {
+            a.floored = a.pct * Math.PI * 2 < MIN_SWEEP;
+            if (a.floored) floorSum += MIN_SWEEP; else freePct += a.pct;
+        });
+        var freeSpace = Math.PI * 2 - floorSum;
+        var startA = -Math.PI / 2, slices = [];
+        active.forEach(function (a) {
+            var sweep = a.floored ? MIN_SWEEP : (a.pct / freePct) * freeSpace;
             var mid = startA + sweep / 2;
             slices.push({
                 s: startA, e: startA + sweep, mid: mid,
-                color: colors[i], label: labels[i], val: values[i], pct: pct,
+                color: colors[a.idx], label: labels[a.idx], val: values[a.idx], pct: a.pct,
                 ox: Math.cos(mid) * explode, oy: Math.sin(mid) * explode
             });
             startA += sweep;
-        }
+        });
 
         // Back→front sort for depth walls
         var sorted = slices.slice().sort(function (a, b) { return Math.sin(a.mid) - Math.sin(b.mid); });
 
         // Dramatic drop shadow
         c.save();
-        c.shadowColor = 'rgba(0,0,30,0.5)'; c.shadowBlur = 42; c.shadowOffsetY = depth + 18;
-        c.beginPath(); c.ellipse(cx, cy + depth + 4, rx * 0.82, ry * 0.5, 0, 0, Math.PI * 2);
+        c.shadowColor = 'rgba(0,0,25,0.42)'; c.shadowBlur = 30; c.shadowOffsetY = depth + 14;
+        c.beginPath(); c.ellipse(cx, cy + depth, rx * 0.85, ry * 0.55, 0, 0, Math.PI * 2);
         c.fillStyle = 'rgba(0,0,0,0.001)'; c.fill(); c.restore();
 
         // Side walls — vertical gradient (top bright → bottom dark) + exploded
@@ -835,11 +844,31 @@
             c.ellipse(cx + ox, cy + oy + depth, rx, ry, 0, sl.e, sl.s, true);
             c.closePath();
             var gv = c.createLinearGradient(cx + ox, cy + oy, cx + ox, cy + oy + depth);
-            gv.addColorStop(0, dimCol(sl.color, 0.92));
-            gv.addColorStop(0.45, dimCol(sl.color, 0.68));
-            gv.addColorStop(1, dimCol(sl.color, 0.40));
+            gv.addColorStop(0, dimCol(sl.color, 0.85));
+            gv.addColorStop(0.55, dimCol(sl.color, 0.62));
+            gv.addColorStop(1, dimCol(sl.color, 0.46));
             c.fillStyle = gv; c.fill();
             c.restore();
+        });
+
+        // radial cut faces (หน้าตัดด้านในของชิ้นที่หันเข้าหากล้อง) — ให้ก้อนดูตันแบบภาพเรนเดอร์
+        slices.forEach(function (sl) {
+            [sl.s, sl.e].forEach(function (ang, k) {
+                var facing = (k === 0) ? Math.sin(ang - 0.02) : Math.sin(ang + 0.02);
+                if (facing <= 0.02) return;
+                var ox = sl.ox, oy = sl.oy;
+                var ex = cx + ox + rx * Math.cos(ang), ey = cy + oy + ry * Math.sin(ang);
+                c.save();
+                c.beginPath();
+                c.moveTo(cx + ox, cy + oy);
+                c.lineTo(ex, ey);
+                c.lineTo(ex, ey + depth);
+                c.lineTo(cx + ox, cy + oy + depth);
+                c.closePath();
+                c.fillStyle = dimCol(sl.color, 0.72);
+                c.fill();
+                c.restore();
+            });
         });
 
         // Top faces — radial gradient with specular highlight + exploded
@@ -848,33 +877,26 @@
             c.save();
             c.beginPath(); c.moveTo(cx + ox, cy + oy);
             c.ellipse(cx + ox, cy + oy, rx, ry, 0, sl.s, sl.e); c.closePath();
-            var gr = c.createRadialGradient(cx + ox - rx * 0.18, cy + oy - ry * 0.75, 0, cx + ox, cy + oy, rx * 1.1);
-            gr.addColorStop(0, dimCol(sl.color, 1.72));
-            gr.addColorStop(0.3, dimCol(sl.color, 1.28));
-            gr.addColorStop(0.62, sl.color);
-            gr.addColorStop(1, dimCol(sl.color, 0.82));
+            // matte: ไล่แสงนุ่มจากบนซ้าย ไม่มี sheen วาวแบบลูกกวาด
+            var gr = c.createRadialGradient(cx + ox - rx * 0.25, cy + oy - ry * 0.9, rx * 0.1, cx + ox, cy + oy, rx * 1.15);
+            gr.addColorStop(0, dimCol(sl.color, 1.32));
+            gr.addColorStop(0.4, dimCol(sl.color, 1.1));
+            gr.addColorStop(0.75, sl.color);
+            gr.addColorStop(1, dimCol(sl.color, 0.88));
             c.fillStyle = gr; c.fill();
-            // bevel สีตัวเอง (ไม่ใช่ขอบขาวแบบสติกเกอร์) + sheen แสงเฉียงพาดบนแบบลูกกวาด
-            c.strokeStyle = dimCol(sl.color, 1.35); c.lineWidth = 2.5; c.stroke();
-            c.clip();
-            var sh = c.createLinearGradient(cx + ox - rx, cy + oy - ry, cx + ox + rx * 0.2, cy + oy + ry * 0.4);
-            sh.addColorStop(0, 'rgba(255,255,255,0.34)');
-            sh.addColorStop(0.45, 'rgba(255,255,255,0.10)');
-            sh.addColorStop(0.7, 'rgba(255,255,255,0)');
-            c.fillStyle = sh;
-            c.fillRect(cx + ox - rx, cy + oy - ry, rx * 2, ry * 2);
+            c.strokeStyle = dimCol(sl.color, 1.18); c.lineWidth = 1.5; c.stroke();
             c.restore();
         });
 
         // ป้าย % กลางแต่ละชิ้น — ใช้ % จริงเสมอ (ไม่ผูกกับมุมที่ floor ไว้เพื่อการมองเห็น)
         slices.forEach(function (sl) {
-            var labelRx = rx * 0.55, labelRy = ry * 0.55;
+            var labelRx = rx * 0.58, labelRy = ry * 0.58;
             var lx = cx + sl.ox + Math.cos(sl.mid) * labelRx;
             var ly = cy + sl.oy + Math.sin(sl.mid) * labelRy;
             var pctText = sl.pct * 100 < 1 ? '<1%' : Math.round(sl.pct * 100) + '%';
             c.save();
             c.textAlign = 'center'; c.textBaseline = 'middle';
-            c.font = '800 ' + Math.max(12, Math.round(rx * 0.125)) + 'px sans-serif';
+            c.font = '800 ' + Math.max(11, Math.round(rx * 0.115)) + 'px sans-serif';
             c.fillStyle = '#ffffff';
             c.shadowColor = 'rgba(0,0,0,0.45)'; c.shadowBlur = 4;
             c.fillText(pctText, lx, ly);
