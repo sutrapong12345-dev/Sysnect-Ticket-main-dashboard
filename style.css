@@ -3388,3 +3388,47 @@
 /* Drill-down modal ฝั่ง dark (ปุ่มปิดเดิม hardcode สีสว่าง) */
 [data-theme="dark"] .btn-close-drill { color: #94a3b8; }
 [data-theme="dark"] .btn-close-drill:hover { background: rgba(148,163,184,0.15); color: #e2e8f0; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   MOBILE UX FIXES (2026-07-02 ค่ำ) — แถบล่างถาวร / แท็บซ้ำ / โลโก้ / loader
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* 1) แถบเมนูล่าง: โชว์ตลอดบนจอเล็ก ไม่ผูกกับ class จาก JS + ตรึง layer กัน fixed วูบตอน scroll */
+@media (max-width: 1024px) {
+    .mobile-tabbar {
+        display: flex !important;
+        position: fixed;
+        left: 0; right: 0; bottom: 0;
+        z-index: 1200;
+        transform: translateZ(0);
+        will-change: transform;
+        background: rgba(255,255,255,0.92);
+        -webkit-backdrop-filter: blur(18px) saturate(180%);
+        backdrop-filter: blur(18px) saturate(180%);
+        border-top: 1px solid rgba(99,102,241,0.18);
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+        padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+        justify-content: space-around;
+        align-items: stretch;
+    }
+    [data-theme="dark"] .mobile-tabbar {
+        background: rgba(15,23,42,0.88);
+        border-top-color: rgba(99,102,241,0.25);
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+    }
+    body { padding-bottom: 74px !important; }
+
+    /* 2) ซ่อนแท็บในการ์ด (สรุป&แนวโน้ม / โครงการ&ทีม) บนแท็บสถานะ/แนวโน้ม — bottom nav แยกให้แล้ว */
+    body.mtab-on[data-mtab="status"] .sidebar-tabs,
+    body.mtab-on[data-mtab="trend"] .sidebar-tabs { display: none !important; }
+}
+
+/* 3) โลโก้ขอบโค้งมน (เห็นชัดใน dark ที่พื้นโลโก้เป็นกล่องขาว) */
+.brand-logo { border-radius: 12px; }
+
+/* 5) loader อยู่กลางจอเสมอ + การ์ดไม่ล้นขอบจอมือถือ */
+.sysnect-loader { padding: 16px; box-sizing: border-box; }
+@media (max-width: 600px) {
+    .enterprise-loader-container { padding: 28px 20px; width: min(88vw, 340px); }
+    .el-footer { letter-spacing: 1px; font-size: 9px; }
+}

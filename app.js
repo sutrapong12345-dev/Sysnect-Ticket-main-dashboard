@@ -455,46 +455,53 @@
             window.isFallbackGlobal = false;
 
             try {
-                if(loaderMessage) loaderMessage.innerText = "กำลังดึงข้อมูลตรงจาก n8n...";
-                // ⚡ ยิงตรง n8n ก่อนเสมอ เพื่อให้เร็วที่สุดตามโครงสร้างใหม่
-                liveData = await fetchWithTimeout(N8N_DIRECT_URL, 45000);
-                window.dataSourceGlobal = 'n8n_direct';
+                if(loaderMessage) loaderMessage.innerText = "กำลังดึงข้อมูลจากฐานข้อมูล (PostgreSQL)...";
+                // ⚡ Backend ก่อนเสมอ (Postgres ตอบ <50ms และฝั่ง server มี fallback n8n→GLPI→cache ในตัว)
+                //    — เดิมยิง n8n ตรงก่อน (payload 5MB+, รอได้ถึง 45 วิ) ทำให้ n8n ล้มแล้วทั้งเว็บมืดทั้งที่ Postgres ออนอยู่
+                liveData = await fetchWithTimeout(API_URL, 8000, authHeaders);
+                window.dataSourceGlobal = (liveData && liveData._meta && liveData._meta.source) || 'postgres';
                 window.isFallbackGlobal = false;
-
-                // ✅ บันทึกลง Railway PostgreSQL ทุกครั้งที่ดึง n8n สำเร็จ (fire-and-forget)
-                (async () => {
-                    try {
-                        const snapshotUrl = 'https://sysnect-ticket-main-dashboard-production.up.railway.app/api/snapshot';
-                        const tok = sessionStorage.getItem('sysnect_sso_token');
-                        const r = await fetch(snapshotUrl, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                ...(tok ? { 'Authorization': `Bearer ${tok}` } : {})
-                            },
-                            body: JSON.stringify(liveData),
-                            signal: AbortSignal.timeout(10000)
-                        });
-                        if (r.ok) {
-                            const j = await r.json();
-                            console.log(`[SNAPSHOT] 💾 บันทึกลง Railway PG สำเร็จ: ${j.written}/${j.fetched} ตั๋ว`);
-                        }
-                    } catch (_) { /* ไม่บล็อก UI */ }
-                })();
-            } catch (n8nError) {
-                console.warn("n8n ตอบสนองช้าหรือมีปัญหา → สลับไปใช้ฐานข้อมูลสำรอง (Backend)...", n8nError);
-                if(loaderMessage) loaderMessage.innerText = "n8n ไม่พร้อม กำลังดึงข้อมูลจากฐานข้อมูลสำรอง...";
+            } catch (apiError) {
+                // token หมดอายุ/ใช้ไม่ได้ → ล้างแล้ว reload ให้ด่าน SSO พาไป login ใหม่ (flag กันลูป ครั้งเดียวต่อ session)
+                if (String(apiError && apiError.message).indexOf('401') !== -1 && !sessionStorage.getItem('sysnect_tickets_401_retry')) {
+                    sessionStorage.setItem('sysnect_tickets_401_retry', '1');
+                    sessionStorage.removeItem('sysnect_sso_token');
+                    location.reload();
+                    return;
+                }
+                console.warn("Backend ไม่พร้อม → ยิงตรง n8n แทน...", apiError);
+                if(loaderMessage) loaderMessage.innerText = "ฐานข้อมูลไม่พร้อม กำลังดึงข้อมูลตรงจาก n8n...";
 
                 try {
-                    // ⚡ ถ้ายิง n8n ไม่ได้ ให้ลองเรียก Backend (รอแค่ 5 วินาที)
-                    liveData = await fetchWithTimeout(API_URL, 5000, authHeaders);
-                    window.dataSourceGlobal = (liveData && liveData._meta && liveData._meta.source) || 'postgres';
+                    liveData = await fetchWithTimeout(N8N_DIRECT_URL, 30000);
+                    window.dataSourceGlobal = 'n8n_direct';
                     window.isFallbackGlobal = true;
+
+                    // ✅ บันทึกลง Railway PostgreSQL เมื่อได้ข้อมูลตรงจาก n8n (fire-and-forget)
+                    (async () => {
+                        try {
+                            const snapshotUrl = 'https://sysnect-ticket-main-dashboard-production.up.railway.app/api/snapshot';
+                            const tok = sessionStorage.getItem('sysnect_sso_token');
+                            const r = await fetch(snapshotUrl, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    ...(tok ? { 'Authorization': `Bearer ${tok}` } : {})
+                                },
+                                body: JSON.stringify(liveData),
+                                signal: AbortSignal.timeout(10000)
+                            });
+                            if (r.ok) {
+                                const j = await r.json();
+                                console.log(`[SNAPSHOT] 💾 บันทึกลง Railway PG สำเร็จ: ${j.written}/${j.fetched} ตั๋ว`);
+                            }
+                        } catch (_) { /* ไม่บล็อก UI */ }
+                    })();
                 } catch (fallbackError) {
                     console.error("ดึงข้อมูลล้มเหลวทุกช่องทาง", fallbackError);
                     window.dataSourceGlobal = 'none';
                     if(loaderMessage) {
-                        loaderMessage.innerText = "ระบบไม่พร้อม — ไม่สามารถดึงข้อมูลจาก n8n และ Backend สำรองได้";
+                        loaderMessage.innerText = "ระบบไม่พร้อม — ไม่สามารถดึงข้อมูลจาก Backend และ n8n ได้";
                         loaderMessage.style.color = "#ef4444";
                     }
                     throw fallbackError;
@@ -634,6 +641,16 @@
             mockDataRaw["pending"] = liveData["pending"] || [];
             mockDataRaw["solved"] = liveData["solved"] || [];
             mockDataRaw["closed"] = liveData["closed"] || [];
+
+            // 🛡️ กันวันที่เพี้ยนจากต้นทาง — n8n เคยส่ง "=2026-07-01" (มี = นำหน้าจาก expression หลุด)
+            // ทำให้ new Date() เป็น Invalid ทุกใบ → กราฟ/ตัวกรองเป็น 0 ทั้งระบบ จึง strip ก่อนใช้เสมอ
+            ['new', 'assigned', 'pending', 'solved', 'closed'].forEach(k => {
+                (mockDataRaw[k] || []).forEach(t => {
+                    ['date', 'date_open', 'date_close'].forEach(f => {
+                        if (typeof t[f] === 'string') t[f] = t[f].replace(/^=+\s*/, '');
+                    });
+                });
+            });
             
             populateProjectFilter();
             
