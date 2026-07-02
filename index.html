@@ -188,9 +188,7 @@
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet" />
     <!-- Flatpickr for Date Inputs -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <link rel="stylesheet" href="style.css?v=25">
+    <link rel="stylesheet" href="style.css?v=26">
 </head>
 <body>
 
@@ -570,7 +568,7 @@
                                 <div class="custom-dropdown-item" data-value="year">ปีนี้</div>
                             </div>
                         </div>
-                        <span class="filter-sep">|</span>
+                        <span class="filter-sep filter-sep-pipe">|</span>
                         <input type="date" id="filterDateStart" title="วันที่เริ่มต้น">
                         <span class="filter-sep">ถึง</span>
                         <input type="date" id="filterDateEnd" title="วันที่สิ้นสุด">
@@ -1024,8 +1022,9 @@ input:checked + .slider:before { transform: translateX(20px); }
                 buttons[i].classList.toggle('active', buttons[i].getAttribute('data-mtab-target') === tab);
             }
             if (tab === 'tickets' && doRender !== false) {
+                // เช็คจาก .ticket-item จริงๆ — ห้ามใช้ children.length เพราะมี <p> placeholder ค้างอยู่ตั้งแต่โหลดหน้า
                 var tc = document.getElementById('ticketContainer');
-                var isEmpty = !tc || tc.children.length === 0;
+                var isEmpty = !tc || !tc.querySelector('.ticket-item');
                 if (isEmpty && typeof window._enterSplitMode === 'function') window._enterSplitMode('ALL');
             }
             if ((tab === 'project' || tab === 'team') && typeof window.switchSidebarTab === 'function') {

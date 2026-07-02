@@ -2996,6 +2996,10 @@
         min-width: 0 !important;
         flex: 1 1 120px !important;
     }
+    /* ตัวคั่น | จะห้อยโดดเดี่ยวเวลา filter bar ตัดบรรทัดบนจอแคบ — ซ่อนไปเลย */
+    #dashboardWrapper .filter-sep-pipe {
+        display: none !important;
+    }
     /* ticket-item: เต็มความกว้าง padding กระชับ */
     #dashboardWrapper .ticket-item {
         padding: 14px !important;
