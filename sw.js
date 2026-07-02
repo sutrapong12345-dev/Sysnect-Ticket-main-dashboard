@@ -50,6 +50,11 @@ self.addEventListener('fetch', (e) => {
         }
         return res;
       })
-      .catch(() => caches.match(req).then((cached) => cached || caches.match('./index.html')))
+      .catch(() => caches.match(req).then((cached) => {
+        if (cached) return cached;
+        // fallback เป็น index.html เฉพาะตอนเปิดหน้า (navigation) — ไม่ใช่ asset อื่น กัน MIME เพี้ยน
+        if (req.mode === 'navigate') return caches.match('./index.html');
+        return Response.error();
+      }))
   );
 });
