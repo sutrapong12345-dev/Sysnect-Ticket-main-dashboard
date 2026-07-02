@@ -3272,3 +3272,119 @@
     body[data-pctab="trend"] #sidebarTabTeam      { display: none !important; }
 }
 
+
+/* Toast Notifications */
+.toast-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 9999; }
+.toast { background: #ffffff; border: 1px solid var(--border-solid, #e2e8f0); border-left: 4px solid var(--primary-color, #6366f1); color: var(--text-main); padding: 12px 16px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 12px; font-size: 14px; animation: toast-slide-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; transition: opacity 0.3s ease, transform 0.3s ease; }
+[data-theme="dark"] .toast { background: #1e293b; border-color: rgba(148,163,184,0.22); }
+.toast.hide { opacity: 0; transform: translateX(100%); }
+@keyframes toast-slide-in { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
+
+
+
+.skeleton-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg-main, #f1f5f9); z-index: 1000; padding: 20px; display: flex; flex-direction: column; gap: 20px; box-sizing: border-box; transition: opacity 0.5s ease, visibility 0.5s ease; }
+.skeleton-overlay.hidden { opacity: 0; visibility: hidden; }
+.skeleton-box { background: linear-gradient(90deg, #e2e8f0 25%, #cbd5e1 50%, #e2e8f0 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 4px; }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+.skeleton-header { display: flex; justify-content: space-between; margin-bottom: 20px; }
+.skeleton-stat-bar { display: grid; grid-template-columns: repeat(6, 1fr); gap: 15px; }
+.skeleton-stat-card { background: white; border-radius: 12px; padding: 15px; border: 1px solid #e2e8f0; }
+.skeleton-dashboard { display: grid; grid-template-columns: 300px 1fr 300px; gap: 20px; flex: 1; }
+.skeleton-panel { background: white; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; }
+.skeleton-ticket { margin-bottom: 10px; }
+
+/* --- DRILL DOWN MODAL --- */
+.drill-modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(4px); z-index: 2000; display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease; }
+.drill-modal-overlay.active { display: flex; opacity: 1; }
+.drill-modal { background: var(--bg-main, #ffffff); width: 90%; max-width: 1000px; max-height: 90vh; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); display: flex; flex-direction: column; overflow: hidden; transform: scale(0.95); transition: transform 0.3s ease; }
+.drill-modal-overlay.active .drill-modal { transform: scale(1); }
+.drill-modal-header { padding: 20px 24px; border-bottom: 1px solid var(--border-color, #e2e8f0); display: flex; justify-content: space-between; align-items: center; background: var(--bg-main, #ffffff); }
+.drill-modal-header h2 { margin: 0; font-size: 1.25rem; font-weight: 700; color: var(--text-main, #1e293b); }
+.btn-close-drill { background: none; border: none; cursor: pointer; color: #64748b; padding: 4px; border-radius: 8px; display: flex; align-items: center; transition: background 0.2s; }
+.btn-close-drill:hover { background: #f1f5f9; color: #1e293b; }
+.drill-modal-body { padding: 20px; overflow-y: auto; flex: 1; background: var(--bg-main, #f8fafc); }
+.drill-modal-body .ticket-item { margin-bottom: 12px; }
+@media (max-width: 1024px) { .skeleton-dashboard { grid-template-columns: 1fr; } .skeleton-stat-bar { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 768px) { .skeleton-stat-bar { grid-template-columns: repeat(2, 1fr); } }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE FIXES (Appended to ensure highest priority)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Fix 1: Stat bar to grid layout on small screens */
+@media (max-width: 640px) {
+    #statBar {
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+        overflow: hidden !important;
+        padding: 10px !important;
+        gap: 8px !important;
+        height: auto !important;
+    }
+    #statBar .stat-card {
+        min-width: 0 !important;
+        flex: none !important;
+        padding: 8px !important;
+        white-space: normal !important;
+    }
+    #statBar .stat-card .sc-value {
+        font-size: 16px !important;
+    }
+    #statBar .stat-card .sc-label {
+        font-size: 9px !important;
+    }
+}
+
+/* Fix 2: Separate Status and Trend views on mobile bottom navigation */
+@media (max-width: 1024px) {
+    /* When Status tab is active, hide Trend elements */
+    body.mtab-on[data-mtab="status"] #sidebarTabAnalytics .sidebar-section-head,
+    body.mtab-on[data-mtab="status"] #sidebarTabAnalytics .period-selector,
+    body.mtab-on[data-mtab="status"] #sidebarTabAnalytics .trend-chart-area {
+        display: none !important;
+    }
+
+    /* When Trend tab is active, hide Status elements */
+    body.mtab-on[data-mtab="trend"] #sidebarTabAnalytics .sidebar-header,
+    body.mtab-on[data-mtab="trend"] #sidebarTabAnalytics .sidebar-chart-area {
+        display: none !important;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   THEME COMPLETENESS — เก็บ component ที่เคยมีสไตล์ธีมเดียวให้ครบทั้ง 2 ธีม
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Loader ตอนเปิดแอป — เดิม hardcode dark เสมอ ทำให้โหมด light เจอจอดำวาบ/ค้าง */
+[data-theme="light"] .sysnect-loader { background-color: #dde5ff; }
+[data-theme="light"] .enterprise-loader-container {
+    background: rgba(255,255,255,0.65);
+    border-color: rgba(99,102,241,0.18);
+    box-shadow: 0 20px 50px rgba(99,102,241,0.15);
+}
+[data-theme="light"] .el-logo-sub { color: #64748b; }
+[data-theme="light"] .el-progress-text,
+[data-theme="light"] #loaderPercent { color: #0f172a; }
+[data-theme="light"] .el-status { color: #64748b; }
+[data-theme="light"] .el-footer { color: #94a3b8; border-top-color: rgba(15,23,42,0.08); }
+[data-theme="light"] .el-ring-bg { stroke: rgba(15,23,42,0.08); }
+[data-theme="light"] .loader-orb-1 { opacity: 0.35; }
+[data-theme="light"] .loader-orb-2 { opacity: 0.25; }
+
+/* แถบเมนูล่างมือถือ — เดิมมีแต่พื้นขาว ไม่มีสไตล์ dark */
+[data-theme="dark"] body.mtab-on .mobile-tabbar {
+    background: rgba(15,23,42,0.88);
+    border-top-color: rgba(99,102,241,0.25);
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+}
+[data-theme="dark"] .mtab-btn { color: #64748b; }
+[data-theme="dark"] .mtab-btn.active { color: #a5b4fc; background: rgba(99,102,241,0.18); }
+
+/* Skeleton overlay ฝั่ง dark */
+[data-theme="dark"] .skeleton-box { background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%); background-size: 200% 100%; }
+[data-theme="dark"] .skeleton-stat-card,
+[data-theme="dark"] .skeleton-panel { background: #0f172a; border-color: rgba(148,163,184,0.15); }
+
+/* Drill-down modal ฝั่ง dark (ปุ่มปิดเดิม hardcode สีสว่าง) */
+[data-theme="dark"] .btn-close-drill { color: #94a3b8; }
+[data-theme="dark"] .btn-close-drill:hover { background: rgba(148,163,184,0.15); color: #e2e8f0; }

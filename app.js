@@ -137,7 +137,7 @@
         const autoRefreshVal = autoRefreshSel ? autoRefreshSel.value : '0';
         const autoRefreshMinutes = autoRefreshVal === 'custom'
             ? Math.max(1, parseInt(autoRefreshCustom ? autoRefreshCustom.value : '10') || 10)
-            : parseInt(autoRefreshVal) || 0;
+            : parseFloat(autoRefreshVal) || 0;
 
         const settings = {
             notifications: notifToggle ? notifToggle.checked : false,
@@ -145,9 +145,10 @@
             autoRefresh: autoRefreshVal,
             autoRefreshCustom: autoRefreshCustom ? parseInt(autoRefreshCustom.value) || 10 : 10,
             defaultStatus: defaultStatusSel ? defaultStatusSel.value : '',
-            theme: themeSel ? themeSel.value : 'light'
+            theme: themeSel ? themeSel.value : 'dark'
         };
         localStorage.setItem('sysnect_settings', JSON.stringify(settings));
+        if (typeof window.showToast === 'function') window.showToast('บันทึกการตั้งค่าเรียบร้อยแล้ว', 'success');
 
         // Apply auto-refresh immediately
         startAutoRefresh(autoRefreshMinutes);
@@ -216,7 +217,7 @@
         const arVal = settings.autoRefresh || '0';
         const arMinutes = arVal === 'custom'
             ? Math.max(1, parseInt(settings.autoRefreshCustom) || 10)
-            : parseInt(arVal) || 0;
+            : parseFloat(arVal) || 0;
         startAutoRefresh(arMinutes);
 
         // Restore default status (applied after data loads via _applyDefaultStatusPending)
@@ -320,6 +321,31 @@
         // ไม่ auto-dismiss แล้ว — อยู่จนกว่าจะกดปิดหรือกดดู ticket
     }
     window.showNotificationToast = showNotificationToast;
+
+    window.showToast = function(message, type = 'info') {
+        const container = document.getElementById('toastContainer');
+        if (!container) return;
+        
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        
+        let icon = 'info';
+        let borderColor = 'var(--primary)';
+        if (type === 'success') { icon = 'check_circle'; borderColor = '#10b981'; }
+        else if (type === 'error') { icon = 'error'; borderColor = '#ef4444'; }
+        else if (type === 'warning') { icon = 'warning'; borderColor = '#f59e0b'; }
+        
+        toast.style.borderLeftColor = borderColor;
+        toast.innerHTML = `<span class="material-symbols-outlined" style="color: ${borderColor}">${icon}</span>
+                           <span>${escapeHtml(message)}</span>`;
+                           
+        container.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.classList.add('hide');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    };
 
     // Store previous ticket IDs to detect new ones
     let previousNewTicketIds = new Set();
@@ -618,7 +644,7 @@
                 initChart();
                 renderMonthlyBreakdown();
                 if (currentStatus) renderTicketList(currentStatus);
-                if (loader) loader.classList.add('hidden');
+                if (skeleton) skeleton.classList.add('hidden');
                 // Auto-open default status tab (first load only)
                 if (!isAutoRefresh && window._applyDefaultStatusPending) {
                     const s = window._applyDefaultStatusPending;
@@ -628,11 +654,10 @@
             }, 150); // ⚡ ลดจาก 800ms ให้รู้สึกไวขึ้น
             
         } catch (error) {
-            clearInterval(progressInterval);
             console.error("เกิดข้อผิดพลาดในการดึงข้อมูลจาก Backend:", error);
             updateConnectionStatus(); // ไฟสถานะแดงทั้ง n8n + PostgreSQL
             
-            if (!isAutoRefresh && loader) loader.classList.add('hidden');
+            if (!isAutoRefresh && skeleton) skeleton.classList.add('hidden');
             initChart();
             
             alert("⚠️ ดึงข้อมูลล้มเหลว!\nสาเหตุ: " + error.message + "\n\n(ไม่สามารถเชื่อมต่อกับ Backend ได้)");
@@ -659,6 +684,33 @@
                 return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
             }
             return `${day}/${month}/${year}`;
+        } catch (e) {
+            return '-';
+        }
+    }
+
+    function timeAgo(dateStr) {
+        if (!dateStr || dateStr === '-') return '-';
+        try {
+            const date = new Date(String(dateStr).replace('T', ' '));
+            if (isNaN(date.getTime())) return '-';
+            const now = new Date();
+            const seconds = Math.floor((now - date) / 1000);
+            
+            if (seconds < 60) return "อัปเดต: เพิ่งไม่นานมานี้";
+            
+            let interval = seconds / 31536000;
+            if (interval >= 1) return "อัปเดต: " + Math.floor(interval) + " ปีที่แล้ว";
+            interval = seconds / 2592000;
+            if (interval >= 1) return "อัปเดต: " + Math.floor(interval) + " เดือนที่แล้ว";
+            interval = seconds / 86400;
+            if (interval >= 1) return "อัปเดต: " + Math.floor(interval) + " วันที่แล้ว";
+            interval = seconds / 3600;
+            if (interval >= 1) return "อัปเดต: " + Math.floor(interval) + " ชม.ที่แล้ว";
+            interval = seconds / 60;
+            if (interval >= 1) return "อัปเดต: " + Math.floor(interval) + " นาทีที่แล้ว";
+            
+            return "อัปเดต: เพิ่งไม่นานมานี้";
         } catch (e) {
             return '-';
         }
@@ -1893,19 +1945,41 @@
 
                         let priorityBadge = '';
                         if (pEng === 'critical') {
-                            priorityBadge = `<span class="badge-priority priority-critical" style="margin-left: 8px; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; background-color: #fee2e2; color: #ef4444; border: 1px solid #fca5a5;">Critical</span>`;
+                            priorityBadge = `<span class="badge-priority priority-critical" style="margin-left: 8px; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; background-color: #fee2e2; color: #ef4444; border: 1px solid #fca5a5;">🔥 Critical</span>`;
                         } else if (pEng === 'high') {
-                            priorityBadge = `<span class="badge-priority priority-high" style="margin-left: 8px; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; background-color: #ffedd5; color: #f97316; border: 1px solid #fdba74;">High</span>`;
+                            priorityBadge = `<span class="badge-priority priority-high" style="margin-left: 8px; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; background-color: #ffedd5; color: #f97316; border: 1px solid #fdba74;">🔥 High</span>`;
                         } else if (pEng === 'medium') {
-                            priorityBadge = `<span class="badge-priority priority-medium" style="margin-left: 8px; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; background-color: #fef9c3; color: #eab308; border: 1px solid #fde047;">Medium</span>`;
+                            priorityBadge = `<span class="badge-priority priority-medium" style="margin-left: 8px; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; background-color: #fef9c3; color: #eab308; border: 1px solid #fde047;">⚠️ Medium</span>`;
                         } else {
-                            priorityBadge = `<span class="badge-priority priority-low" style="margin-left: 8px; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; background-color: #dcfce7; color: #22c55e; border: 1px solid #86efac;">Low</span>`;
+                            priorityBadge = `<span class="badge-priority priority-low" style="margin-left: 8px; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; background-color: #dcfce7; color: #22c55e; border: 1px solid #86efac;">ℹ️ Low</span>`;
                         }
                         
                         const _dur = calculateTicketDuration(ticket.date_open, ticket.date_close, ticket._statusName);
                         const _isResolved = ['CLOSED','SOLVED'].includes(String(ticket._statusName||'').toUpperCase());
                         const _durBadge = _dur ? `<span class="badge-duration ${_isResolved?'resolved':'ongoing'}"><span class="material-symbols-outlined" style="font-size:13px;">${_isResolved?'check_circle':'schedule'}</span>${_dur}</span>` : '';
                         const _closeDisplay = formatDateTime(ticket.date_close||'-');
+
+                        // SLA Logic
+                        let slaHours = 24;
+                        if (pEng === 'critical') slaHours = 1;
+                        else if (pEng === 'high') slaHours = 4;
+                        else if (pEng === 'medium') slaHours = 24;
+                        else slaHours = 48; // Low
+                        
+                        let slaBadge = '';
+                        if (!_isResolved && ticket.date_open) {
+                            const dateOpen = new Date(String(ticket.date_open).replace('T', ' '));
+                            if (!isNaN(dateOpen)) {
+                                const diffHours = (new Date(dateOpen.getTime() + slaHours * 60 * 60 * 1000) - new Date()) / 3600000;
+                                if (diffHours < 0) {
+                                    slaBadge = `<span class="badge-sla overdue" style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:bold;background-color:#fee2e2;color:#dc2626;border:1px solid #f87171;"><span class="material-symbols-outlined" style="font-size:13px;">timer_off</span>เกิน SLA ${Math.abs(diffHours).toFixed(1)} ชม.</span>`;
+                                } else if (diffHours <= 2) {
+                                    slaBadge = `<span class="badge-sla warning" style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:bold;background-color:#ffedd5;color:#ea580c;border:1px solid #fdba74;"><span class="material-symbols-outlined" style="font-size:13px;">timer</span>เหลือ SLA ${diffHours.toFixed(1)} ชม.</span>`;
+                                } else {
+                                    slaBadge = `<span class="badge-sla safe" style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:bold;background-color:#dcfce7;color:#16a34a;border:1px solid #86efac;"><span class="material-symbols-outlined" style="font-size:13px;">timer</span>เหลือ SLA ${diffHours.toFixed(1)} ชม.</span>`;
+                                }
+                            }
+                        }
 
                         htmlString += `
                             <div class="ticket-item" data-ticket-id="${escapeHtml(ticket.id)}" style="animation-delay: ${delay}s; border-left-color: ${ticket._statusColor};">
@@ -1923,6 +1997,7 @@
                                             </button>
                                         </span>
                                         ${priorityBadge}
+                                        ${slaBadge}
                                     </div>
                                     ${_durBadge}
                                 </div>
@@ -1936,6 +2011,9 @@
                                     ${ticket.assignee && ticket.assignee !== '-' ? `<span class="badge" style="display:inline-flex;align-items:center;gap:4px;background:rgba(99,102,241,0.08);color:#6366f1;border:1px solid rgba(99,102,241,0.3);"><span class="material-symbols-outlined" style="font-size:13px;">person</span>${escapeHtml(ticket.assignee)}</span>` : ''}
                                     <span class="badge" style="display:inline-flex;align-items:center;gap:4px;background:rgba(59,130,246,0.07);color:#2563eb;border:1px solid rgba(59,130,246,0.25);">
                                         <span class="material-symbols-outlined" style="font-size:13px;">calendar_today</span>เปิด: ${formatDateTime(ticket.date_open)}
+                                    </span>
+                                    <span class="badge" style="display:inline-flex;align-items:center;gap:4px;background:rgba(100,116,139,0.07);color:#64748b;border:1px solid rgba(100,116,139,0.25);">
+                                        <span class="material-symbols-outlined" style="font-size:13px;">update</span>${timeAgo(ticket.date_mod || ticket.date_open)}
                                     </span>
                                     <span class="badge" style="display:inline-flex;align-items:center;gap:4px;background:rgba(239,68,68,0.07);color:#dc2626;border:1px solid rgba(239,68,68,0.25);">
                                         <span class="material-symbols-outlined" style="font-size:13px;">event_busy</span>ปิด: ${_closeDisplay === '-' ? '<span style="opacity:0.45;">ยังไม่ปิด</span>' : _closeDisplay}
@@ -2042,7 +2120,7 @@
                 });
                 
                 if(allTickets.length === 0) {
-                    container.innerHTML = '<div style="text-align:center; padding: 40px;"><span style="font-size: 40px;">📭</span><p style="color:#7f8c8d; margin-top: 15px;">ไม่พบข้อมูลที่ค้นหา</p></div>';
+                    container.innerHTML = '<div style="text-align:center; padding: 40px;"><span class="material-symbols-outlined" style="font-size: 48px; color: #cbd5e1;">inbox</span><p style="color:#7f8c8d; margin-top: 15px;">ไม่พบข้อมูลที่ค้นหา</p></div>';
                 } else {
                     window.currentRenderId = (window.currentRenderId || 0) + 1;
                     const myRenderId = window.currentRenderId;
@@ -2088,6 +2166,28 @@
                             const _durBadge2 = _dur2 ? `<span class="badge-duration ${_isResolved2?'resolved':'ongoing'}"><span class="material-symbols-outlined" style="font-size:13px;">${_isResolved2?'check_circle':'schedule'}</span>${_dur2}</span>` : '';
                             const _closeDisplay2 = formatDateTime(ticket.date_close||'-');
 
+                            // SLA Logic
+                            let slaHours2 = 24;
+                            if (pEng === 'critical') slaHours2 = 1;
+                            else if (pEng === 'high') slaHours2 = 4;
+                            else if (pEng === 'medium') slaHours2 = 24;
+                            else slaHours2 = 48; // Low
+                            
+                            let slaBadge2 = '';
+                            if (!_isResolved2 && ticket.date_open) {
+                                const dateOpen2 = new Date(String(ticket.date_open).replace('T', ' '));
+                                if (!isNaN(dateOpen2)) {
+                                    const diffHours2 = (new Date(dateOpen2.getTime() + slaHours2 * 60 * 60 * 1000) - new Date()) / 3600000;
+                                    if (diffHours2 < 0) {
+                                        slaBadge2 = `<span class="badge-sla overdue" style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:bold;background-color:#fee2e2;color:#dc2626;border:1px solid #f87171;"><span class="material-symbols-outlined" style="font-size:13px;">timer_off</span>เกิน SLA ${Math.abs(diffHours2).toFixed(1)} ชม.</span>`;
+                                    } else if (diffHours2 <= 2) {
+                                        slaBadge2 = `<span class="badge-sla warning" style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:bold;background-color:#ffedd5;color:#ea580c;border:1px solid #fdba74;"><span class="material-symbols-outlined" style="font-size:13px;">timer</span>เหลือ SLA ${diffHours2.toFixed(1)} ชม.</span>`;
+                                    } else {
+                                        slaBadge2 = `<span class="badge-sla safe" style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:bold;background-color:#dcfce7;color:#16a34a;border:1px solid #86efac;"><span class="material-symbols-outlined" style="font-size:13px;">timer</span>เหลือ SLA ${diffHours2.toFixed(1)} ชม.</span>`;
+                                    }
+                                }
+                            }
+
                             htmlString += `
                                 <div class="ticket-item" data-ticket-id="${escapeHtml(ticket.id)}" style="animation-delay: ${delay}s; border-left-color: ${ticket._statusColor};">
                                     <div class="ticket-checkbox-container">
@@ -2104,9 +2204,11 @@
                                                 </button>
                                             </span>
                                             ${priorityBadge}
+                                            ${slaBadge2}
                                         </div>
                                         ${_durBadge2}
                                     </div>
+
 
                                     <div class="ticket-meta-row">
                                         <span class="badge badge-location" style="display:inline-flex;align-items:center;gap:4px;">
@@ -2763,7 +2865,25 @@
     
 
     
-    let currentTheme = localStorage.getItem('sysnectTheme') || 'light';
+    // default ต้องเป็น 'dark' ให้ตรงกับ loadSettings/HTML — เดิมเป็น 'light' ทำให้เครื่องใหม่
+    // (เช่นมือถือ) ธีมเพี้ยนคนละค่ากับ loader/หน้าเว็บ
+    let currentTheme = localStorage.getItem('sysnectTheme') || 'dark';
+
+    // sync <meta name="theme-color"> (สีแถบบนเบราว์เซอร์มือถือ/PWA) ให้ตามธีมเสมอ
+    (function () {
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (!meta || window._themeMetaSync) return;
+        window._themeMetaSync = true;
+        function applyThemeMeta() {
+            meta.setAttribute('content',
+                document.documentElement.getAttribute('data-theme') === 'dark' ? '#050816' : '#2563eb');
+        }
+        applyThemeMeta();
+        if (typeof MutationObserver !== 'undefined') {
+            new MutationObserver(applyThemeMeta)
+                .observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+        }
+    })();
 
     // ─── Sidebar Left: Status Bar Chart (vertical cylinders) ────
     function renderStatusBarChart(values, labels) {
@@ -2876,7 +2996,7 @@
                 c.fillStyle = isDark ? 'rgba(148,163,184,0.7)' : 'rgba(100,116,139,0.7)';
                 c.font = '700 11px "JetBrains Mono", monospace';
                 c.textAlign = 'center';
-                c.fillText('0', x + barW / 2, padTop - 6);
+                c.fillText('0', x + barW / 2, baseY - 8);
                 c.restore();
             }
 
@@ -3517,3 +3637,59 @@ window.selectDatePreset = function(preset) {
         section.style.display = 'none';
     }
 };
+
+window.openDrillDownModal = function(status) {
+    const modal = document.getElementById('drillDownModal');
+    const title = document.getElementById('drillModalTitle');
+    const list = document.getElementById('drillModalList');
+    
+    if (!modal || !title || !list) return;
+    
+    let tickets = [];
+    if (status === 'ALL') {
+        tickets = [
+            ...(mockDataRaw['new'] || []),
+            ...(mockDataRaw['assigned'] || []),
+            ...(mockDataRaw['pending'] || []),
+            ...(mockDataRaw['solved'] || []),
+            ...(mockDataRaw['closed'] || [])
+        ];
+        title.innerText = 'Tickets ทั้งหมด';
+    } else {
+        const key = status.toLowerCase();
+        tickets = mockDataRaw[key] || [];
+        title.innerText = 'Tickets สถานะ: ' + status;
+    }
+    
+    tickets.sort((a, b) => new Date(b.date_open || b.date) - new Date(a.date_open || a.date));
+    
+    if (tickets.length === 0) {
+        list.innerHTML = '<div style="text-align:center; padding: 40px; color: #94a3b8;"><span class="material-symbols-outlined" style="font-size:48px; opacity:0.5;">inbox</span><p>ไม่พบรายการตั๋วในสถานะนี้</p></div>';
+    } else {
+        let html = '';
+        tickets.forEach(t => {
+            const priorityClass = t.priority ? t.priority.toLowerCase() : 'low';
+            const priorityText = t.priority ? t.priority.charAt(0).toUpperCase() + t.priority.slice(1) : 'Low';
+            
+            html += '<div class="ticket-item" style="background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:12px; margin-bottom:10px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">';
+            html += '<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">';
+            html += '<div style="font-weight:600; color:#1e293b; font-size:14px;">' + (t.id || '-') + ' - ' + (t.name || t.detail || '-') + '</div>';
+            html += '<span class="badge-priority priority-' + priorityClass + '" style="font-size:11px; padding:2px 8px; border-radius:12px; font-weight:bold; flex-shrink:0; margin-left:10px;">' + priorityText + '</span>';
+            html += '</div>';
+            html += '<div style="font-size:12px; color:#64748b; display:flex; gap:16px; flex-wrap:wrap;">';
+            html += '<span style="display:flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">folder</span> ' + (t.project || '-') + '</span>';
+            html += '<span style="display:flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">calendar_today</span> ' + (t.date_open || t.date || '-') + '</span>';
+            html += '<span style="display:flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">person</span> ' + (t.assignee || 'Unassigned') + '</span>';
+            html += '</div></div>';
+        });
+        list.innerHTML = html;
+    }
+    
+    modal.classList.add('active');
+};
+
+window.closeDrillDownModal = function() {
+    const modal = document.getElementById('drillDownModal');
+    if (modal) modal.classList.remove('active');
+};
+
