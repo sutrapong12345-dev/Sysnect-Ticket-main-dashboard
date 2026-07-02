@@ -368,6 +368,8 @@
 
         // Show loader and start simulated progress
         const loader = document.getElementById('sysnectLoader');
+        // skeleton overlay (ยังไม่มี markup ในหน้า — querySelector คืน null ได้ ปลอดภัย ไม่ ReferenceError)
+        const skeleton = document.querySelector('.skeleton-overlay');
         const loaderBar = document.getElementById('progressRing');
         const loaderPercent = document.getElementById('loaderPercent');
         const loaderMessage = document.getElementById('loaderMessage');
@@ -644,6 +646,7 @@
                 initChart();
                 renderMonthlyBreakdown();
                 if (currentStatus) renderTicketList(currentStatus);
+                if (loader) loader.classList.add('hidden'); // ซ่อน loader จริง — จุดนี้เคยถูกแทนด้วย skeleton แล้วทำให้ค้าง 100%
                 if (skeleton) skeleton.classList.add('hidden');
                 // Auto-open default status tab (first load only)
                 if (!isAutoRefresh && window._applyDefaultStatusPending) {
@@ -657,6 +660,7 @@
             console.error("เกิดข้อผิดพลาดในการดึงข้อมูลจาก Backend:", error);
             updateConnectionStatus(); // ไฟสถานะแดงทั้ง n8n + PostgreSQL
             
+            if (!isAutoRefresh && loader) loader.classList.add('hidden');
             if (!isAutoRefresh && skeleton) skeleton.classList.add('hidden');
             initChart();
             
