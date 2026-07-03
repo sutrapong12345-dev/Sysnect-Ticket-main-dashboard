@@ -3700,10 +3700,11 @@
     .pc-tabbar { left: calc((100vw - 1680px) / 2 - 66px); }
 }
 
-/* ── Compact tier สำหรับ Display scale 125–150% (effective 1025–1440px):
+/* ── Compact tier สำหรับ Display scale 125–150% (effective 1025–1600px):
       ค่า base (title 22px / KPI 22px / chart 300px) ออกแบบสำหรับ 1680px
-      บนจอแคบจากการ scale จะดูซูมเกิน — ย่อส่วนหัว/การ์ด/กราฟให้เห็นเนื้อหาครบจอ */
-@media (min-width: 1025px) and (max-width: 1440px) {
+      บนจอแคบจากการ scale จะดูซูมเกิน — ย่อส่วนหัว/การ์ด/กราฟให้เห็นเนื้อหาครบจอ
+      เพดาน 1600 เพื่อครอบ FHD@125% (1536px) ที่ผู้ใช้เทสจริงแล้ว legend โดนตัด */
+@media (min-width: 1025px) and (max-width: 1600px) {
     .top-navbar { padding: 0 18px; }
     .stat-bar { padding: 6px 14px; gap: 8px; }
     .stat-card { padding: 7px 12px; }
