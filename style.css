@@ -3687,3 +3687,32 @@
     .enterprise-loader-container { padding: 28px 20px; width: min(88vw, 340px); }
     .el-footer { letter-spacing: 1px; font-size: 9px; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PC DISPLAY-SCALE ADAPTIVE — ปรับหน้า PC ให้พอดีกับ Display scale ของแต่ละคน
+   Windows scale 125%/150% ทำให้ viewport ที่เว็บเห็นเหลือ ~1025–1440px
+   ส่วนจอ 2K/4K @100% กว้างกว่า max-width 1680px ของเนื้อหามาก
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── จอกว้างมาก (>1780px): pill nav ซ้ายเลื่อนเข้ามาชิดขอบเนื้อหา
+      เดิม fixed left:14px ติดขอบจอ ห่างจากเนื้อหาที่ถูกจำกัด 1680px กึ่งกลาง = ไม่สมมาตร */
+@media (min-width: 1781px) {
+    .pc-tabbar { left: calc((100vw - 1680px) / 2 - 66px); }
+}
+
+/* ── Compact tier สำหรับ Display scale 125–150% (effective 1025–1440px):
+      ค่า base (title 22px / KPI 22px / chart 300px) ออกแบบสำหรับ 1680px
+      บนจอแคบจากการ scale จะดูซูมเกิน — ย่อส่วนหัว/การ์ด/กราฟให้เห็นเนื้อหาครบจอ */
+@media (min-width: 1025px) and (max-width: 1440px) {
+    .top-navbar { padding: 0 18px; }
+    .stat-bar { padding: 6px 14px; gap: 8px; }
+    .stat-card { padding: 7px 12px; }
+    .stat-card .sc-value { font-size: 19px; }
+    .dashboard-wrapper { padding: 10px 12px; gap: 8px; }
+    .chart-card { padding: 16px 14px; }
+    .chart-title { font-size: 19px; }
+    .chart-subtitle { font-size: 12px; }
+    .chart-container { height: 250px !important; } /* inline style 300px จึงต้อง !important */
+    .cl-row { padding: 6px 10px; gap: 6px; }
+    .pc-tabbar { left: 8px; padding: 10px 6px; gap: 4px; }
+}
