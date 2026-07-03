@@ -1848,7 +1848,151 @@
             border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;
             transition: background 0.2s; font-family: inherit;
         }
-        .btn-export-submit:hover { background: #1d4ed8; }/* Custom Dropdown UI for Projects */
+        .btn-export-submit:hover { background: #1d4ed8; }
+
+        /* ═══ Export modal: ขยายให้รองรับรายการตรวจสอบ + จำกัดความสูงเลื่อนภายใน ═══ */
+        #exportModal .modal-content {
+            max-width: 600px;
+            max-height: min(88vh, 88dvh);
+            overflow-y: auto;
+        }
+
+        /* ── ปุ่ม "ตรวจสอบรายการ" (secondary) ── */
+        .btn-preview-export {
+            background: rgba(99,102,241,0.08);
+            color: #6366f1;
+            border: 1px solid rgba(99,102,241,0.4);
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.2s;
+            font-family: inherit;
+        }
+        .btn-preview-export:hover { background: rgba(99,102,241,0.15); }
+        .btn-preview-export:disabled { opacity: 0.6; cursor: wait; }
+
+        /* ── คำเตือนยังไม่เลือกรูปแบบไฟล์ ── */
+        .export-format-warning {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 10px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            background: #fef2f2;
+            border: 1px solid #fca5a5;
+            color: #dc2626;
+            font-size: 12.5px;
+            font-weight: 600;
+        }
+        @keyframes formatShake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-6px); }
+            40% { transform: translateX(6px); }
+            60% { transform: translateX(-4px); }
+            80% { transform: translateX(4px); }
+        }
+        .export-format-grid.format-shake { animation: formatShake 0.4s ease; }
+
+        /* ── รายการตรวจสอบก่อน Export ── */
+        .export-preview-list {
+            max-height: 240px;
+            overflow-y: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            background: #f8fafc;
+        }
+        .epv-row {
+            display: grid;
+            grid-template-columns: auto 1fr auto auto;
+            align-items: center;
+            gap: 10px;
+            padding: 7px 12px;
+            font-size: 12.5px;
+            border-bottom: 1px solid #eef2f7;
+        }
+        .epv-row:last-child { border-bottom: none; }
+        .epv-row:nth-child(even) { background: rgba(148,163,184,0.06); }
+        .epv-id { color: #6366f1; font-weight: 700; white-space: nowrap; }
+        .epv-name {
+            color: #334155;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            min-width: 0;
+        }
+        .epv-status {
+            font-size: 10px; font-weight: 700; padding: 2px 8px;
+            border-radius: 10px; white-space: nowrap;
+        }
+        .epv-new      { background: #dbeafe; color: #2563eb; }
+        .epv-assigned { background: #fef3c7; color: #b45309; }
+        .epv-pending  { background: #fee2e2; color: #dc2626; }
+        .epv-solved   { background: #dcfce7; color: #16a34a; }
+        .epv-closed   { background: #e2e8f0; color: #475569; }
+        .epv-date { color: #64748b; font-size: 11.5px; white-space: nowrap; }
+        .epv-more {
+            padding: 8px 12px; text-align: center;
+            color: #64748b; font-size: 12px; font-style: italic;
+            background: rgba(148,163,184,0.08);
+        }
+        .epv-empty {
+            display: flex; flex-direction: column; align-items: center; gap: 6px;
+            padding: 24px 12px; color: #94a3b8; font-size: 13px;
+        }
+
+        /* ── Dark theme ── */
+        [data-theme="dark"] .btn-preview-export {
+            background: rgba(129,140,248,0.12);
+            color: #a5b4fc;
+            border-color: rgba(129,140,248,0.45);
+        }
+        [data-theme="dark"] .btn-preview-export:hover { background: rgba(129,140,248,0.22); }
+        [data-theme="dark"] .export-format-warning {
+            background: rgba(239,68,68,0.12);
+            border-color: rgba(239,68,68,0.4);
+            color: #fca5a5;
+        }
+        [data-theme="dark"] .export-preview-list {
+            background: rgba(255,255,255,0.03);
+            border-color: rgba(255,255,255,0.1);
+        }
+        [data-theme="dark"] .epv-row { border-bottom-color: rgba(255,255,255,0.06); }
+        [data-theme="dark"] .epv-row:nth-child(even) { background: rgba(255,255,255,0.03); }
+        [data-theme="dark"] .epv-id { color: #a5b4fc; }
+        [data-theme="dark"] .epv-name { color: #cbd5e1; }
+        [data-theme="dark"] .epv-date { color: #94a3b8; }
+        [data-theme="dark"] .epv-new      { background: rgba(59,130,246,0.18); color: #93c5fd; }
+        [data-theme="dark"] .epv-assigned { background: rgba(245,158,11,0.18); color: #fcd34d; }
+        [data-theme="dark"] .epv-pending  { background: rgba(239,68,68,0.18); color: #fca5a5; }
+        [data-theme="dark"] .epv-solved   { background: rgba(16,185,129,0.18); color: #86efac; }
+        [data-theme="dark"] .epv-closed   { background: rgba(148,163,184,0.15); color: #cbd5e1; }
+        [data-theme="dark"] .epv-more { color: #94a3b8; background: rgba(255,255,255,0.03); }
+        [data-theme="dark"] .epv-empty { color: #64748b; }
+
+        /* ── มือถือ: modal เกือบเต็มจอ ปุ่ม action ตัดบรรทัดได้ list เตี้ยลง ── */
+        @media (max-width: 640px) {
+            #exportModal .modal-content {
+                width: calc(100% - 20px);
+                max-width: none;
+                padding: 20px 16px;
+                max-height: min(92vh, 92dvh);
+            }
+            #exportModal .modal-actions {
+                flex-wrap: wrap;
+            }
+            #exportModal .modal-actions button { flex: 1 1 auto; justify-content: center; }
+            .export-preview-list { max-height: 34vh; }
+            .epv-row { grid-template-columns: auto 1fr auto; gap: 8px; }
+            .epv-date { display: none; } /* จอแคบ: ตัดคอลัมน์วันที่ เหลือ ID/ชื่อ/สถานะ */
+            .format-btn { padding: 12px 6px; }
+        }
+
+/* Custom Dropdown UI for Projects */
 .custom-project-dropdown {
     position: relative;
     width: 100%;

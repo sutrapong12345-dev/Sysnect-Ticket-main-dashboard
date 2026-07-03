@@ -2381,6 +2381,10 @@
 
     document.getElementById('filterDateStart')?.addEventListener('change', handleDateChange);
     document.getElementById('filterDateEnd')?.addEventListener('change', handleDateChange);
+
+    // Export modal: แก้วันที่กำหนดเอง → list ที่ตรวจสอบไว้ไม่ตรงเงื่อนไขแล้ว ซ่อนไป
+    document.getElementById('exportDateFrom')?.addEventListener('change', () => window.hideExportPreview && window.hideExportPreview());
+    document.getElementById('exportDateTo')?.addEventListener('change', () => window.hideExportPreview && window.hideExportPreview());
     
     // Clear Filters
     document.getElementById('btnClearDateRange')?.addEventListener('click', () => {
@@ -2431,7 +2435,8 @@
     // ==============================================
     // Advanced Export System
     // ==============================================
-    let currentExportFormat = 'excel';
+    let currentExportFormat = null; // ค่าเริ่มต้นไม่เลือก — ผู้ใช้ต้องกดเลือกเองก่อนดาวน์โหลด
+    const EXPORT_WEBHOOK = 'https://n8n.sysnect.co.th/webhook/ticket-history';
     window.isExportingSelection = false;
 
     function computeExportDateRange(dateRange) {
@@ -2466,25 +2471,161 @@
         if (dateGroup) {
             dateGroup.style.display = forSelection ? 'none' : 'block';
         }
+        // เริ่มต้นทุกครั้งแบบยังไม่เลือก format — บังคับให้ผู้ใช้เลือกเองก่อนดาวน์โหลด
+        currentExportFormat = null;
+        document.querySelectorAll('.format-btn').forEach(btn => btn.classList.remove('selected'));
+        hideFormatWarning();
+        window.hideExportPreview();
         document.getElementById('exportModal').classList.add('active');
         selectDatePreset('today');
     };
-    
+
     window.closeExportModal = function() {
         document.getElementById('exportModal').classList.remove('active');
     };
-    
+
     window.selectExportFormat = function(format) {
         currentExportFormat = format;
         document.querySelectorAll('.format-btn').forEach(btn => btn.classList.remove('selected'));
         document.querySelector(`.format-btn[data-format="${format}"]`).classList.add('selected');
+        hideFormatWarning();
+    };
+
+    function showFormatWarning() {
+        const w = document.getElementById('exportFormatWarning');
+        const grid = document.querySelector('.export-format-grid');
+        if (w) w.style.display = 'flex';
+        if (grid) {
+            grid.classList.remove('format-shake');
+            void grid.offsetWidth; // restart animation
+            grid.classList.add('format-shake');
+        }
+    }
+    function hideFormatWarning() {
+        const w = document.getElementById('exportFormatWarning');
+        if (w) w.style.display = 'none';
+    }
+
+    // ซ่อน/ล้างรายการตรวจสอบ — เรียกเมื่อเปิด modal ใหม่หรือเปลี่ยนช่วงวัน (กันโชว์ list ค้างไม่ตรงเงื่อนไข)
+    window.hideExportPreview = function() {
+        const sec = document.getElementById('exportPreviewSection');
+        const list = document.getElementById('exportPreviewList');
+        if (sec) sec.style.display = 'none';
+        if (list) list.innerHTML = '';
+    };
+
+    // ── รวบรวมรายการตามเงื่อนไขปัจจุบัน — ใช้ร่วมกันทั้งปุ่ม "ตรวจสอบรายการ" และ "ดาวน์โหลด" ──
+    async function collectExportTickets() {
+        if (window.isExportingSelection) {
+            const dataObj = getFilteredData().project_breakdown;
+            let sel = [];
+            Object.keys(dataObj).forEach(key => {
+                dataObj[key].forEach(t => {
+                    if (selectedTickets.has(String(t.id)))
+                        sel.push({ ...t, status_name: key.toUpperCase() });
+                });
+            });
+            return { tickets: sel, dateText: 'เฉพาะรายการที่เลือก (Selected Tickets)' };
+        }
+
+        const dateRange = document.getElementById('exportDateRange').value || 'all';
+        const { from, to } = computeExportDateRange(dateRange);
+        const params = new URLSearchParams({ source: 'export' });
+        if (from) params.append('from', from);
+        if (to)   params.append('to', to);
+
+        const res = await fetch(`${EXPORT_WEBHOOK}?${params.toString()}`);
+        if (!res.ok) throw new Error('n8n ตอบกลับ HTTP ' + res.status);
+        let raw = await res.json();
+
+        if (!Array.isArray(raw) && raw.data) raw = raw.data;
+        if (!Array.isArray(raw)) raw = [raw];
+
+        const statusMap = { '1':'NEW','2':'ASSIGNED','3':'ASSIGNED','4':'PENDING','5':'SOLVED','6':'CLOSED' };
+        const prioMap   = { '1':'ต่ำมาก','2':'ต่ำ','3':'ปานกลาง','4':'สูง','5':'สูงมาก','6':'สูงมาก' };
+
+        const tickets = raw.map(t => {
+            const sc = String(t["12"] || t.status || '1');
+            const pc = String(t["3"]  || t.priority || '3');
+            return {
+                id:           t["2"]  || t.id    || '-',
+                name:         t["1"]  || t.name  || '-',
+                project:      t["76667"] || t["76666"] || t.project || t.project_name || '-',
+                project_code: t["76666"] || t.project_code || '-',
+                category:     t["7"]  || t.category || '-',
+                detail:       (t["21"] || t.detail || t.description || '-').replace(/<[^>]*>?/gm, '').trim(),
+                location:     t["83"] || t.location || '-',
+                priority:     prioMap[pc] || pc,
+                date:         (t["15"] || t.date_open || t.date_creation || '-').split(' ')[0],
+                date_open:    t["15"] || t.date_open  || t.date_creation || '-',
+                date_close:   t["16"] || t.date_close || t.closedate     || '-',
+                date_creation: t["15"] || t.date_creation || t.date_open || '-',
+                status_name:  statusMap[sc] || (t.status_name || 'NEW').toUpperCase()
+            };
+        });
+
+        const dateText = (from && to) ? `${from} ถึง ${to}` : 'ข้อมูลทั้งหมด';
+        return { tickets, dateText };
+    }
+
+    // ── ปุ่ม "ตรวจสอบรายการ": โชว์ list ตามเงื่อนไขให้เช็คก่อน แล้วค่อยกดดาวน์โหลดจริง ──
+    const PREVIEW_MAX_ROWS = 300; // กัน DOM บวมเมื่อช่วงกว้าง (เช่น "ทั้งหมด" หลายร้อยใบ)
+    window.previewExport = async function() {
+        const btn = document.getElementById('btnPreviewExport');
+        const sec = document.getElementById('exportPreviewSection');
+        const list = document.getElementById('exportPreviewList');
+        const countEl = document.getElementById('exportPreviewCount');
+        if (!btn || !sec || !list) return;
+
+        const originalHTML = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = `<span class="material-symbols-outlined" style="font-size:18px;animation:spin 1s linear infinite;">sync</span> กำลังตรวจสอบ...`;
+
+        try {
+            const { tickets } = await collectExportTickets();
+
+            if (tickets.length === 0) {
+                if (countEl) countEl.textContent = '';
+                list.innerHTML = `<div class="epv-empty"><span class="material-symbols-outlined" style="font-size:28px;">inbox</span>${window.isExportingSelection ? 'ยังไม่ได้เลือก ticket' : 'ไม่พบข้อมูลในช่วงเวลาที่เลือก'}</div>`;
+                sec.style.display = 'block';
+                return;
+            }
+
+            if (countEl) countEl.textContent = `(${tickets.length} ใบ)`;
+            let html = tickets.slice(0, PREVIEW_MAX_ROWS).map(t => {
+                const st = String(t.status_name || '-').toUpperCase();
+                return `<div class="epv-row">
+                    <span class="epv-id">#${escapeHtml(String(t.id))}</span>
+                    <span class="epv-name" title="${escapeHtml(t.name || '-')}">${escapeHtml(t.name || '-')}</span>
+                    <span class="epv-status epv-${st.toLowerCase()}">${escapeHtml(st)}</span>
+                    <span class="epv-date">${escapeHtml(String(t.date_open || '-').split(' ')[0])}</span>
+                </div>`;
+            }).join('');
+            if (tickets.length > PREVIEW_MAX_ROWS) {
+                html += `<div class="epv-more">…และอีก ${tickets.length - PREVIEW_MAX_ROWS} ใบ (จะถูก Export ครบทั้งหมด)</div>`;
+            }
+            list.innerHTML = html;
+            sec.style.display = 'block';
+            sec.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } catch (err) {
+            console.error('Preview export error:', err);
+            list.innerHTML = `<div class="epv-empty" style="color:#ef4444;"><span class="material-symbols-outlined" style="font-size:28px;">error</span>ดึงข้อมูลไม่สำเร็จ: ${escapeHtml(err.message)}</div>`;
+            sec.style.display = 'block';
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalHTML;
+        }
     };
     
     window.executeExport = async function() {
-        const dateRange = document.getElementById('exportDateRange').value || 'all';
+        // บังคับเลือกรูปแบบไฟล์ก่อนเสมอ (ค่าเริ่มต้นไม่มีตัวเลือก)
+        if (!currentExportFormat) {
+            showFormatWarning();
+            return;
+        }
+
         const submitBtn = document.querySelector('.btn-export-submit');
         const originalHTML = submitBtn.innerHTML;
-        const EXPORT_WEBHOOK = 'https://n8n.sysnect.co.th/webhook/ticket-history';
 
         const setLoading = msg => {
             submitBtn.disabled = true;
@@ -2495,72 +2636,14 @@
             submitBtn.innerHTML = originalHTML;
         };
 
-        // ── กรณี Export เฉพาะที่ checkbox เลือก → ใช้ข้อมูลในหน้าเว็บตามเดิม ──
-        if (window.isExportingSelection) {
-            const dataObj = getFilteredData().project_breakdown;
-            let sel = [];
-            Object.keys(dataObj).forEach(key => {
-                dataObj[key].forEach(t => {
-                    if (selectedTickets.has(String(t.id)))
-                        sel.push({ ...t, status_name: key.toUpperCase() });
-                });
-            });
-            if (sel.length === 0) { alert('ไม่ได้เลือก ticket'); return; }
-            if (currentExportFormat === 'pdf') {
-                setLoading('กำลังสร้าง PDF...');
-                await exportToPDFReport(sel, 'เฉพาะรายการที่เลือก (Selected Tickets)');
-                resetBtn();
-            } else {
-                exportToSpreadsheet(sel, currentExportFormat);
-            }
-            closeExportModal();
-            return;
-        }
-
-        // ── กรณี Export ทั่วไป → call webhook แยก (ไม่จำกัด 120 วัน) ──
         setLoading('กำลังดึงข้อมูล...');
         try {
-            const { from, to } = computeExportDateRange(dateRange);
-            const params = new URLSearchParams({ source: 'export' });
-            if (from) params.append('from', from);
-            if (to)   params.append('to', to);
-
-            const res = await fetch(`${EXPORT_WEBHOOK}?${params.toString()}`);
-            if (!res.ok) throw new Error('n8n ตอบกลับ HTTP ' + res.status);
-            let raw = await res.json();
-
-            if (!Array.isArray(raw) && raw.data) raw = raw.data;
-            if (!Array.isArray(raw)) raw = [raw];
-
-            const statusMap = { '1':'NEW','2':'ASSIGNED','3':'ASSIGNED','4':'PENDING','5':'SOLVED','6':'CLOSED' };
-            const prioMap   = { '1':'ต่ำมาก','2':'ต่ำ','3':'ปานกลาง','4':'สูง','5':'สูงมาก','6':'สูงมาก' };
-
-            const tickets = raw.map(t => {
-                const sc = String(t["12"] || t.status || '1');
-                const pc = String(t["3"]  || t.priority || '3');
-                return {
-                    id:           t["2"]  || t.id    || '-',
-                    name:         t["1"]  || t.name  || '-',
-                    project:      t["76667"] || t["76666"] || t.project || t.project_name || '-',
-                    project_code: t["76666"] || t.project_code || '-',
-                    category:     t["7"]  || t.category || '-',
-                    detail:       (t["21"] || t.detail || t.description || '-').replace(/<[^>]*>?/gm, '').trim(),
-                    location:     t["83"] || t.location || '-',
-                    priority:     prioMap[pc] || pc,
-                    date:         (t["15"] || t.date_open || t.date_creation || '-').split(' ')[0],
-                    date_open:    t["15"] || t.date_open  || t.date_creation || '-',
-                    date_close:   t["16"] || t.date_close || t.closedate     || '-',
-                    date_creation: t["15"] || t.date_creation || t.date_open || '-',
-                    status_name:  statusMap[sc] || (t.status_name || 'NEW').toUpperCase()
-                };
-            });
+            const { tickets, dateText } = await collectExportTickets();
 
             if (tickets.length === 0) {
-                alert('ไม่พบข้อมูลในช่วงเวลาที่เลือก');
+                alert(window.isExportingSelection ? 'ไม่ได้เลือก ticket' : 'ไม่พบข้อมูลในช่วงเวลาที่เลือก');
                 return;
             }
-
-            const dateText = (from && to) ? `${from} ถึง ${to}` : 'ข้อมูลทั้งหมด';
 
             if (currentExportFormat === 'excel' || currentExportFormat === 'csv') {
                 exportToSpreadsheet(tickets, currentExportFormat);
@@ -3635,6 +3718,9 @@
 window.selectDatePreset = function(preset) {
     // อัปเดต hidden field
     document.getElementById('exportDateRange').value = preset;
+
+    // เงื่อนไขเปลี่ยน → list ที่ตรวจสอบไว้ใช้ไม่ได้แล้ว ซ่อนไปกันเข้าใจผิด
+    if (window.hideExportPreview) window.hideExportPreview();
 
     // อัปเดต pill highlight
     document.querySelectorAll('.date-preset-pill').forEach(btn => {

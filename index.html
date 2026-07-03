@@ -191,7 +191,7 @@
     <link rel="stylesheet" href="vendor/flatpickr/flatpickr.min.css">
     <script defer src="vendor/flatpickr/flatpickr.min.js"></script>
     <script defer src="vendor/flatpickr/th.js"></script>
-    <link rel="stylesheet" href="style.css?v=29">
+    <link rel="stylesheet" href="style.css?v=30">
 </head>
 <body>
 
@@ -666,8 +666,9 @@
 
         <div class="export-option-group">
             <label class="export-label">เลือกรูปแบบไฟล์ (Format)</label>
+            <!-- ไม่มีปุ่มไหนถูกเลือกไว้ล่วงหน้า — ผู้ใช้ต้องกดเลือกเองก่อนดาวน์โหลด -->
             <div class="export-format-grid">
-                <button class="format-btn selected" data-format="excel" onclick="selectExportFormat('excel')">
+                <button class="format-btn" data-format="excel" onclick="selectExportFormat('excel')">
                     <span class="material-symbols-outlined format-icon format-excel">table_view</span>
                     Excel
                 </button>
@@ -680,10 +681,27 @@
                     PDF
                 </button>
             </div>
+            <div id="exportFormatWarning" class="export-format-warning" style="display:none;">
+                <span class="material-symbols-outlined" style="font-size:16px;">warning</span>
+                กรุณาเลือกรูปแบบไฟล์ (Excel / CSV / PDF) ก่อนดาวน์โหลด
+            </div>
+        </div>
+
+        <!-- รายการตรวจสอบก่อน Export — โชว์เมื่อกดปุ่ม "ตรวจสอบรายการ" -->
+        <div class="export-option-group" id="exportPreviewSection" style="display:none;">
+            <label class="export-label" style="display:flex; align-items:center; gap:6px;">
+                <span class="material-symbols-outlined" style="font-size:17px; color:#6366f1;">fact_check</span>
+                รายการที่จะ Export <span id="exportPreviewCount" style="color:#6366f1;"></span>
+            </label>
+            <div id="exportPreviewList" class="export-preview-list"></div>
         </div>
 
         <div class="modal-actions">
             <button class="btn-cancel" style="background: none; border: 1px solid #e2e8f0; padding: 10px 20px; border-radius: 8px; cursor: pointer; color: #64748b; font-weight: 600;" onclick="closeExportModal()">ยกเลิก</button>
+            <button class="btn-preview-export" id="btnPreviewExport" onclick="previewExport()">
+                <span class="material-symbols-outlined" style="font-size: 18px;">fact_check</span>
+                ตรวจสอบรายการ
+            </button>
             <button class="btn-export-submit" onclick="executeExport()">
                 <span class="material-symbols-outlined" style="font-size: 18px;">download</span>
                 ดาวน์โหลด
@@ -1049,7 +1067,7 @@ input:checked + .slider:before { transform: translateX(20px); }
 })();
 </script>
 
-<script src="app.js?v=26" defer></script>
+<script src="app.js?v=27" defer></script>
 
 <!-- ═══ ปฏิทินภาษาไทย (flatpickr) บน date inputs ทั้ง 4 จุด ═══
      คงค่า .value เป็น Y-m-d ตามที่ logic กรอง/export ใช้อยู่เดิม
