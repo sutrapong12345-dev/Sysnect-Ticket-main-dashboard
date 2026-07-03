@@ -3014,11 +3014,46 @@
     }
     /* ticket-item: เต็มความกว้าง padding กระชับ */
     #dashboardWrapper .ticket-item {
-        padding: 14px !important;
+        padding: 12px !important;
+        margin-bottom: 10px !important;
+        border-left-width: 4px !important;
         box-sizing: border-box !important;
     }
     #dashboardWrapper .ticket-header-row {
         padding-right: 30px !important;
+        margin-bottom: 6px !important;
+    }
+
+    /* ── Tickets panel: ย่อสเกลทั้งชุดให้พอดีจอเหมือนแท็บโครงการ ──
+       ขนาด base (h3 18px / title 14px / badge 11px) ออกแบบมาสำหรับ PC
+       บนจอ ~390px จะดูซูมเกิน+แออัด — badge ใช้ inline style จึงต้อง !important */
+    #dashboardWrapper .ticket-header-sticky h3 {
+        font-size: 15px !important;
+        margin-bottom: 8px !important;
+    }
+    #dashboardWrapper .ticket-filter-bar select,
+    #dashboardWrapper .ticket-filter-bar input[type="date"],
+    #dashboardWrapper .ticket-filter-bar .btn-filter-clear {
+        font-size: 12px !important;
+        padding: 4px 8px !important;
+    }
+    #dashboardWrapper .ticket-title-row {
+        font-size: 13px !important;
+        margin-bottom: 6px !important;
+    }
+    #dashboardWrapper .ticket-meta-row {
+        gap: 5px !important;
+        margin-bottom: 6px !important;
+    }
+    #dashboardWrapper .ticket-item .badge,
+    #dashboardWrapper .ticket-item .badge-priority,
+    #dashboardWrapper .ticket-item .badge-sla,
+    #dashboardWrapper .ticket-item .badge-duration {
+        font-size: 10px !important;
+        padding: 2px 7px !important;
+    }
+    #dashboardWrapper .ticket-item .material-symbols-outlined {
+        font-size: 12px !important;
     }
 }
 
