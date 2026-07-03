@@ -1824,7 +1824,7 @@
         
         .export-select:focus { border-color: #3b82f6; }
         .export-format-grid {
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
         }
         .format-btn {
             display: flex; flex-direction: column; align-items: center; gap: 8px;
@@ -1840,6 +1840,7 @@
         .format-excel { color: #10b981; }
         .format-csv { color: #f59e0b; }
         .format-pdf { color: #ef4444; }
+        .format-summary { color: #8b5cf6; }
         .modal-actions {
             display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px;
         }
@@ -1897,6 +1898,30 @@
             80% { transform: translateX(4px); }
         }
         .export-format-grid.format-shake { animation: formatShake 0.4s ease; }
+
+        /* ── กล่องอธิบาย "สรุปกราฟ": บอกว่าจะสรุปตามที่เลือกช่วงไหน มีอะไรในรายงานบ้าง ── */
+        .export-summary-hint {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            margin-top: 10px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: rgba(139, 92, 246, 0.07);
+            border: 1px solid rgba(139, 92, 246, 0.35);
+            color: #6d28d9;
+            font-size: 12.5px;
+            line-height: 1.55;
+        }
+        .export-summary-hint .material-symbols-outlined {
+            font-size: 18px;
+            flex-shrink: 0;
+            margin-top: 1px;
+            color: #8b5cf6;
+        }
+        .export-summary-hint b { font-weight: 700; }
+        .esh-range { color: #7c3aed; }
+        .esh-items { color: #64748b; font-size: 12px; }
 
         /* ── รายการตรวจสอบก่อน Export ── */
         .export-preview-list {
@@ -1957,6 +1982,13 @@
             border-color: rgba(239,68,68,0.4);
             color: #fca5a5;
         }
+        [data-theme="dark"] .export-summary-hint {
+            background: rgba(139,92,246,0.12);
+            border-color: rgba(139,92,246,0.45);
+            color: #c4b5fd;
+        }
+        [data-theme="dark"] .esh-range { color: #a78bfa; }
+        [data-theme="dark"] .esh-items { color: #94a3b8; }
         [data-theme="dark"] .export-preview-list {
             background: rgba(255,255,255,0.03);
             border-color: rgba(255,255,255,0.1);
@@ -1990,6 +2022,8 @@
             .epv-row { grid-template-columns: auto 1fr auto; gap: 8px; }
             .epv-date { display: none; } /* จอแคบ: ตัดคอลัมน์วันที่ เหลือ ID/ชื่อ/สถานะ */
             .format-btn { padding: 12px 6px; }
+            /* 4 format บนจอแคบ: จัด 2×2 กันปุ่มบีบจนตัวหนังสือล้น */
+            .export-format-grid { grid-template-columns: repeat(2, 1fr); }
         }
 
 /* Custom Dropdown UI for Projects */

@@ -191,7 +191,7 @@
     <link rel="stylesheet" href="vendor/flatpickr/flatpickr.min.css">
     <script defer src="vendor/flatpickr/flatpickr.min.js"></script>
     <script defer src="vendor/flatpickr/th.js"></script>
-    <link rel="stylesheet" href="style.css?v=32">
+    <link rel="stylesheet" href="style.css?v=33">
 </head>
 <body>
 
@@ -694,11 +694,17 @@
                     <span class="material-symbols-outlined format-icon format-pdf">picture_as_pdf</span>
                     PDF
                 </button>
+                <button class="format-btn" data-format="summary" onclick="selectExportFormat('summary')">
+                    <span class="material-symbols-outlined format-icon format-summary">monitoring</span>
+                    สรุปกราฟ
+                </button>
             </div>
             <div id="exportFormatWarning" class="export-format-warning" style="display:none;">
                 <span class="material-symbols-outlined" style="font-size:16px;">warning</span>
-                กรุณาเลือกรูปแบบไฟล์ (Excel / CSV / PDF) ก่อนดาวน์โหลด
+                กรุณาเลือกรูปแบบไฟล์ (Excel / CSV / PDF / สรุปกราฟ) ก่อนดาวน์โหลด
             </div>
+            <!-- กล่องอธิบายรายงานสรุปกราฟ — โชว์เมื่อเลือก format "สรุปกราฟ" อัปเดตตามช่วงวันที่เลือก -->
+            <div id="exportSummaryHint" class="export-summary-hint" style="display:none;"></div>
         </div>
 
         <!-- รายการตรวจสอบก่อน Export — โชว์เมื่อกดปุ่ม "ตรวจสอบรายการ" -->
@@ -1081,7 +1087,7 @@ input:checked + .slider:before { transform: translateX(20px); }
 })();
 </script>
 
-<script src="app.js?v=28" defer></script>
+<script src="app.js?v=29" defer></script>
 
 <!-- ═══ ปฏิทินภาษาไทย (flatpickr) บน date inputs ทั้ง 4 จุด ═══
      คงค่า .value เป็น Y-m-d ตามที่ logic กรอง/export ใช้อยู่เดิม

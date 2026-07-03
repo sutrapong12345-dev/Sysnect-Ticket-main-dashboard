@@ -2546,6 +2546,7 @@
         document.querySelectorAll('.format-btn').forEach(btn => btn.classList.remove('selected'));
         hideFormatWarning();
         window.hideExportPreview();
+        updateSummaryHint();
         document.getElementById('exportModal').classList.add('active');
         selectDatePreset('today');
     };
@@ -2559,6 +2560,7 @@
         document.querySelectorAll('.format-btn').forEach(btn => btn.classList.remove('selected'));
         document.querySelector(`.format-btn[data-format="${format}"]`).classList.add('selected');
         hideFormatWarning();
+        updateSummaryHint();
     };
 
     function showFormatWarning() {
@@ -2721,6 +2723,10 @@
             } else if (currentExportFormat === 'pdf') {
                 setLoading('กำลังสร้าง PDF...');
                 await exportToPDFReport(tickets, dateText);
+                closeExportModal();
+            } else if (currentExportFormat === 'summary') {
+                setLoading('กำลังสร้างรายงานสรุป...');
+                await exportToSummaryReport(tickets, dateText);
                 closeExportModal();
             }
         } catch (err) {
@@ -2951,6 +2957,448 @@
         });
 
         doc.save('Ticket_History_' + new Date().toISOString().slice(0,10) + '.pdf');
+    }
+
+    // ==============================================
+    // Summary Report (สรุปกราฟ + Chart) — PDF ภาพรวมผู้บริหาร
+    // ==============================================
+
+    // ── ข้อความ "สรุปตามที่เลือก" ใต้ปุ่ม format — อัปเดตทุกครั้งที่เปลี่ยน format/ช่วงวัน ──
+    function exportPresetLabel() {
+        const preset = document.getElementById('exportDateRange')?.value || 'all';
+        const names = { today: 'วันนี้', week: '7 วันล่าสุด', month30: '30 วันล่าสุด', month: 'เดือนนี้', last_month: 'เดือนที่แล้ว', quarter: '3 เดือนล่าสุด', year: 'ปีนี้', all: 'ข้อมูลทั้งหมด', custom: 'กำหนดเอง' };
+        const { from, to } = computeExportDateRange(preset);
+        const th = s => { const d = new Date(s + 'T00:00:00'); return isNaN(d) ? s : d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }); };
+        let label = names[preset] || preset;
+        if (from && to) label += from === to ? ` (${th(from)})` : ` (${th(from)} – ${th(to)})`;
+        return label;
+    }
+
+    function updateSummaryHint() {
+        const box = document.getElementById('exportSummaryHint');
+        if (!box) return;
+        if (currentExportFormat !== 'summary') { box.style.display = 'none'; return; }
+        const rangeText = window.isExportingSelection
+            ? `เฉพาะรายการที่เลือก (${selectedTickets.size} ใบ)`
+            : exportPresetLabel();
+        box.innerHTML = `<span class="material-symbols-outlined">monitoring</span>
+            <div><b>รายงานสรุปกราฟ + Chart (PDF)</b> — สรุปตามที่เลือก: <b class="esh-range">${escapeHtml(rangeText)}</b><br>
+            <span class="esh-items">ในรายงาน: KPI ทุกสถานะ · กราฟวงกลมสัดส่วนสถานะ · แนวโน้มจำนวนงาน · Top 10 โครงการ · Top 10 สถานที่ · สัดส่วนความสำคัญ · สถิติเด่น</span></div>`;
+        box.style.display = 'flex';
+    }
+    window.updateSummaryHint = updateSummaryHint;
+
+    // วันที่กำหนดเองเปลี่ยน → รีเฟรชข้อความสรุปให้ตรงช่วงจริง
+    ['exportDateFrom', 'exportDateTo'].forEach(id => {
+        document.getElementById(id)?.addEventListener('change', () => updateSummaryHint());
+    });
+
+    // ── โลโก้บริษัทสำหรับหัวรายงาน: โหลดจากไฟล์จริงครั้งเดียวแล้วแคช ──
+    let reportLogoCache = null;
+    async function loadReportLogo() {
+        if (reportLogoCache) return reportLogoCache;
+        try {
+            const res = await fetch('sysnect-logo.png');
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const dataUrl = 'data:image/png;base64,' + arrayBufferToBase64(await res.arrayBuffer());
+            const img = new Image();
+            await new Promise((ok, no) => { img.onload = ok; img.onerror = no; img.src = dataUrl; });
+            const hMm = 12;
+            const wMm = Math.min(60, hMm * (img.naturalWidth / Math.max(img.naturalHeight, 1)));
+            reportLogoCache = { dataUrl, wMm, hMm };
+        } catch (e) {
+            console.warn('โหลดโลโก้รายงานไม่สำเร็จ — ข้ามโลโก้', e);
+        }
+        return reportLogoCache;
+    }
+
+    const SUMMARY_STATUS_ORDER = ['NEW', 'ASSIGNED', 'PENDING', 'SOLVED', 'CLOSED'];
+    const SUMMARY_STATUS_COLORS = { NEW: '#3b82f6', ASSIGNED: '#f59e0b', PENDING: '#ef4444', SOLVED: '#10b981', CLOSED: '#64748b' };
+    const SUMMARY_STATUS_TH = { NEW: 'เปิดใหม่', ASSIGNED: 'กำลังดำเนินการ', PENDING: 'รอดำเนินการ', SOLVED: 'แก้ไขแล้ว', CLOSED: 'ปิดแล้ว' };
+
+    function hexToRgb(hex) {
+        const h = hex.replace('#', '');
+        return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+    }
+
+    // นับยอดทุกมิติจาก ticket ชุดเดียวกับที่ Export ปกติใช้ — เลขตรงกันแน่นอน
+    function summarizeTicketData(data) {
+        const byStatus = { NEW: 0, ASSIGNED: 0, PENDING: 0, SOLVED: 0, CLOSED: 0 };
+        const byProject = {}, byLocation = {}, byPriority = {}, byDay = {};
+        data.forEach(t => {
+            const st = String(t.status_name || '').toUpperCase();
+            if (byStatus[st] !== undefined) byStatus[st]++;
+            const pj = String(t.project || t.project_name || '-').trim() || '-';
+            byProject[pj] = (byProject[pj] || 0) + 1;
+            const loc = String(t.location || '-').trim() || '-';
+            byLocation[loc] = (byLocation[loc] || 0) + 1;
+            const pr = String(t.priority || '-').trim() || '-';
+            byPriority[pr] = (byPriority[pr] || 0) + 1;
+            const day = String(t.date_open || t.date || '').split(' ')[0].split('T')[0];
+            if (/^\d{4}-\d{2}-\d{2}$/.test(day)) byDay[day] = (byDay[day] || 0) + 1;
+        });
+        return { byStatus, byProject, byLocation, byPriority, byDay, total: data.length };
+    }
+
+    function topEntries(obj, n) {
+        return Object.entries(obj).sort((a, b) => b[1] - a[1]).slice(0, n);
+    }
+
+    // ── กราฟวงกลม (donut) วาดบน canvas 2x เพื่อความคมแล้วฝังเป็นรูปใน PDF ──
+    function buildDonutPng(byStatus, total) {
+        const size = 520;
+        const cvs = document.createElement('canvas');
+        cvs.width = size; cvs.height = size;
+        const ctx = cvs.getContext('2d');
+        const cx = size / 2, cy = size / 2, rOut = size * 0.46, rIn = size * 0.27;
+        let start = -Math.PI / 2;
+        SUMMARY_STATUS_ORDER.forEach(st => {
+            const v = byStatus[st];
+            if (!v) return;
+            const ang = (v / total) * Math.PI * 2;
+            ctx.beginPath();
+            ctx.arc(cx, cy, rOut, start, start + ang);
+            ctx.arc(cx, cy, rIn, start + ang, start, true);
+            ctx.closePath();
+            ctx.fillStyle = SUMMARY_STATUS_COLORS[st];
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 4;
+            ctx.stroke();
+            if (v / total >= 0.06) {
+                const mid = start + ang / 2, rl = (rOut + rIn) / 2;
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 30px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(Math.round(v / total * 100) + '%', cx + rl * Math.cos(mid), cy + rl * Math.sin(mid));
+            }
+            start += ang;
+        });
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillStyle = '#1e293b';
+        ctx.font = 'bold 72px sans-serif';
+        ctx.fillText(String(total), cx, cy + 12);
+        ctx.font = '600 24px sans-serif';
+        ctx.fillStyle = '#64748b';
+        ctx.fillText('TICKETS', cx, cy + 48);
+        return cvs.toDataURL('image/png');
+    }
+
+    // ── กราฟแท่งแนวโน้ม: รายวัน (≤45 วัน) หรือรวมเป็นรายเดือน (ช่วงยาว) ──
+    function buildTrendPng(byDay) {
+        const days = Object.keys(byDay).sort();
+        if (days.length === 0) return null;
+        let labels, values, unit;
+        if (days.length > 45) {
+            const byM = {};
+            days.forEach(d => { const m = d.slice(0, 7); byM[m] = (byM[m] || 0) + byDay[d]; });
+            const ms = Object.keys(byM).sort();
+            labels = ms.map(m => { const p = m.split('-'); return parseInt(p[1]) + '/' + String(parseInt(p[0]) + 543).slice(-2); });
+            values = ms.map(m => byM[m]);
+            unit = 'รายเดือน (เดือน/ปี พ.ศ.)';
+        } else {
+            labels = days.map(d => { const p = d.split('-'); return parseInt(p[2]) + '/' + parseInt(p[1]); });
+            values = days.map(d => byDay[d]);
+            unit = 'รายวัน (วัน/เดือน)';
+        }
+        const W = 1560, H = 430, padL = 70, padR = 20, padT = 46, padB = 60;
+        const cvs = document.createElement('canvas');
+        cvs.width = W; cvs.height = H;
+        const ctx = cvs.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, W, H);
+        // สเกลแกน Y เป็นจำนวนเต็มขั้นเท่ากันเสมอ (0, step, 2step, ...) กันเลขซ้ำ/กระโดด
+        const rawMax = Math.max.apply(null, values.concat([1]));
+        const ticks = 4;
+        const step = Math.max(1, Math.ceil(rawMax / ticks));
+        const maxV = step * ticks;
+        const plotW = W - padL - padR, plotH = H - padT - padB;
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = 2;
+        ctx.font = '22px sans-serif';
+        for (let i = 0; i <= ticks; i++) {
+            const yy = padT + plotH - plotH * i / ticks;
+            ctx.beginPath(); ctx.moveTo(padL, yy); ctx.lineTo(W - padR, yy); ctx.stroke();
+            ctx.fillStyle = '#94a3b8';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(String(step * i), padL - 10, yy);
+        }
+        const n = values.length;
+        const slot = plotW / n;
+        const bw = Math.min(slot * 0.62, 90);
+        const labelStep = Math.ceil(n / 20);
+        ctx.textAlign = 'center';
+        values.forEach((v, i) => {
+            const bx = padL + slot * i + slot / 2;
+            const bh = plotH * (v / maxV);
+            if (bh > 0) {
+                const grad = ctx.createLinearGradient(0, padT + plotH - bh, 0, padT + plotH);
+                grad.addColorStop(0, '#8b5cf6');
+                grad.addColorStop(1, '#6366f1');
+                ctx.fillStyle = grad;
+                const r = Math.min(8, bw / 2, bh);
+                const x0 = bx - bw / 2, y0 = padT + plotH - bh;
+                ctx.beginPath();
+                ctx.moveTo(x0, y0 + bh);
+                ctx.lineTo(x0, y0 + r);
+                ctx.quadraticCurveTo(x0, y0, x0 + r, y0);
+                ctx.lineTo(x0 + bw - r, y0);
+                ctx.quadraticCurveTo(x0 + bw, y0, x0 + bw, y0 + r);
+                ctx.lineTo(x0 + bw, y0 + bh);
+                ctx.closePath();
+                ctx.fill();
+            }
+            if (n <= 31 && v > 0) {
+                ctx.fillStyle = '#6d28d9';
+                ctx.font = 'bold 20px sans-serif';
+                ctx.textBaseline = 'alphabetic';
+                ctx.fillText(String(v), bx, padT + plotH - bh - 8);
+            }
+            if (i % labelStep === 0) {
+                ctx.fillStyle = '#64748b';
+                ctx.font = '20px sans-serif';
+                ctx.textBaseline = 'top';
+                ctx.fillText(labels[i], bx, padT + plotH + 10);
+            }
+        });
+        return { png: cvs.toDataURL('image/png'), unit };
+    }
+
+    async function exportToSummaryReport(data, dateRangeLabel) {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const PAGE_W = 210, PAGE_H = 297, MARGIN = 14, CW = PAGE_W - MARGIN * 2;
+
+        const loaded = await loadThaiFonts();
+        if (loaded && regularFontBase64 && boldFontBase64) {
+            doc.addFileToVFS('Sarabun-Regular.ttf', regularFontBase64);
+            doc.addFont('Sarabun-Regular.ttf', 'Sarabun', 'normal');
+            doc.addFileToVFS('Sarabun-Bold.ttf', boldFontBase64);
+            doc.addFont('Sarabun-Bold.ttf', 'Sarabun', 'bold');
+            doc.setFont('Sarabun', 'normal');
+        }
+
+        const S = summarizeTicketData(data);
+
+        // ─── หัวกระดาษบริษัท (แบบเดียวกับ Ticket History Report) ───
+        const logo = await loadReportLogo();
+        if (logo) {
+            try { doc.addImage(logo.dataUrl, 'PNG', MARGIN, 8, logo.wMm, logo.hMm); } catch (e) { console.warn('ใส่โลโก้ไม่สำเร็จ', e); }
+        }
+        doc.setFont('Sarabun', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(100, 116, 139);
+        doc.text('บริษัท ซิสเนค อินฟอร์เมชัน จำกัด', PAGE_W - MARGIN, 11, { align: 'right' });
+        doc.setFontSize(8);
+        doc.text('111 หมู่ ดิจิทัล พาร์ค เวสต์ อาคารรูนิคอมวัน ชั้น 9 ยูนิต 917 ถนนสุขุมวิท', PAGE_W - MARGIN, 16, { align: 'right' });
+        doc.text('แขวงบางจาก เขตพระโขนง กรุงเทพมหานคร 10260 โทรศัพท์: 091-964-9642', PAGE_W - MARGIN, 21, { align: 'right' });
+        doc.setDrawColor(226, 232, 240);
+        doc.setLineWidth(0.5);
+        doc.line(MARGIN, 27, PAGE_W - MARGIN, 27);
+
+        // ─── ชื่อรายงาน + เงื่อนไขที่เลือก ───
+        doc.setFont('Sarabun', 'bold');
+        doc.setFontSize(15);
+        doc.setTextColor(55, 48, 163);
+        doc.text('รายงานสรุปภาพรวม Ticket (Summary Report)', MARGIN, 36);
+        doc.setFont('Sarabun', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(140, 140, 140);
+        const thDate = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+        doc.text(`สรุปตามที่เลือก: ${dateRangeLabel}  |  ${S.total} รายการ  |  ออกรายงาน: ${thDate}`, MARGIN, 42);
+
+        const sectionTitle = (y, text) => {
+            doc.setFillColor(139, 92, 246);
+            doc.rect(MARGIN, y - 3.6, 1.6, 4.6, 'F');
+            doc.setFont('Sarabun', 'bold');
+            doc.setFontSize(11);
+            doc.setTextColor(51, 65, 85);
+            doc.text(text, MARGIN + 4, y);
+            doc.setFont('Sarabun', 'normal');
+        };
+
+        // ─── KPI cards 6 ช่อง ───
+        let y = 50;
+        const kpis = [
+            ['TOTAL', S.total, '#6366f1', 'ทั้งหมด'],
+            ['NEW', S.byStatus.NEW, '#3b82f6', 'เปิดใหม่'],
+            ['ASSIGNED', S.byStatus.ASSIGNED, '#f59e0b', 'ดำเนินการ'],
+            ['PENDING', S.byStatus.PENDING, '#ef4444', 'รอดำเนินการ'],
+            ['SOLVED', S.byStatus.SOLVED, '#10b981', 'แก้ไขแล้ว'],
+            ['CLOSED', S.byStatus.CLOSED, '#64748b', 'ปิดแล้ว']
+        ];
+        const gap = 3, cardW = (CW - gap * 5) / 6, cardH = 21;
+        kpis.forEach((k, i) => {
+            const x = MARGIN + i * (cardW + gap);
+            const [r, g, b] = hexToRgb(k[2]);
+            doc.setDrawColor(r, g, b);
+            doc.setLineWidth(0.4);
+            doc.roundedRect(x, y, cardW, cardH, 2, 2, 'S');
+            doc.setTextColor(r, g, b);
+            doc.setFont('Sarabun', 'bold');
+            doc.setFontSize(7.5);
+            doc.text(k[0], x + cardW / 2, y + 5.5, { align: 'center' });
+            doc.setFontSize(15);
+            doc.setTextColor(30, 41, 59);
+            doc.text(String(k[1]), x + cardW / 2, y + 12.5, { align: 'center' });
+            doc.setFont('Sarabun', 'normal');
+            doc.setFontSize(6.5);
+            doc.setTextColor(100, 116, 139);
+            const pct = S.total ? Math.round(k[1] / S.total * 100) : 0;
+            doc.text(i === 0 ? k[3] : `${k[3]} · ${pct}%`, x + cardW / 2, y + 17.5, { align: 'center' });
+        });
+        y += cardH + 10;
+
+        // ─── กราฟวงกลมสัดส่วนสถานะ + legend ───
+        sectionTitle(y, 'สัดส่วนตามสถานะ (Status Distribution)');
+        y += 4;
+        try {
+            doc.addImage(buildDonutPng(S.byStatus, S.total), 'PNG', MARGIN, y, 62, 62);
+        } catch (e) { console.warn('วาดกราฟวงกลมไม่สำเร็จ', e); }
+        let ly = y + 12;
+        const lx = MARGIN + 74;
+        SUMMARY_STATUS_ORDER.forEach(st => {
+            const v = S.byStatus[st];
+            const [r, g, b] = hexToRgb(SUMMARY_STATUS_COLORS[st]);
+            doc.setFillColor(r, g, b);
+            doc.roundedRect(lx, ly - 3.2, 4, 4, 1, 1, 'F');
+            doc.setFont('Sarabun', 'bold');
+            doc.setFontSize(9.5);
+            doc.setTextColor(51, 65, 85);
+            doc.text(`${st} · ${SUMMARY_STATUS_TH[st]}`, lx + 6.5, ly);
+            doc.setFont('Sarabun', 'normal');
+            doc.setTextColor(100, 116, 139);
+            const pct = S.total ? (v / S.total * 100).toFixed(1) : '0.0';
+            doc.text(`${v} ใบ (${pct}%)`, lx + 62, ly);
+            ly += 8.4;
+        });
+        const solvedRate = S.total ? Math.round((S.byStatus.SOLVED + S.byStatus.CLOSED) / S.total * 100) : 0;
+        doc.setFont('Sarabun', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(16, 185, 129);
+        doc.text(`อัตราแก้ไขสำเร็จ (Solved + Closed): ${solvedRate}%`, lx, ly + 2);
+        y += 62 + 10;
+
+        // ─── แนวโน้มจำนวนงาน ───
+        const trend = buildTrendPng(S.byDay);
+        if (trend) {
+            sectionTitle(y, `แนวโน้มจำนวน Ticket ${trend.unit}`);
+            y += 4;
+            try {
+                doc.addImage(trend.png, 'PNG', MARGIN, y, CW, CW * 430 / 1560);
+            } catch (e) { console.warn('วาดกราฟแนวโน้มไม่สำเร็จ', e); }
+            y += CW * 430 / 1560 + 10;
+        }
+
+        // ─── สถิติเด่น ───
+        const dayEntries = Object.entries(S.byDay);
+        const busiest = dayEntries.length ? dayEntries.sort((a, b) => b[1] - a[1])[0] : null;
+        const avgPerDay = dayEntries.length ? (S.total / dayEntries.length).toFixed(1) : '-';
+        const topProject = topEntries(S.byProject, 1)[0];
+        const thShort = s => { const d = new Date(s + 'T00:00:00'); return isNaN(d) ? s : d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }); };
+        sectionTitle(y, 'สถิติเด่น (Highlights)');
+        y += 3;
+        doc.setFillColor(248, 250, 252);
+        doc.setDrawColor(226, 232, 240);
+        doc.setLineWidth(0.3);
+        doc.roundedRect(MARGIN, y, CW, 24, 2.5, 2.5, 'FD');
+        const stats = [
+            [`${solvedRate}%`, 'อัตราแก้ไขสำเร็จ'],
+            [String(avgPerDay), 'เฉลี่ยต่อวันที่มีงานเข้า'],
+            [busiest ? `${thShort(busiest[0])} (${busiest[1]} ใบ)` : '-', 'วันที่งานเข้ามากที่สุด'],
+            [topProject ? String(topProject[1]) + ' ใบ' : '-', topProject ? `โครงการสูงสุด: ${topProject[0].length > 26 ? topProject[0].slice(0, 25) + '…' : topProject[0]}` : 'โครงการสูงสุด']
+        ];
+        const statW = CW / 4;
+        stats.forEach((st, i) => {
+            const cxm = MARGIN + statW * i + statW / 2;
+            doc.setFont('Sarabun', 'bold');
+            doc.setFontSize(11.5);
+            doc.setTextColor(79, 70, 229);
+            doc.text(st[0], cxm, y + 10, { align: 'center' });
+            doc.setFont('Sarabun', 'normal');
+            doc.setFontSize(7);
+            doc.setTextColor(100, 116, 139);
+            doc.text(st[1], cxm, y + 17, { align: 'center', maxWidth: statW - 6 });
+            if (i > 0) {
+                doc.setDrawColor(226, 232, 240);
+                doc.line(MARGIN + statW * i, y + 4, MARGIN + statW * i, y + 20);
+            }
+        });
+
+        // ─── หน้า 2: Top โครงการ / สถานที่ / ความสำคัญ ───
+        doc.addPage();
+        y = 22;
+
+        // แถบแนวนอนวาดด้วย jsPDF ตรงๆ — คมชัดกว่า render จาก canvas
+        const drawHBarList = (yy, entries, total, colorOf) => {
+            const labelW = 62, valueW = 26, barW = CW - labelW - valueW - 6;
+            const maxV = entries.length ? entries[0][1] : 1;
+            entries.forEach(en => {
+                const [r, g, b] = hexToRgb(colorOf(en[0]));
+                doc.setFont('Sarabun', 'normal');
+                doc.setFontSize(8.5);
+                doc.setTextColor(71, 85, 105);
+                let txt = String(en[0]);
+                if (doc.getTextWidth(txt) > labelW - 2) {
+                    while (txt.length > 1 && doc.getTextWidth(txt + '…') > labelW - 2) txt = txt.slice(0, -1);
+                    txt += '…';
+                }
+                doc.text(txt, MARGIN, yy);
+                doc.setFillColor(241, 245, 249);
+                doc.roundedRect(MARGIN + labelW, yy - 3.2, barW, 4.2, 1.2, 1.2, 'F');
+                doc.setFillColor(r, g, b);
+                doc.roundedRect(MARGIN + labelW, yy - 3.2, Math.max(1.4, barW * (en[1] / maxV)), 4.2, 1.2, 1.2, 'F');
+                doc.setFontSize(8);
+                doc.setTextColor(100, 116, 139);
+                const pct = total ? Math.round(en[1] / total * 100) : 0;
+                doc.text(`${en[1]} (${pct}%)`, MARGIN + labelW + barW + 3, yy);
+                yy += 7;
+            });
+            return yy;
+        };
+        const ensureRoom = (needed) => {
+            if (y + needed > PAGE_H - 18) { doc.addPage(); y = 22; }
+        };
+
+        const topProjects = topEntries(S.byProject, 10);
+        ensureRoom(12 + topProjects.length * 7);
+        sectionTitle(y, `Top ${topProjects.length} โครงการที่มีงานมากที่สุด`);
+        y = drawHBarList(y + 8, topProjects, S.total, () => '#6366f1') + 8;
+
+        const topLocations = topEntries(S.byLocation, 10);
+        ensureRoom(12 + topLocations.length * 7);
+        sectionTitle(y, `Top ${topLocations.length} สถานที่ที่มีงานมากที่สุด`);
+        y = drawHBarList(y + 8, topLocations, S.total, () => '#0ea5e9') + 8;
+
+        const prioOrder = ['สูงมาก', 'สูง', 'ปานกลาง', 'ต่ำ', 'ต่ำมาก'];
+        const prioColors = { 'สูงมาก': '#dc2626', 'สูง': '#f97316', 'ปานกลาง': '#f59e0b', 'ต่ำ': '#10b981', 'ต่ำมาก': '#64748b' };
+        const prioEntries = prioOrder.filter(p => S.byPriority[p]).map(p => [p, S.byPriority[p]])
+            .concat(Object.entries(S.byPriority).filter(([p]) => !prioOrder.includes(p)));
+        if (prioEntries.length) {
+            ensureRoom(12 + prioEntries.length * 7);
+            sectionTitle(y, 'สัดส่วนตามความสำคัญ (Priority)');
+            const sortedPrio = prioEntries.slice().sort((a, b) => b[1] - a[1]);
+            y = drawHBarList(y + 8, sortedPrio, S.total, (label) => prioColors[label] || '#8b5cf6') + 8;
+        }
+
+        // ─── ท้ายกระดาษทุกหน้า ───
+        const pages = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pages; i++) {
+            doc.setPage(i);
+            doc.setDrawColor(226, 232, 240);
+            doc.setLineWidth(0.3);
+            doc.line(MARGIN, PAGE_H - 12, PAGE_W - MARGIN, PAGE_H - 12);
+            doc.setFont('Sarabun', 'normal');
+            doc.setFontSize(8);
+            doc.setTextColor(148, 163, 184);
+            doc.text('SYSNECT Ticket Dashboard — รายงานสรุปกราฟ + Chart', MARGIN, PAGE_H - 7);
+            doc.text('หน้า ' + i + ' / ' + pages, PAGE_W - MARGIN, PAGE_H - 7, { align: 'right' });
+        }
+
+        doc.save('SYSNECT_Summary_Report_' + new Date().toISOString().slice(0, 10) + '.pdf');
     }
 
     // ไม่ต้องเรียก initChart() ตรงนี้แล้ว เพราะเราเรียกใน fetchLiveTickets()
@@ -3792,6 +4240,9 @@ window.selectDatePreset = function(preset) {
 
     // เงื่อนไขเปลี่ยน → list ที่ตรวจสอบไว้ใช้ไม่ได้แล้ว ซ่อนไปกันเข้าใจผิด
     if (window.hideExportPreview) window.hideExportPreview();
+
+    // ช่วงวันเปลี่ยน → รีเฟรชข้อความ "สรุปตามที่เลือก" ของรายงานสรุปกราฟ
+    if (window.updateSummaryHint) window.updateSummaryHint();
 
     // อัปเดต pill highlight
     document.querySelectorAll('.date-preset-pill').forEach(btn => {
