@@ -2922,9 +2922,21 @@
         min-height: 0 !important;
     }
     #dashboardWrapper .chart-container {
-        height: 280px !important;
+        /* จำกัดทั้งสูงและกว้าง — pie คำนวณรัศมีจากขนาด container (min(W*0.38, H*0.42))
+           ถ้าปล่อยเต็มความกว้างจอ วงจะใหญ่เกินบนมือถือ */
+        height: 225px !important;
+        max-width: 270px !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
         position: relative !important;
         overflow: hidden !important;
+    }
+    /* หัวข้อการ์ดกราฟ: ลดขนาดให้ส่วนบนกระชับ ไม่กินจอ */
+    #dashboardWrapper .chart-card .chart-title {
+        font-size: 17px !important;
+    }
+    #dashboardWrapper .chart-card .chart-subtitle {
+        font-size: 12.5px !important;
     }
     #dashboardWrapper .sidebar-card {
         height: auto !important;
