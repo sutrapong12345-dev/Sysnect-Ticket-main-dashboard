@@ -2042,27 +2042,8 @@
                         const _durBadge = _dur ? `<span class="badge-duration ${_isResolved?'resolved':'ongoing'}"><span class="material-symbols-outlined" style="font-size:13px;">${_isResolved?'check_circle':'schedule'}</span>${_dur}</span>` : '';
                         const _closeDisplay = formatDateTime(ticket.date_close||'-');
 
-                        // SLA Logic
-                        let slaHours = 24;
-                        if (pEng === 'critical') slaHours = 1;
-                        else if (pEng === 'high') slaHours = 4;
-                        else if (pEng === 'medium') slaHours = 24;
-                        else slaHours = 48; // Low
-                        
-                        let slaBadge = '';
-                        if (String(ticket._statusName||'').toUpperCase() === 'NEW' && ticket.date_open) {
-                            const dateOpen = new Date(String(ticket.date_open).replace('T', ' '));
-                            if (!isNaN(dateOpen)) {
-                                const diffHours = (new Date(dateOpen.getTime() + slaHours * 60 * 60 * 1000) - new Date()) / 3600000;
-                                if (diffHours < 0) {
-                                    slaBadge = `<span class="badge-sla overdue" style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:bold;background-color:#fee2e2;color:#dc2626;border:1px solid #f87171;"><span class="material-symbols-outlined" style="font-size:13px;">timer_off</span>เกิน SLA ${Math.abs(diffHours).toFixed(1)} ชม.</span>`;
-                                } else if (diffHours <= 2) {
-                                    slaBadge = `<span class="badge-sla warning" style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:bold;background-color:#ffedd5;color:#ea580c;border:1px solid #fdba74;"><span class="material-symbols-outlined" style="font-size:13px;">timer</span>เหลือ SLA ${diffHours.toFixed(1)} ชม.</span>`;
-                                } else {
-                                    slaBadge = `<span class="badge-sla safe" style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:bold;background-color:#dcfce7;color:#16a34a;border:1px solid #86efac;"><span class="material-symbols-outlined" style="font-size:13px;">timer</span>เหลือ SLA ${diffHours.toFixed(1)} ชม.</span>`;
-                                }
-                            }
-                        }
+                        // SLA มาตรฐานกลาง (ชั่วคราว): รับงาน 10 นาที + ปิดงาน 7 วัน — logic รวมที่ buildSlaBadges()
+                        const slaBadge = buildSlaBadges(ticket._statusName, ticket.date_open, ticket.date_close);
 
                         htmlString += `
                             <div class="ticket-item" data-ticket-id="${escapeHtml(ticket.id)}" style="animation-delay: ${delay}s; border-left-color: ${ticket._statusColor};">
@@ -2249,27 +2230,8 @@
                             const _durBadge2 = _dur2 ? `<span class="badge-duration ${_isResolved2?'resolved':'ongoing'}"><span class="material-symbols-outlined" style="font-size:13px;">${_isResolved2?'check_circle':'schedule'}</span>${_dur2}</span>` : '';
                             const _closeDisplay2 = formatDateTime(ticket.date_close||'-');
 
-                            // SLA Logic
-                            let slaHours2 = 24;
-                            if (pEng === 'critical') slaHours2 = 1;
-                            else if (pEng === 'high') slaHours2 = 4;
-                            else if (pEng === 'medium') slaHours2 = 24;
-                            else slaHours2 = 48; // Low
-                            
-                            let slaBadge2 = '';
-                            if (String(ticket._statusName||'').toUpperCase() === 'NEW' && ticket.date_open) {
-                                const dateOpen2 = new Date(String(ticket.date_open).replace('T', ' '));
-                                if (!isNaN(dateOpen2)) {
-                                    const diffHours2 = (new Date(dateOpen2.getTime() + slaHours2 * 60 * 60 * 1000) - new Date()) / 3600000;
-                                    if (diffHours2 < 0) {
-                                        slaBadge2 = `<span class="badge-sla overdue" style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:bold;background-color:#fee2e2;color:#dc2626;border:1px solid #f87171;"><span class="material-symbols-outlined" style="font-size:13px;">timer_off</span>เกิน SLA ${Math.abs(diffHours2).toFixed(1)} ชม.</span>`;
-                                    } else if (diffHours2 <= 2) {
-                                        slaBadge2 = `<span class="badge-sla warning" style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:bold;background-color:#ffedd5;color:#ea580c;border:1px solid #fdba74;"><span class="material-symbols-outlined" style="font-size:13px;">timer</span>เหลือ SLA ${diffHours2.toFixed(1)} ชม.</span>`;
-                                    } else {
-                                        slaBadge2 = `<span class="badge-sla safe" style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:bold;background-color:#dcfce7;color:#16a34a;border:1px solid #86efac;"><span class="material-symbols-outlined" style="font-size:13px;">timer</span>เหลือ SLA ${diffHours2.toFixed(1)} ชม.</span>`;
-                                    }
-                                }
-                            }
+                            // SLA มาตรฐานกลาง (ชั่วคราว): รับงาน 10 นาที + ปิดงาน 7 วัน — logic รวมที่ buildSlaBadges()
+                            const slaBadge2 = buildSlaBadges(ticket._statusName, ticket.date_open, ticket.date_close);
 
                             htmlString += `
                                 <div class="ticket-item" data-ticket-id="${escapeHtml(ticket.id)}" style="animation-delay: ${delay}s; border-left-color: ${ticket._statusColor};">
@@ -3718,6 +3680,7 @@
             const pColor = isHigh ? '#ef4444' : isMed ? '#f59e0b' : '#9ca3af';
             const isDone = t._statusKey === 'solved' || t._statusKey === 'closed';
             const dateLabel = isDone ? `ปิดเมื่อ ${formatDateTime(t.date_close || t.date_open)}` : `เปิดเมื่อ ${formatDateTime(t.date_open)}`;
+            const slaHtml = buildSlaBadges(t._statusKey, t.date_open, t.date_close, true);
             html += `
                 <div class="entity-ticket-card">
                     <div class="entity-ticket-top">
@@ -3729,6 +3692,7 @@
                         <span style="color:${pColor};font-weight:700;">● ${escapeHtml(t.priority || '-')}</span>
                         <span>${dateLabel}</span>
                     </div>
+                    ${slaHtml ? `<div class="entity-ticket-sla">${slaHtml}</div>` : ''}
                 </div>`;
         });
         html += '</div>';
@@ -4267,6 +4231,68 @@ window.selectDatePreset = function(preset) {
     }
 };
 
+// ==============================================
+// SLA มาตรฐานกลาง (ตั้งไว้ชั่วคราว)
+// ⚠️ ยังไม่ใช่มาตรฐานทางการของบริษัท — รอตั้งทีม Service desk ก่อนค่อยฟิกซ์
+// ปรับตัวเลข 2 บรรทัดนี้ที่เดียว มีผลทุกจุดที่แสดง ticket ทั้งเว็บ
+// ==============================================
+const SLA_RESPONSE_MIN = 10;  // ① ticket ใหม่ (NEW) ต้องรับงานภายใน 10 นาที
+const SLA_RESOLVE_DAYS = 7;   // ② ทุก ticket ต้องปิดงาน (CLOSED) ภายใน 7 วัน
+const SLA_NOTE = 'SLA มาตรฐานชั่วคราว — ยังไม่ประกาศใช้อย่างเป็นทางการ';
+
+// สร้าง badge SLA ทั้ง 2 ตัวจากสถานะ + วันเปิด/ปิด — ใช้ร่วมกันทุกหน้าจอ (compact = ตัวเล็กสำหรับการ์ดแคบ)
+function buildSlaBadges(statusName, dateOpenStr, dateCloseStr, compact = false) {
+    const st = String(statusName || '').toUpperCase();
+    const dateOpen = dateOpenStr && dateOpenStr !== '-' ? new Date(String(dateOpenStr).replace('T', ' ')) : null;
+    if (!dateOpen || isNaN(dateOpen)) return '';
+
+    const fs = compact ? '10px' : '11px';
+    const icf = compact ? '12px' : '13px';
+    const pill = (bg, color, border, icon, text) =>
+        `<span class="badge-sla" title="${SLA_NOTE}" style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;font-size:${fs};font-weight:bold;background-color:${bg};color:${color};border:1px solid ${border};"><span class="material-symbols-outlined" style="font-size:${icf};">${icon}</span>${text}</span>`;
+    const fmtDur = ms => {
+        const m = ms / 60000;
+        if (m < 60) return Math.max(1, Math.round(m)) + ' นาที';
+        if (m < 1440) return (m / 60).toFixed(1) + ' ชม.';
+        return (m / 1440).toFixed(1) + ' วัน';
+    };
+
+    let html = '';
+    const now = Date.now();
+
+    // ① SLA รับงาน — เฉพาะใบที่ยังเป็น NEW (ถูก assign แล้ว badge นี้หายไปเอง)
+    if (st === 'NEW') {
+        const respLeft = dateOpen.getTime() + SLA_RESPONSE_MIN * 60000 - now;
+        html += respLeft >= 0
+            ? pill('#dcfce7', '#16a34a', '#86efac', 'timer', `รับงานใน ${SLA_RESPONSE_MIN} นาที: เหลือ ${fmtDur(respLeft)}`)
+            : pill('#fee2e2', '#dc2626', '#f87171', 'timer_off', `เกิน SLA รับงาน ${fmtDur(-respLeft)}`);
+    }
+
+    // ② SLA ปิดงาน — นับจากวันเปิดถึงกำหนด 7 วัน
+    const deadline = dateOpen.getTime() + SLA_RESOLVE_DAYS * 86400000;
+    const dateClose = dateCloseStr && dateCloseStr !== '-' ? new Date(String(dateCloseStr).replace('T', ' ')) : null;
+    const closedAt = (st === 'CLOSED' || st === 'SOLVED') && dateClose && !isNaN(dateClose) ? dateClose.getTime() : null;
+
+    if (closedAt !== null) {
+        // ปิด/แก้เสร็จแล้ว → สรุปผลว่าทันหรือเกิน SLA
+        const used = closedAt - dateOpen.getTime();
+        html += ' ' + (closedAt <= deadline
+            ? pill('#dcfce7', '#16a34a', '#86efac', 'task_alt', `ปิดใน SLA (${fmtDur(used)})`)
+            : pill('#fee2e2', '#dc2626', '#f87171', 'assignment_late', `ปิดเกิน SLA ${SLA_RESOLVE_DAYS} วัน (ใช้ ${fmtDur(used)})`));
+    } else if (st !== 'CLOSED') {
+        // ยังไม่ปิด → นับถอยหลัง (เหลือ >1 วัน = ฟ้า, ≤1 วัน = ส้ม, เกิน = แดง)
+        const left = deadline - now;
+        if (left < 0) {
+            html += ' ' + pill('#fee2e2', '#dc2626', '#f87171', 'event_busy', `เกินกำหนดปิด ${fmtDur(-left)}`);
+        } else if (left <= 86400000) {
+            html += ' ' + pill('#ffedd5', '#ea580c', '#fdba74', 'hourglass_bottom', `ใกล้ครบกำหนดปิด: เหลือ ${fmtDur(left)}`);
+        } else {
+            html += ' ' + pill('#eff6ff', '#2563eb', '#93c5fd', 'event_available', `ปิดใน ${SLA_RESOLVE_DAYS} วัน: เหลือ ${fmtDur(left)}`);
+        }
+    }
+    return html.trim();
+}
+
 window.openDrillDownModal = function(status) {
     const modal = document.getElementById('drillDownModal');
     const title = document.getElementById('drillModalTitle');
@@ -4276,17 +4302,14 @@ window.openDrillDownModal = function(status) {
     
     let tickets = [];
     if (status === 'ALL') {
-        tickets = [
-            ...(mockDataRaw['new'] || []),
-            ...(mockDataRaw['assigned'] || []),
-            ...(mockDataRaw['pending'] || []),
-            ...(mockDataRaw['solved'] || []),
-            ...(mockDataRaw['closed'] || [])
-        ];
+        // แท็กสถานะติดตัวไว้ให้ badge SLA รู้ว่าใบไหนสถานะอะไร
+        ['new', 'assigned', 'pending', 'solved', 'closed'].forEach(key => {
+            (mockDataRaw[key] || []).forEach(t => tickets.push({ ...t, _slaStatus: key.toUpperCase() }));
+        });
         title.innerText = 'Tickets ทั้งหมด';
     } else {
         const key = status.toLowerCase();
-        tickets = mockDataRaw[key] || [];
+        tickets = (mockDataRaw[key] || []).map(t => ({ ...t, _slaStatus: key.toUpperCase() }));
         title.innerText = 'Tickets สถานะ: ' + status;
     }
     
@@ -4309,7 +4332,10 @@ window.openDrillDownModal = function(status) {
             html += '<span style="display:flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">folder</span> ' + (t.project || '-') + '</span>';
             html += '<span style="display:flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">calendar_today</span> ' + (t.date_open || t.date || '-') + '</span>';
             html += '<span style="display:flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">person</span> ' + (t.assignee || 'Unassigned') + '</span>';
-            html += '</div></div>';
+            html += '</div>';
+            const slaHtml = buildSlaBadges(t._slaStatus, t.date_open || t.date, t.date_close, true);
+            if (slaHtml) html += '<div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;">' + slaHtml + '</div>';
+            html += '</div>';
         });
         list.innerHTML = html;
     }

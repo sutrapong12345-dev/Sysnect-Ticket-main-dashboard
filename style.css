@@ -403,6 +403,8 @@
         .entity-ticket-title { font-size: 12.5px; line-height: 1.4; color: var(--text-main, #334155); margin-bottom: 6px; }
         [data-theme="dark"] .entity-ticket-title { color: #cbd5e1; }
         .entity-ticket-meta { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-sub, #64748b); gap: 8px; }
+        /* แถว badge SLA ในการ์ด ticket ของ accordion ทีมงาน/โครงการ */
+        .entity-ticket-sla { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 5px; }
 
         /* ไฮไลต์ ticket ที่ถูกเด้งมาจาก accordion โครงการ/ทีมงาน */
         @keyframes ticketJumpPulse {
