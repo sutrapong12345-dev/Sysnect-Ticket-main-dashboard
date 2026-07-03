@@ -187,8 +187,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet" />
-    <!-- Flatpickr for Date Inputs -->
-    <link rel="stylesheet" href="style.css?v=28">
+    <!-- Flatpickr (self-host): ปฏิทินเลือกวันที่ภาษาไทย — native date picker บังคับภาษาไม่ได้ -->
+    <link rel="stylesheet" href="vendor/flatpickr/flatpickr.min.css">
+    <script defer src="vendor/flatpickr/flatpickr.min.js"></script>
+    <script defer src="vendor/flatpickr/th.js"></script>
+    <link rel="stylesheet" href="style.css?v=29">
 </head>
 <body>
 
@@ -1046,7 +1049,34 @@ input:checked + .slider:before { transform: translateX(20px); }
 })();
 </script>
 
-<script src="app.js?v=25" defer></script>
+<script src="app.js?v=26" defer></script>
+
+<!-- ═══ ปฏิทินภาษาไทย (flatpickr) บน date inputs ทั้ง 4 จุด ═══
+     คงค่า .value เป็น Y-m-d ตามที่ logic กรอง/export ใช้อยู่เดิม
+     disableMobile จำเป็น — ไม่งั้น flatpickr ถอยกลับไปใช้ native picker บนมือถือ (ภาษาอังกฤษ) -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (typeof flatpickr === 'undefined' || !flatpickr.l10ns || !flatpickr.l10ns.th) return;
+    flatpickr.localize(flatpickr.l10ns.th);
+    ['filterDateStart', 'filterDateEnd', 'exportDateFrom', 'exportDateTo'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        var fp = flatpickr(el, {
+            locale: 'th',
+            dateFormat: 'Y-m-d',
+            altInput: true,
+            altFormat: 'j M Y',
+            altInputClass: 'fp-alt',
+            disableMobile: true
+        });
+        if (fp.altInput) {
+            fp.altInput.placeholder = 'เลือกวันที่';
+            var t = el.getAttribute('title');
+            if (t) fp.altInput.title = t;
+        }
+    });
+});
+</script>
 
 <!-- ═══ PC Tab Controller ═══ -->
 <script>

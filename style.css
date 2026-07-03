@@ -727,7 +727,8 @@
         /* แถว 2: กรองอื่นๆ ไม่ wrap */
         .filter-row-bottom { flex-wrap: nowrap; }
         .ticket-filter-bar select,
-        .ticket-filter-bar input[type="date"] {
+        .ticket-filter-bar input[type="date"],
+        .ticket-filter-bar input.fp-alt {
             padding: 5px 9px;
             font-size: 12.5px;
             border: 1px solid #e2e8f0;
@@ -739,7 +740,21 @@
             white-space: nowrap;
             min-width: 0;
         }
-        .ticket-filter-bar input[type="date"] { min-width: 110px; }
+        .ticket-filter-bar input[type="date"],
+        .ticket-filter-bar input.fp-alt { min-width: 110px; }
+        /* flatpickr altInput ในส่วน Export modal — input เดิมใช้ inline style ซึ่ง altInput ไม่ได้รับมา */
+        #customDateRangeSection input.fp-alt {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 13px;
+            color: #1e293b;
+            outline: none;
+            cursor: pointer;
+            font-family: inherit;
+            width: 100%;
+            box-sizing: border-box;
+        }
         .ticket-filter-bar .btn-filter-clear {
             padding: 5px 10px;
             font-size: 12.5px;
@@ -1486,7 +1501,7 @@
             /* ซ่อน user-pill บนมือถือเล็กมาก (space มีน้อยมาก) */
             .user-pill { display: none !important; }
             .filter-row-bottom { flex-wrap: wrap !important; }
-            input[type="date"] { font-size: 11px; min-width: 100px; }
+            input[type="date"], input.fp-alt { font-size: 11px; min-width: 100px; }
             /* Navbar right ให้แน่นขึ้น */
             .nav-right { gap: 3px; }
         }
@@ -2131,11 +2146,51 @@
     border-color: rgba(255,255,255,0.06);
 }
 [data-theme="dark"] .ticket-filter-bar select,
-[data-theme="dark"] .ticket-filter-bar input[type="date"] {
+[data-theme="dark"] .ticket-filter-bar input[type="date"],
+[data-theme="dark"] .ticket-filter-bar input.fp-alt {
     background: rgba(255,255,255,0.06);
     border-color: rgba(255,255,255,0.1);
     color: #cbd5e1;
     color-scheme: dark;
+}
+[data-theme="dark"] #customDateRangeSection input.fp-alt {
+    background: rgba(255,255,255,0.06);
+    border-color: rgba(255,255,255,0.1);
+    color: #cbd5e1;
+}
+
+/* ─── flatpickr calendar: ธีมมืด (ไฟล์ lib เป็นธีมสว่างอย่างเดียว) ─── */
+[data-theme="dark"] .flatpickr-calendar {
+    background: #1e293b;
+    border: 1px solid rgba(255,255,255,0.12);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+    color: #e2e8f0;
+}
+[data-theme="dark"] .flatpickr-calendar.arrowTop::before { border-bottom-color: rgba(255,255,255,0.12); }
+[data-theme="dark"] .flatpickr-calendar.arrowTop::after { border-bottom-color: #1e293b; }
+[data-theme="dark"] .flatpickr-calendar.arrowBottom::before { border-top-color: rgba(255,255,255,0.12); }
+[data-theme="dark"] .flatpickr-calendar.arrowBottom::after { border-top-color: #1e293b; }
+[data-theme="dark"] .flatpickr-months .flatpickr-month,
+[data-theme="dark"] .flatpickr-current-month .flatpickr-monthDropdown-months,
+[data-theme="dark"] .flatpickr-current-month input.cur-year { color: #e2e8f0; }
+[data-theme="dark"] .flatpickr-current-month .flatpickr-monthDropdown-months { background: #1e293b; }
+[data-theme="dark"] .flatpickr-months .flatpickr-prev-month,
+[data-theme="dark"] .flatpickr-months .flatpickr-next-month { fill: #94a3b8; }
+[data-theme="dark"] .flatpickr-months .flatpickr-prev-month:hover svg,
+[data-theme="dark"] .flatpickr-months .flatpickr-next-month:hover svg { fill: #c4b5fd; }
+[data-theme="dark"] span.flatpickr-weekday { color: #94a3b8; }
+[data-theme="dark"] .flatpickr-day { color: #e2e8f0; }
+[data-theme="dark"] .flatpickr-day.flatpickr-disabled,
+[data-theme="dark"] .flatpickr-day.prevMonthDay,
+[data-theme="dark"] .flatpickr-day.nextMonthDay { color: #475569; }
+[data-theme="dark"] .flatpickr-day:hover,
+[data-theme="dark"] .flatpickr-day:focus { background: rgba(99,102,241,0.25); border-color: transparent; }
+[data-theme="dark"] .flatpickr-day.today { border-color: #818cf8; }
+[data-theme="dark"] .flatpickr-day.selected,
+[data-theme="dark"] .flatpickr-day.selected:hover {
+    background: #6366f1;
+    border-color: #6366f1;
+    color: #fff;
 }
 [data-theme="dark"] .ticket-filter-bar .btn-filter-clear {
     background: rgba(239,68,68,0.1);
@@ -3004,7 +3059,8 @@
     #dashboardWrapper .filter-row-bottom {
         flex-wrap: wrap !important;
     }
-    #dashboardWrapper .ticket-filter-bar input[type="date"] {
+    #dashboardWrapper .ticket-filter-bar input[type="date"],
+    #dashboardWrapper .ticket-filter-bar input.fp-alt {
         min-width: 0 !important;
         flex: 1 1 120px !important;
     }
@@ -3033,6 +3089,7 @@
     }
     #dashboardWrapper .ticket-filter-bar select,
     #dashboardWrapper .ticket-filter-bar input[type="date"],
+    #dashboardWrapper .ticket-filter-bar input.fp-alt,
     #dashboardWrapper .ticket-filter-bar .btn-filter-clear {
         font-size: 12px !important;
         padding: 4px 8px !important;

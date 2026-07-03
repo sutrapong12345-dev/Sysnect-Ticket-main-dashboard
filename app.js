@@ -2387,9 +2387,9 @@
         const startEl = document.getElementById('filterDateStart');
         const endEl = document.getElementById('filterDateEnd');
         
-        // Clear Date Inputs
-        if (startEl) startEl.value = '';
-        if (endEl) endEl.value = '';
+        // Clear Date Inputs — ผ่าน flatpickr ถ้ามี (เคลียร์ altInput ที่แสดงผลด้วย ไม่งั้นตัวหนังสือค้าง)
+        if (startEl) { if (startEl._flatpickr) startEl._flatpickr.clear(false); else startEl.value = ''; }
+        if (endEl) { if (endEl._flatpickr) endEl._flatpickr.clear(false); else endEl.value = ''; }
 
         // Helper to reset custom dropdowns
         const resetCustomDropdown = (selectId, titleId, defaultText) => {
@@ -3652,8 +3652,8 @@ window.selectDatePreset = function(preset) {
         const fmt = d => d.toISOString().slice(0, 10);
         const fromEl = document.getElementById('exportDateFrom');
         const toEl = document.getElementById('exportDateTo');
-        if (fromEl && !fromEl.value) fromEl.value = fmt(from);
-        if (toEl && !toEl.value) toEl.value = fmt(today);
+        if (fromEl && !fromEl.value) { if (fromEl._flatpickr) fromEl._flatpickr.setDate(fmt(from), false); else fromEl.value = fmt(from); }
+        if (toEl && !toEl.value) { if (toEl._flatpickr) toEl._flatpickr.setDate(fmt(today), false); else toEl.value = fmt(today); }
     } else {
         section.style.display = 'none';
     }
