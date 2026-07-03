@@ -653,8 +653,8 @@
             });
             
             populateProjectFilter();
-            
-            
+            populateLocationFilter();
+
             const clockEl = document.getElementById('lastUpdateText');
             if (clockEl) clockEl.innerText = `หน้าเว็บซิงค์ล่าสุด: ${dateStr} ${timeStr}`;
             updateConnectionStatus();
@@ -1259,6 +1259,61 @@
         window.customDropdownEventsAttached = true;
     }
 
+    // ─── ตัวกรองสถานที่: เติมรายการจากข้อมูลจริง (unique location + จำนวน) ───
+    // รายการเป็น dynamic ต้อง bind click ใหม่ทุกครั้งที่ populate (setupCustomDropdown bind เฉพาะตอนโหลดหน้า)
+    function populateLocationFilter() {
+        const select = document.getElementById('locationFilter');
+        const list = document.getElementById('locationDropdownList');
+        const title = document.getElementById('locationDropdownTitle');
+        if (!select || !list) return;
+
+        const currentSelection = select.value || 'all';
+        const locCounts = {};
+        Object.keys(mockDataRaw).forEach(status => {
+            mockDataRaw[status].forEach(t => {
+                const loc = String(t.location || '').trim();
+                if (loc && loc !== '-') {
+                    if (!locCounts[loc]) locCounts[loc] = 0;
+                    locCounts[loc]++;
+                }
+            });
+        });
+        const sorted = Object.keys(locCounts).sort((a, b) => locCounts[b] - locCounts[a]);
+
+        select.innerHTML = '<option value="all">สถานที่: ทั้งหมด</option>';
+        let listHtml = `<div class="custom-dropdown-item${currentSelection === 'all' ? ' selected' : ''}" data-value="all">สถานที่: ทั้งหมด</div>`;
+        sorted.forEach(loc => {
+            const opt = document.createElement('option');
+            opt.value = loc;
+            opt.textContent = `สถานที่: ${loc}`;
+            select.appendChild(opt);
+            listHtml += `<div class="custom-dropdown-item${currentSelection === loc ? ' selected' : ''}" data-value="${escapeHtml(loc)}">${escapeHtml(loc)} (${locCounts[loc]})</div>`;
+        });
+        list.innerHTML = listHtml;
+
+        // คงค่าที่เลือกไว้ ถ้าสถานที่นั้นหายไปจากข้อมูล (เช่นเปลี่ยนช่วงเวลา) ให้ถอยเป็น all
+        if (currentSelection !== 'all' && locCounts[currentSelection]) {
+            select.value = currentSelection;
+        } else {
+            select.value = 'all';
+            if (title) title.textContent = 'สถานที่: ทั้งหมด';
+        }
+
+        // bind click ให้ item ชุดใหม่
+        list.querySelectorAll('.custom-dropdown-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const val = item.getAttribute('data-value');
+                select.value = val;
+                if (title) title.textContent = val === 'all' ? 'สถานที่: ทั้งหมด' : item.textContent;
+                list.querySelectorAll('.custom-dropdown-item').forEach(i => i.classList.remove('selected'));
+                item.classList.add('selected');
+                list.style.display = 'none';
+                select.dispatchEvent(new Event('change'));
+            });
+        });
+    }
+
     // ฟังก์ชันช่วยคัดกรองข้อมูล
     function getFilteredData() {
         const searchInputEl = document.getElementById('searchInput');
@@ -1364,6 +1419,13 @@
                     matchProject = t.project === projectFilter;
                 }
 
+                // Location Filtering
+                let matchLocation = true;
+                const locationFilter = document.getElementById('locationFilter') ? document.getElementById('locationFilter').value : 'all';
+                if (locationFilter && locationFilter !== 'all') {
+                    matchLocation = String(t.location || '').trim() === locationFilter;
+                }
+
                 // Assignee Filtering
                 let matchAssignee = true;
                 if (window._activeAssigneeFilter) {
@@ -1375,7 +1437,7 @@
                     }
                 }
 
-                return matchSearch && matchDate && matchPriority && matchProject && matchAssignee;
+                return matchSearch && matchDate && matchPriority && matchProject && matchLocation && matchAssignee;
             });
 
             filteredData[status] = tickets;
@@ -2321,6 +2383,13 @@
         if (currentStatus) renderTicketList(currentStatus);
     });
 
+    // ระบบ Filter สถานที่ (Dropdown)
+    document.getElementById('locationFilter')?.addEventListener('change', () => {
+        initChart();
+        renderMonthlyBreakdown();
+        if (currentStatus) renderTicketList(currentStatus);
+    });
+
     // ระบบ Filter วันที่ (Dropdown)
     document.getElementById('dateFilter')?.addEventListener('change', (e) => {
         const startEl = document.getElementById('filterDateStart');
@@ -2407,6 +2476,7 @@
         // Reset all selects to 'all' and update custom UI titles
         resetCustomDropdown('dateFilter', 'timeDropdownTitle', 'ทุกเวลา');
         resetCustomDropdown('priorityFilter', 'priorityDropdownTitle', 'Priority: ทั้งหมด');
+        resetCustomDropdown('locationFilter', 'locationDropdownTitle', 'สถานที่: ทั้งหมด');
         resetCustomDropdown('projectFilter', 'customDropdownSelected', 'Project: ทั้งหมด');
         
         // Sync quick filter
@@ -3712,6 +3782,7 @@
         }
 
         setupCustomDropdown('priorityDropdownContainer', 'priorityDropdownHeader', 'priorityDropdownTitle', 'priorityDropdownList', 'priorityFilter');
+        setupCustomDropdown('locationDropdownContainer', 'locationDropdownHeader', 'locationDropdownTitle', 'locationDropdownList', 'locationFilter');
         setupCustomDropdown('timeDropdownContainer', 'timeDropdownHeader', 'timeDropdownTitle', 'timeDropdownList', 'dateFilter');
     });
 
