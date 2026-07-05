@@ -3755,10 +3755,10 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   🔔 BELL MENU — Status Ticket (มือถือเท่านั้น)
-   แทนปุ่มสลับธีมบนมือถือ (ธีมตั้งได้ใน Settings แล้ว) — PC ยังใช้ปุ่มธีมเหมือนเดิม
+   🔔 BELL MENU — Status Ticket (ทุกจอ อยู่ข้างปุ่มตั้งค่า)
+   บนมือถือแทนปุ่มสลับธีม (ธีมตั้งได้ใน Settings แล้ว) — PC มีทั้งกระดิ่ง+ปุ่มธีม
    ═══════════════════════════════════════════════════════════════════════ */
-.bell-wrap { display: none; position: relative; }
+.bell-wrap { display: block; position: relative; }
 
 /* จุดแดงบนไอคอนกระดิ่ง — โชว์เมื่อมี Ticket สถานะ NEW ค้างอยู่ */
 .bell-dot {
@@ -3829,8 +3829,7 @@
 .bell-count.is-new  { color: #3b82f6; background: rgba(59, 130, 246, 0.14); }
 .bell-count.is-proc { color: #d97706; background: rgba(245, 158, 11, 0.16); }
 
-/* มือถือ: โชว์กระดิ่ง + ซ่อนปุ่มธีม — PC (≥1025px) ไม่เปลี่ยนอะไร */
+/* มือถือ: ซ่อนปุ่มธีม (เหลือกระดิ่ง) — PC (≥1025px) มีครบทั้งคู่ */
 @media (max-width: 1024px) {
-    .bell-wrap { display: block; }
     #btnThemeToggle { display: none !important; }
 }
