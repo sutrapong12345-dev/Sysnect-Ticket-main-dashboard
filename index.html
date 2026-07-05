@@ -191,7 +191,7 @@
     <link rel="stylesheet" href="vendor/flatpickr/flatpickr.min.css">
     <script defer src="vendor/flatpickr/flatpickr.min.js"></script>
     <script defer src="vendor/flatpickr/th.js"></script>
-    <link rel="stylesheet" href="style.css?v=36">
+    <link rel="stylesheet" href="style.css?v=37">
 </head>
 <body>
 
@@ -278,6 +278,11 @@
                     <span class="bell-item-text"><b>กำลังดำเนินการ</b><small>Processing Ticket</small></span>
                     <span class="bell-count is-proc" id="bellCountProc">0</span>
                 </button>
+                <!-- ลิสต์ ticket ที่เข้ามาภายใน 24 ชม. — เกินหน้าต่างเวลาแล้วหายเอง; กดใบไหนเด้งไปหาใบนั้นใน list -->
+                <div class="bell-recent-head">เข้ามาใน 24 ชม. <span class="bell-recent-count" id="bellRecentCount">0</span></div>
+                <div class="bell-recent-list" id="bellRecentList">
+                    <div class="bell-recent-empty">ยังไม่มี Ticket ใหม่ใน 24 ชม.</div>
+                </div>
             </div>
         </div>
 
@@ -1108,7 +1113,7 @@ input:checked + .slider:before { transform: translateX(20px); }
 })();
 </script>
 
-<script src="app.js?v=31" defer></script>
+<script src="app.js?v=32" defer></script>
 
 <!-- ═══ ปฏิทินภาษาไทย (flatpickr) บน date inputs ทั้ง 4 จุด ═══
      คงค่า .value เป็น Y-m-d ตามที่ logic กรอง/export ใช้อยู่เดิม

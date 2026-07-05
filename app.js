@@ -4118,6 +4118,69 @@
         if (bellProc) bellProc.textContent = readStat('statAssigned') + readStat('statPending');
         const bellDot = document.getElementById('bellDot');
         if (bellDot) bellDot.classList.toggle('show', readStat('statNew') > 0);
+        if (typeof renderBellRecent === 'function') renderBellRecent();
+    }
+
+    // 🔔 ลิสต์ ticket ที่เข้ามาภายใน 24 ชม. ในเมนูกระดิ่ง — นับจาก date_open ทุกสถานะ
+    // (ใช้ mockDataRaw ตรงๆ ไม่ผ่าน filter เพื่อให้แจ้งเตือนครบเสมอ) เกิน 24 ชม. หายเอง
+    function renderBellRecent() {
+        const listEl = document.getElementById('bellRecentList');
+        const countEl = document.getElementById('bellRecentCount');
+        if (!listEl) return;
+        const colorMap = { new: '#3b82f6', assigned: '#f59e0b', pending: '#ef4444', solved: '#10b981', closed: '#64748b' };
+        const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+        const recent = [];
+        ['new', 'assigned', 'pending', 'solved', 'closed'].forEach(k => {
+            (mockDataRaw[k] || []).forEach(t => {
+                const d = new Date(String(t.date_open || t.date || '').replace('T', ' '));
+                if (!isNaN(d.getTime()) && d.getTime() >= cutoff) recent.push({ t, ts: d.getTime(), status: k });
+            });
+        });
+        recent.sort((a, b) => b.ts - a.ts);
+        if (countEl) countEl.textContent = recent.length;
+        const top = recent.slice(0, 30); // กันเมนูยาวเกิน — โชว์ 30 ใบล่าสุดพอ
+        if (!top.length) {
+            listEl.innerHTML = '<div class="bell-recent-empty">ยังไม่มี Ticket ใหม่ใน 24 ชม.</div>';
+            return;
+        }
+        listEl.innerHTML = top.map(({ t, status }) => {
+            const shortId = extractShortId(t);
+            const ago = timeAgo(t.date_open).replace('อัปเดต: ', '');
+            return `<button type="button" class="bell-recent-item" data-tid="${escapeHtml(String(t.id))}">
+                <span class="bell-recent-dot" style="background:${colorMap[status]}"></span>
+                <span class="bell-recent-body">
+                    <span class="bell-recent-title">${escapeHtml(t.name || 'Ticket #' + shortId)}</span>
+                    <span class="bell-recent-meta">#${escapeHtml(String(shortId))} · ${escapeHtml(ago)}</span>
+                </span>
+            </button>`;
+        }).join('');
+    }
+
+    // กด ticket ในกระดิ่ง → เปิด list ทุกสถานะ แล้วเลื่อนไปหาใบนั้นพร้อมไฮไลต์
+    function bellGoTicket(id) {
+        const bw = document.getElementById('bellWrap');
+        if (bw) bw.classList.remove('open');
+        if (typeof window._enterSplitMode === 'function') window._enterSplitMode('ALL');
+        let tries = 0;
+        const seek = function() {
+            const safe = (window.CSS && CSS.escape) ? CSS.escape(String(id)) : String(id).replace(/["\\]/g, '\\$&');
+            const el = document.querySelector('.ticket-item[data-ticket-id="' + safe + '"]');
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                el.classList.add('bell-flash');
+                setTimeout(() => el.classList.remove('bell-flash'), 2600);
+                return;
+            }
+            tries++;
+            // list render เป็น chunk — รอก่อน; ถ้านานผิดปกติ = โดนตัวกรองวันที่บัง (เช่นใบเข้าเมื่อคืน
+            // แต่ตัวกรองอยู่ "วันนี้") → สลับเป็น "ทุกเวลา" ผ่าน dropdown จริงแล้วหาต่อ
+            if (tries === 12) {
+                const allItem = document.querySelector('#timeDropdownList .custom-dropdown-item[data-value="all"]');
+                if (allItem) allItem.click();
+            }
+            if (tries < 25) setTimeout(seek, 160);
+        };
+        setTimeout(seek, 300);
     }
 
     function updateStatBarActive(status) {
@@ -4162,7 +4225,13 @@
         if (!bellWrap || !btnBell) return;
         btnBell.addEventListener('click', function(e) {
             e.stopPropagation();
+            const opening = !bellWrap.classList.contains('open');
+            if (opening) renderBellRecent(); // คำนวณหน้าต่าง 24 ชม. ใหม่ทุกครั้งที่เปิด
             bellWrap.classList.toggle('open');
+        });
+        document.getElementById('bellRecentList')?.addEventListener('click', function(e) {
+            const item = e.target.closest('.bell-recent-item');
+            if (item) bellGoTicket(item.getAttribute('data-tid'));
         });
         document.addEventListener('click', function(e) {
             if (!bellWrap.contains(e.target)) bellWrap.classList.remove('open');
