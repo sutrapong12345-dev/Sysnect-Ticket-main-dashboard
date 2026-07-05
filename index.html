@@ -191,7 +191,7 @@
     <link rel="stylesheet" href="vendor/flatpickr/flatpickr.min.css">
     <script defer src="vendor/flatpickr/flatpickr.min.js"></script>
     <script defer src="vendor/flatpickr/th.js"></script>
-    <link rel="stylesheet" href="style.css?v=34">
+    <link rel="stylesheet" href="style.css?v=35">
 </head>
 <body>
 
@@ -263,6 +263,27 @@
         <button class="btn-action" id="btnThemeToggle" title="Toggle Dark/Light Mode" style="border-radius: 50%; width: 38px; height: 38px; padding: 0; display: flex; align-items: center; justify-content: center;">
             <span class="material-symbols-outlined theme-icon" style="font-size: 20px;">dark_mode</span>
         </button>
+
+        <!-- 🔔 เมนูกระดิ่ง Status Ticket — โชว์เฉพาะมือถือ แทนปุ่มธีม (ธีมตั้งได้ใน Settings อยู่แล้ว) -->
+        <div class="bell-wrap" id="bellWrap">
+            <button class="btn-action" id="btnBell" title="สถานะ Ticket" style="border-radius: 50%; width: 38px; height: 38px; padding: 0; display: flex; align-items: center; justify-content: center; position: relative;">
+                <span class="material-symbols-outlined" style="font-size: 20px;">notifications</span>
+                <span class="bell-dot" id="bellDot"></span>
+            </button>
+            <div class="bell-menu" id="bellMenu">
+                <div class="bell-menu-title">Status Ticket</div>
+                <button type="button" class="bell-item" id="bellItemNew">
+                    <span class="bell-pulse is-new"></span>
+                    <span class="bell-item-text"><b>เข้ามาใหม่</b><small>New Ticket</small></span>
+                    <span class="bell-count is-new" id="bellCountNew">0</span>
+                </button>
+                <button type="button" class="bell-item" id="bellItemProc">
+                    <span class="bell-pulse is-proc"></span>
+                    <span class="bell-item-text"><b>กำลังดำเนินการ</b><small>Processing Ticket</small></span>
+                    <span class="bell-count is-proc" id="bellCountProc">0</span>
+                </button>
+            </div>
+        </div>
 
         <button class="btn-action primary-action" id="btnRefresh">
             <span class="material-symbols-outlined" style="vertical-align: text-bottom; font-size: 18px;">sync</span> Refresh
@@ -1087,7 +1108,7 @@ input:checked + .slider:before { transform: translateX(20px); }
 })();
 </script>
 
-<script src="app.js?v=30" defer></script>
+<script src="app.js?v=31" defer></script>
 
 <!-- ═══ ปฏิทินภาษาไทย (flatpickr) บน date inputs ทั้ง 4 จุด ═══
      คงค่า .value เป็น Y-m-d ตามที่ logic กรอง/export ใช้อยู่เดิม

@@ -3753,3 +3753,84 @@
     .cl-row { padding: 6px 10px; gap: 6px; }
     .pc-tabbar { left: 8px; padding: 10px 6px; gap: 4px; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   🔔 BELL MENU — Status Ticket (มือถือเท่านั้น)
+   แทนปุ่มสลับธีมบนมือถือ (ธีมตั้งได้ใน Settings แล้ว) — PC ยังใช้ปุ่มธีมเหมือนเดิม
+   ═══════════════════════════════════════════════════════════════════════ */
+.bell-wrap { display: none; position: relative; }
+
+/* จุดแดงบนไอคอนกระดิ่ง — โชว์เมื่อมี Ticket สถานะ NEW ค้างอยู่ */
+.bell-dot {
+    position: absolute; top: 6px; right: 7px;
+    width: 9px; height: 9px; border-radius: 50%;
+    background: #ef4444; display: none;
+    animation: bellDotPulse 1.6s ease-out infinite;
+}
+.bell-dot.show { display: block; }
+@keyframes bellDotPulse {
+    0%   { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.55); }
+    70%  { box-shadow: 0 0 0 7px rgba(239, 68, 68, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+.bell-menu {
+    position: absolute; top: calc(100% + 10px); right: -4px;
+    width: 252px; padding: 10px;
+    background: var(--card-bg-solid, #fff);
+    border: 1px solid var(--border-solid, #e2e8f0);
+    border-radius: 14px;
+    box-shadow: 0 14px 38px rgba(15, 23, 42, 0.25);
+    display: none; z-index: 1300;
+}
+[data-theme="dark"] .bell-menu { background: #1e293b; border-color: rgba(148,163,184,0.22); }
+.bell-wrap.open .bell-menu { display: block; animation: bellMenuIn 0.18s ease-out; }
+@keyframes bellMenuIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.bell-menu-title {
+    font-size: 11px; font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase;
+    color: var(--text-sub, #94a3b8); padding: 2px 8px 8px;
+}
+.bell-item {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%; padding: 10px;
+    background: transparent; border: none; border-radius: 10px;
+    cursor: pointer; text-align: left;
+    -webkit-tap-highlight-color: transparent;
+}
+.bell-item:active { background: rgba(59, 130, 246, 0.12); }
+.bell-item + .bell-item { margin-top: 2px; }
+.bell-item-text { flex: 1; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.bell-item-text b { font-size: 13.5px; font-weight: 700; color: var(--text-main, #1e293b); }
+.bell-item-text small { font-size: 10.5px; color: var(--text-sub, #94a3b8); }
+
+/* วงกลมกระพริบ — สีเดียวกับสถานะบนกราฟ (NEW น้ำเงิน / ดำเนินการ ส้ม) */
+.bell-pulse { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.bell-pulse.is-new  { background: #3b82f6; animation: bellPulseBlue 1.6s ease-out infinite; }
+.bell-pulse.is-proc { background: #f59e0b; animation: bellPulseAmber 1.6s ease-out infinite; }
+@keyframes bellPulseBlue {
+    0%   { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5); }
+    70%  { box-shadow: 0 0 0 8px rgba(59, 130, 246, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+}
+@keyframes bellPulseAmber {
+    0%   { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.5); }
+    70%  { box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+}
+
+.bell-count {
+    font-family: 'JetBrains Mono', monospace; font-size: 12.5px; font-weight: 800;
+    padding: 2px 9px; border-radius: 999px; flex-shrink: 0;
+}
+.bell-count.is-new  { color: #3b82f6; background: rgba(59, 130, 246, 0.14); }
+.bell-count.is-proc { color: #d97706; background: rgba(245, 158, 11, 0.16); }
+
+/* มือถือ: โชว์กระดิ่ง + ซ่อนปุ่มธีม — PC (≥1025px) ไม่เปลี่ยนอะไร */
+@media (max-width: 1024px) {
+    .bell-wrap { display: block; }
+    #btnThemeToggle { display: none !important; }
+}

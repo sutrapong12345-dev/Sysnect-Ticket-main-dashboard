@@ -4109,6 +4109,15 @@
             const el = document.getElementById(idMap[key]);
             if (el) el.textContent = values[i] ?? 0;
         });
+
+        // 🔔 sync เมนูกระดิ่ง (มือถือ): เข้ามาใหม่ = NEW / กำลังดำเนินการ = ASSIGNED + PENDING
+        const readStat = id => parseInt(document.getElementById(id)?.textContent, 10) || 0;
+        const bellNew = document.getElementById('bellCountNew');
+        const bellProc = document.getElementById('bellCountProc');
+        if (bellNew) bellNew.textContent = readStat('statNew');
+        if (bellProc) bellProc.textContent = readStat('statAssigned') + readStat('statPending');
+        const bellDot = document.getElementById('bellDot');
+        if (bellDot) bellDot.classList.toggle('show', readStat('statNew') > 0);
     }
 
     function updateStatBarActive(status) {
@@ -4144,6 +4153,27 @@
         if (typeof renderAssigneeSidebar === 'function') renderAssigneeSidebar();
         if (typeof renderTrendLineChart === 'function') renderTrendLineChart();
     });
+
+    // ── 🔔 เมนูกระดิ่ง Status Ticket (มือถือ) ──
+    // กดกระดิ่ง = เปิด/ปิดเมนู · กดรายการ = เด้งไปหน้า ticket list ทันที (NEW / ALL)
+    (function initBellMenu() {
+        const bellWrap = document.getElementById('bellWrap');
+        const btnBell = document.getElementById('btnBell');
+        if (!bellWrap || !btnBell) return;
+        btnBell.addEventListener('click', function(e) {
+            e.stopPropagation();
+            bellWrap.classList.toggle('open');
+        });
+        document.addEventListener('click', function(e) {
+            if (!bellWrap.contains(e.target)) bellWrap.classList.remove('open');
+        });
+        const bellGo = function(status) {
+            bellWrap.classList.remove('open');
+            if (typeof window._enterSplitMode === 'function') window._enterSplitMode(status);
+        };
+        document.getElementById('bellItemNew')?.addEventListener('click', () => bellGo('NEW'));
+        document.getElementById('bellItemProc')?.addEventListener('click', () => bellGo('ALL'));
+    })();
 
     document.addEventListener('DOMContentLoaded', () => {
         initTheme();
