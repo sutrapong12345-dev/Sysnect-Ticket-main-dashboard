@@ -191,7 +191,7 @@
     <link rel="stylesheet" href="vendor/flatpickr/flatpickr.min.css">
     <script defer src="vendor/flatpickr/flatpickr.min.js"></script>
     <script defer src="vendor/flatpickr/th.js"></script>
-    <link rel="stylesheet" href="style.css?v=37">
+    <link rel="stylesheet" href="style.css?v=38">
 </head>
 <body>
 
@@ -414,6 +414,10 @@
                 <div id="pgStatusBadge" style="display: flex; align-items: center; gap: 6px; background: rgba(100,116,139,0.05); padding: 3px 10px; border-radius: 10px; border: 1px solid rgba(100,116,139,0.15); font-size: 12px; color: #475569;">
                     <span id="pgDot" style="width:8px; height:8px; border-radius:50%; background:#94a3b8; display:inline-block; transition: background 0.4s, box-shadow 0.4s;"></span>
                     <span id="pgStatusText">PostgreSQL</span>
+                </div>
+                <div id="dbCountBadge" style="display: none; align-items: center; gap: 6px; background: rgba(37,99,235,0.06); padding: 3px 10px; border-radius: 10px; border: 1px solid rgba(37,99,235,0.18); font-size: 12px; color: #1d4ed8;">
+                    <span class="material-symbols-outlined" style="font-size: 14px;">database</span>
+                    <span id="dbCountText">DB รวม 0 ใบ</span>
                 </div>
             </div>
             
@@ -1113,7 +1117,7 @@ input:checked + .slider:before { transform: translateX(20px); }
 })();
 </script>
 
-<script src="app.js?v=32" defer></script>
+<script src="app.js?v=35" defer></script>
 
 <!-- ═══ ปฏิทินภาษาไทย (flatpickr) บน date inputs ทั้ง 4 จุด ═══
      คงค่า .value เป็น Y-m-d ตามที่ logic กรอง/export ใช้อยู่เดิม

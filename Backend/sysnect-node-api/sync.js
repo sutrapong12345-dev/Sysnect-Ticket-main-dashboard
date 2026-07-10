@@ -14,8 +14,7 @@ const {
 } = require('./util');
 
 // ---------- CONFIG ----------
-const N8N_WEBHOOK = process.env.N8N_WEBHOOK
-    || 'https://n8n.sysnect.co.th/webhook/48ec49ee-a4ca-4677-bad7-deb3c3ec341d';
+const N8N_WEBHOOK = process.env.N8N_WEBHOOK || '';
 const N8N_TIMEOUT = parseInt(process.env.N8N_TIMEOUT || '45000', 10);
 const BACKFILL_DAYS = parseInt(process.env.BACKFILL_DAYS || '120', 10);
 const SYNC_INTERVAL_MS = parseInt(process.env.SYNC_INTERVAL_MS || '300000', 10); // 5 นาที
@@ -130,6 +129,9 @@ function normalizeN8nPayload(grouped) {
 // ช่องทางที่ 1: sync ผ่าน n8n
 // ============================================================
 async function syncViaN8n() {
+    if (!N8N_WEBHOOK) {
+        throw new Error('ยังไม่ได้ตั้งค่า N8N_WEBHOOK');
+    }
     const url = N8N_WEBHOOK.includes('?') ? `${N8N_WEBHOOK}&source=autoRefresh` : `${N8N_WEBHOOK}?source=autoRefresh`;
     const raw = await httpGet(url, N8N_TIMEOUT);
     const grouped = unwrapN8n(raw);

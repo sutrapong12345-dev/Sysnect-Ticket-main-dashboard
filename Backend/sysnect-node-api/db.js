@@ -18,7 +18,7 @@ const poolConfig = process.env.DATABASE_URL
         host: process.env.DB_HOST || 'localhost',
         port: parseInt(process.env.DB_PORT || '5432', 10),
         user: process.env.DB_USER || 'sysnect',
-        password: process.env.DB_PASSWORD || 'sysnect_secret',
+        password: process.env.DB_PASSWORD || '',
         database: process.env.DB_NAME || 'ticket_database',
         max: 10,
         idleTimeoutMillis: 30000,

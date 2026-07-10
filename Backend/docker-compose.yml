@@ -7,7 +7,7 @@ services:
     restart: always
     environment:
       - POSTGRES_USER=sysnect
-      - POSTGRES_PASSWORD=sysnect_secret
+      - POSTGRES_PASSWORD=${DB_PASSWORD:?Set DB_PASSWORD before running docker compose}
       - POSTGRES_DB=ticket_database
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -26,10 +26,10 @@ services:
       - DB_POSTGRESDB_HOST=postgres
       - DB_POSTGRESDB_PORT=5432
       - DB_POSTGRESDB_USER=sysnect
-      - DB_POSTGRESDB_PASSWORD=sysnect_secret
+      - DB_POSTGRESDB_PASSWORD=${DB_PASSWORD:?Set DB_PASSWORD before running docker compose}
       - N8N_BASIC_AUTH_ACTIVE=true
-      - N8N_BASIC_AUTH_USER=admin
-      - N8N_BASIC_AUTH_PASSWORD=password
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD:?Set N8N_BASIC_AUTH_PASSWORD before running docker compose}
       - WEBHOOK_URL=http://localhost:5678/
     depends_on:
       - postgres
@@ -48,17 +48,17 @@ services:
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_USER=sysnect
-      - DB_PASSWORD=sysnect_secret
+      - DB_PASSWORD=${DB_PASSWORD:?Set DB_PASSWORD before running docker compose}
       - DB_NAME=ticket_database
       # ----- Delta Sync -----
-      - N8N_WEBHOOK=https://n8n.sysnect.co.th/webhook/48ec49ee-a4ca-4677-bad7-deb3c3ec341d
+      - N8N_WEBHOOK=${N8N_WEBHOOK:?Set N8N_WEBHOOK before running docker compose}
       - BACKFILL_DAYS=120
       - SYNC_INTERVAL_MS=300000
       # ----- GLPI (ช่องทางสำรอง) -----
-      - GLPI_BASE_URL=https://itservicedesk.sysnect.co.th/apirest.php
-      - GLPI_USER=admin_sysnect
-      - GLPI_PASS=!P@ssw0rd##
-      - GLPI_APP_TOKEN=Cxhq0afuuU5qsChRdAqpZHWOEQowqXYr6Cz8nl81
+      - GLPI_BASE_URL=${GLPI_BASE_URL:?Set GLPI_BASE_URL before running docker compose}
+      - GLPI_USER=${GLPI_USER:?Set GLPI_USER before running docker compose}
+      - GLPI_PASS=${GLPI_PASS:?Set GLPI_PASS before running docker compose}
+      - GLPI_APP_TOKEN=${GLPI_APP_TOKEN:?Set GLPI_APP_TOKEN before running docker compose}
     depends_on:
       - postgres
 

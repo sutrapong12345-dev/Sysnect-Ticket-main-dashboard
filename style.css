@@ -3879,3 +3879,273 @@
         width: min(320px, calc(100vw - 20px));
     }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   IT SUPPORT UX POLISH — cleaner queue-focused surface, no new features
+   ═══════════════════════════════════════════════════════════════════════ */
+
+:root {
+    --support-radius: 8px;
+    --support-shadow: 0 1px 2px rgba(15, 23, 42, 0.08), 0 8px 22px rgba(15, 23, 42, 0.06);
+    --support-shadow-dark: 0 1px 2px rgba(0, 0, 0, 0.35), 0 10px 24px rgba(0, 0, 0, 0.22);
+}
+
+.top-navbar {
+    min-height: 60px;
+    border-bottom-width: 1px;
+    box-shadow: 0 1px 0 rgba(148, 163, 184, 0.14);
+}
+
+.brand-logo { max-height: 38px; }
+
+.search-box {
+    border-radius: var(--support-radius);
+    min-height: 38px;
+    box-sizing: border-box;
+}
+
+.btn-action {
+    min-height: 38px;
+    border-radius: var(--support-radius) !important;
+}
+
+.stat-bar {
+    gap: 8px;
+    padding: 8px 14px;
+}
+
+.stat-card {
+    border-radius: var(--support-radius);
+    min-height: 58px;
+    box-shadow: none;
+}
+
+.stat-card:hover {
+    transform: translateY(-1px);
+}
+
+.chart-card,
+.ticket-list-card,
+.sidebar-card {
+    border-radius: var(--support-radius);
+    box-shadow: var(--support-shadow);
+}
+
+.ticket-filter-bar {
+    border-radius: var(--support-radius);
+    box-shadow: none;
+}
+
+.custom-dropdown-header,
+.ticket-filter-bar select,
+.ticket-filter-bar input[type="date"],
+.ticket-filter-bar input.fp-alt,
+.btn-filter-clear {
+    border-radius: var(--support-radius) !important;
+}
+
+.ticket-item {
+    border-radius: var(--support-radius);
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    box-shadow: none;
+}
+
+.ticket-item:hover {
+    transform: translateY(-1px);
+    border-left-width: 6px;
+    box-shadow: var(--support-shadow);
+}
+
+.ticket-title-row {
+    font-size: 13.5px;
+    line-height: 1.45;
+}
+
+.ticket-meta-row {
+    gap: 5px;
+    margin-bottom: 8px;
+}
+
+.ticket-item .badge,
+.ticket-item .badge-priority,
+.ticket-item .badge-sla,
+.ticket-item .badge-duration {
+    border-radius: 999px !important;
+    line-height: 1.2;
+}
+
+[data-theme="dark"] .top-navbar {
+    box-shadow: 0 1px 0 rgba(148, 163, 184, 0.12);
+}
+
+[data-theme="dark"] .chart-card,
+[data-theme="dark"] .ticket-list-card,
+[data-theme="dark"] .sidebar-card {
+    box-shadow: var(--support-shadow-dark);
+}
+
+[data-theme="dark"] .ticket-item {
+    background: rgba(15, 23, 42, 0.72);
+    border-color: rgba(148, 163, 184, 0.13);
+    box-shadow: none;
+}
+
+[data-theme="dark"] .ticket-item:hover {
+    background: rgba(15, 23, 42, 0.86);
+    border-color: rgba(148, 163, 184, 0.22);
+    box-shadow: var(--support-shadow-dark);
+}
+
+@media (max-width: 1024px) {
+    .top-navbar {
+        min-height: 104px;
+        padding: calc(8px + env(safe-area-inset-top, 0px)) 14px 10px;
+        gap: 8px;
+        align-content: center;
+    }
+
+    .brand-logo {
+        max-height: 34px;
+        max-width: 150px;
+    }
+
+    .nav-right {
+        gap: 6px;
+    }
+
+    .btn-action,
+    .btn-settings-icon,
+    #btnBell,
+    #btnRefresh,
+    #btnExport {
+        width: 40px !important;
+        height: 40px !important;
+        min-width: 40px !important;
+        min-height: 40px !important;
+        padding: 0 !important;
+        border-radius: var(--support-radius) !important;
+        justify-content: center;
+        overflow: hidden;
+    }
+
+    #btnRefresh,
+    #btnExport {
+        font-size: 0;
+        gap: 0;
+    }
+
+    #btnRefresh .material-symbols-outlined,
+    #btnExport .material-symbols-outlined {
+        margin: 0 !important;
+        font-size: 20px !important;
+    }
+
+    .nav-center {
+        order: 3;
+        flex-basis: 100%;
+        max-width: none;
+        padding: 0;
+    }
+
+    .nav-center .search-box,
+    .nav-center .search-box:focus-within {
+        width: 100% !important;
+        min-height: 40px;
+    }
+
+    .stat-bar {
+        padding: 8px 10px !important;
+        gap: 6px !important;
+    }
+
+    #statBar .stat-card {
+        min-height: 58px;
+        padding: 8px !important;
+    }
+
+    #statBar .stat-card .sc-label {
+        font-size: 9px !important;
+        letter-spacing: 0;
+    }
+
+    #statBar .stat-card .sc-value {
+        font-size: 18px !important;
+        line-height: 1.05;
+    }
+
+    #statBar .stat-card .sc-sub {
+        font-size: 9px !important;
+        line-height: 1.15;
+    }
+
+    #dashboardWrapper {
+        padding: 8px;
+    }
+
+    #dashboardWrapper .chart-card {
+        padding: 14px 10px !important;
+    }
+
+    #dashboardWrapper .chart-card .chart-title {
+        font-size: 16px !important;
+        line-height: 1.25;
+    }
+
+    #dashboardWrapper .ticket-header-sticky,
+    #dashboardWrapper .ticket-filter-bar,
+    #dashboardWrapper .ticket-container-scroll {
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+    }
+
+    #dashboardWrapper .ticket-item {
+        padding: 12px !important;
+        margin-bottom: 8px !important;
+        border-radius: var(--support-radius) !important;
+    }
+
+    #dashboardWrapper .ticket-header-row {
+        gap: 6px !important;
+        padding-right: 28px !important;
+    }
+
+    #dashboardWrapper .ticket-title-row {
+        font-size: 13px !important;
+        line-height: 1.38 !important;
+    }
+
+    .mobile-tabbar {
+        min-height: 56px;
+    }
+
+    .mtab-btn {
+        min-height: 44px;
+        border-radius: var(--support-radius);
+    }
+}
+
+@media (max-width: 420px) {
+    .brand-logo { max-width: 138px; }
+
+    .nav-right { gap: 5px; }
+
+    .btn-action,
+    .btn-settings-icon,
+    #btnBell,
+    #btnRefresh,
+    #btnExport {
+        width: 38px !important;
+        height: 38px !important;
+        min-width: 38px !important;
+        min-height: 38px !important;
+    }
+
+    #statBar .stat-card {
+        min-height: 54px;
+        padding: 7px !important;
+    }
+
+    #statBar .stat-card .sc-value { font-size: 17px !important; }
+    #statBar .stat-card .sc-sub { font-size: 8.5px !important; }
+}

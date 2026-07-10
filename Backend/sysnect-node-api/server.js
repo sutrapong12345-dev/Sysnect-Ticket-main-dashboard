@@ -23,23 +23,25 @@ const syncLimiter = security.createRateLimiter({ windowMs: 60000, max: 5, name: 
 app.use('/api/', generalLimiter);
 
 // ============================================================
-// CONFIGURATION — อ่านจาก ENV ก่อนเสมอ (เลี่ยง hardcode secret)
-// ⚠️ ค่า default ด้านล่างมีไว้กันระบบล้มเฉยๆ ควรย้ายไปไว้ใน .env / docker-compose
-//    และ "หมุนเปลี่ยนรหัส (rotate)" เพราะรหัสเดิมเคยถูก commit ลงซอร์สโค้ดแล้ว
+// CONFIGURATION — อ่านจาก ENV เท่านั้นสำหรับค่าที่เป็น secret / endpoint ภายใน
+// ถ้าขาดค่าใด ระบบจะ fallback เฉพาะช่องทางที่ยังใช้ได้ และแจ้งเตือนโดยไม่พิมพ์ secret ออก log
 // ============================================================
-const N8N_WEBHOOK = process.env.N8N_WEBHOOK
-    || 'https://n8n.sysnect.co.th/webhook/48ec49ee-a4ca-4677-bad7-deb3c3ec341d';
-const GLPI_BASE_URL = process.env.GLPI_BASE_URL || 'https://itservicedesk.sysnect.co.th/apirest.php';
+const N8N_WEBHOOK = process.env.N8N_WEBHOOK || '';
+const GLPI_BASE_URL = process.env.GLPI_BASE_URL || '';
+const GLPI_USER = process.env.GLPI_USER || '';
+const GLPI_PASS = process.env.GLPI_PASS || '';
 const GLPI_AUTH = process.env.GLPI_AUTH
-    || Buffer.from(`${process.env.GLPI_USER || 'admin_sysnect'}:${process.env.GLPI_PASS || '!P@ssw0rd##'}`).toString('base64');
-const GLPI_APP_TOKEN = process.env.GLPI_APP_TOKEN || 'Cxhq0afuuU5qsChRdAqpZHWOEQowqXYr6Cz8nl81';
+    || ((GLPI_USER && GLPI_PASS) ? Buffer.from(`${GLPI_USER}:${GLPI_PASS}`).toString('base64') : '');
+const GLPI_APP_TOKEN = process.env.GLPI_APP_TOKEN || '';
 const CACHE_FILE = path.join(__dirname, 'tickets_cached.json');
 const N8N_TIMEOUT = parseInt(process.env.N8N_TIMEOUT || '45000', 10);
 const GLPI_TIMEOUT = parseInt(process.env.GLPI_TIMEOUT || '30000', 10);
 
-// เตือนถ้ายังใช้ค่า secret แบบ default (ไม่ได้พิมพ์ค่า secret ออก log)
-if (!process.env.GLPI_PASS && !process.env.GLPI_AUTH) {
-    console.warn('[SEC] ⚠️ ใช้ GLPI credential ค่า default จากซอร์สโค้ด — ควรตั้งผ่าน ENV และ rotate รหัส');
+if (!N8N_WEBHOOK) {
+    console.warn('[CONFIG] ⚠️ ไม่ได้ตั้ง N8N_WEBHOOK → ช่องทาง n8n จะใช้ไม่ได้จนกว่าจะตั้ง ENV');
+}
+if (!GLPI_BASE_URL || !GLPI_AUTH || !GLPI_APP_TOKEN) {
+    console.warn('[CONFIG] ⚠️ ตั้งค่า GLPI ไม่ครบ → GLPI fallback จะใช้ไม่ได้จนกว่าจะตั้ง ENV');
 }
 if (!security.SYNC_TOKEN_SET) {
     console.warn('[SEC] ℹ️ ไม่ได้ตั้ง SYNC_TOKEN → /api/sync เรียกได้เฉพาะ localhost');
@@ -168,6 +170,9 @@ function loadCache() {
 // STEP 1: ดึงข้อมูลจาก n8n Webhook
 // ============================================================
 async function fetchFromN8N(query = {}) {
+    if (!N8N_WEBHOOK) {
+        throw new Error('ยังไม่ได้ตั้งค่า N8N_WEBHOOK');
+    }
     console.log(`[N8N] 🔄 กำลังดึงข้อมูลจาก n8n...`);
     const qs = new URLSearchParams(query).toString();
     const url = qs ? `${N8N_WEBHOOK}?${qs}` : N8N_WEBHOOK;
@@ -201,6 +206,9 @@ async function fetchFromN8N(query = {}) {
 // STEP 2: ดึงข้อมูลตรงจาก GLPI API (Fallback)
 // ============================================================
 async function fetchFromGLPI() {
+    if (!GLPI_BASE_URL || !GLPI_AUTH || !GLPI_APP_TOKEN) {
+        throw new Error('ยังไม่ได้ตั้งค่า GLPI_BASE_URL / GLPI credential / GLPI_APP_TOKEN ให้ครบ');
+    }
     console.log(`[GLPI] 🔄 กำลังดึงข้อมูลตรงจาก GLPI API...`);
     
     // 2a. Login (initSession)
@@ -221,7 +229,7 @@ async function fetchFromGLPI() {
     }
     
     const sessionToken = loginResponse.data.session_token;
-    console.log(`[GLPI] 🔑 Login สำเร็จ, session: ${sessionToken.substring(0, 10)}...`);
+    console.log(`[GLPI] 🔑 Login สำเร็จ`);
     
     const glpiHeaders = {
         'Session-Token': sessionToken,
@@ -445,6 +453,9 @@ app.get('/api/tickets', requireSso, async (req, res) => {
 // N8N PROXY ENDPOINT — คงไว้สำหรับ backward compatibility
 // ============================================================
 app.get('/api/n8n-proxy', (req, res) => {
+    if (!N8N_WEBHOOK) {
+        return res.status(503).json({ error: 'N8N_NOT_CONFIGURED', message: 'ยังไม่ได้ตั้งค่า N8N_WEBHOOK' });
+    }
     console.log(`[${new Date().toISOString()}] Proxying request to n8n...`);
     
     const urlObj = new URL(N8N_WEBHOOK);

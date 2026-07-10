@@ -39,6 +39,7 @@
 ### ผ่าน Docker (แนะนำ)
 ```powershell
 cd "Backend"
+copy .env.example .env   # แล้วแก้ค่าจริงก่อนรัน
 docker compose up -d --build
 # เปิดหน้าเว็บ: http://localhost:3000
 ```

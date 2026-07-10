@@ -12,7 +12,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${DB_USER:-sysnect}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-sysnect_secret}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env before running docker compose}
       POSTGRES_DB: ${DB_NAME:-ticket_database}
     volumes:
       - pgdata:/var/lib/postgresql/data

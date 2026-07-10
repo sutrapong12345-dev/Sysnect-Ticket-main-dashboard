@@ -355,10 +355,53 @@
         loadSettings();
         renderUserPill();
 
-        // ดึงข้อมูลจริงจาก n8n
+        // ดึงข้อมูลจริงผ่าน Backend หลัก (มี PostgreSQL เป็นข้อมูลสำรอง)
         fetchLiveTickets();
 
     });
+
+    function getConfiguredApiBase() {
+        const cfg = window.SYSNECT_CONFIG || {};
+        return cfg.API_BASE
+            || ((location.protocol.startsWith('http') && !location.hostname.endsWith('github.io') && !location.hostname.endsWith('pages.dev') && !location.hostname.endsWith('workers.dev'))
+                ? location.origin
+                : 'https://sysnect-ticket-main-dashboard-production.up.railway.app');
+    }
+
+    async function readBackendHealth(timeoutMs = 5000) {
+        const abortCtrl = new AbortController();
+        const id = setTimeout(() => abortCtrl.abort(), timeoutMs);
+        try {
+            const res = await fetch(`${getConfiguredApiBase()}/api/health`, { signal: abortCtrl.signal });
+            if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+            return await res.json();
+        } finally {
+            clearTimeout(id);
+        }
+    }
+
+    function applyHealthCounts(health) {
+        const counts = health?.database?.counts;
+        if (!counts) return false;
+        window.sysnectStoredCounts = counts;
+        const values = ['new', 'assigned', 'pending', 'solved', 'closed'].map(k => Number(counts[k] || 0));
+        const total = Number(counts.total || values.reduce((sum, n) => sum + n, 0));
+        updateDatabaseCountBadge(counts);
+        updateStatBar(values, ['new', 'assigned', 'pending', 'solved', 'closed'], total);
+        const totalDisplay = document.getElementById('totalTicketsCount');
+        if (totalDisplay) totalDisplay.innerText = total;
+        return total > 0;
+    }
+
+    function updateDatabaseCountBadge(counts) {
+        if (!counts) return;
+        const badge = document.getElementById('dbCountBadge');
+        const text = document.getElementById('dbCountText');
+        if (!badge || !text) return;
+        const total = Number(counts.total || 0);
+        text.textContent = `DB รวม ${total} ใบ`;
+        badge.style.display = total > 0 ? 'flex' : 'none';
+    }
 
     // ==========================================
     // 💡 การเชื่อมต่อกับ n8n Webhook สำหรับใช้งานจริง
@@ -399,13 +442,13 @@
             if (!isAutoRefresh && loaderMessage) {
                 secondsElapsed += 0.2;
                 if (secondsElapsed > 120) {
-                    loaderMessage.innerText = "ระบบของ n8n กำลังประมวลผลนานกว่าปกติ อาจใช้เวลาหลายนาที...";
+                    loaderMessage.innerText = "Backend ใช้เวลาตอบนานกว่าปกติ กำลังตรวจสอบข้อมูลสำรอง...";
                     loaderMessage.style.color = "#ef4444";
                 } else if (secondsElapsed > 30) {
                     loaderMessage.innerText = "กำลังดาวน์โหลดชุดข้อมูลขนาดใหญ่ โปรดรอสักครู่...";
                     loaderMessage.style.color = "#f59e0b";
                 } else if (secondsElapsed > 10) {
-                    loaderMessage.innerText = "กำลังดึงข้อมูลล่าสุดจากฐานข้อมูล n8n...";
+                    loaderMessage.innerText = "กำลังดึงข้อมูลล่าสุดจาก Backend...";
                     loaderMessage.style.color = "#2563eb";
                 } else if (secondsElapsed > 3) {
                     loaderMessage.innerText = "กำลังเชื่อมต่อเพื่อดึงข้อมูล Tickets...";
@@ -424,12 +467,25 @@
                 try {
                     const res = await fetch(url, { signal: abortCtrl.signal, headers: extraHeaders });
                     clearTimeout(id);
-                    if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+                    if (!res.ok) {
+                        let detail = '';
+                        try {
+                            const errJson = await res.json();
+                            detail = errJson.message || errJson.error || '';
+                        } catch (_) { /* response body may not be JSON */ }
+                        const err = new Error(detail ? `HTTP error ${res.status}: ${detail}` : `HTTP error ${res.status}`);
+                        err.httpStatus = res.status;
+                        throw err;
+                    }
                     return await res.json();
                 } catch (err) {
                     clearTimeout(id);
                     throw err;
                 }
+            }
+            function appendQueryParam(baseUrl, query) {
+                if (!baseUrl) return '';
+                return baseUrl + (baseUrl.includes('?') ? '&' + query.replace(/^\?/, '') : query);
             }
 
             // แนบ SSO token (จาก sessionStorage) ไปกับการเรียก Node API เพื่อผ่าน guard ฝั่ง backend
@@ -439,16 +495,11 @@
             // 🆕 ระบบเดียวกับ BASE (backend-driven): Node /api/tickets (n8n→PostgreSQL) เป็นหลัก
             //    → ถ้า n8n ล่ม Node ส่งข้อมูลจาก PostgreSQL แทน (_meta.source='postgres')
             //    → ทางสุดท้าย ยิง n8n ตรง (เผื่อ Node server เองล่ม)
-            // เสิร์ฟผ่าน Node เอง (localhost:3000 หรือ server จริง) = same-origin
-            // หน้าเว็บอยู่ GitHub Pages = ชี้มาที่ backend ในคอมเรา (dev) · ขึ้น server จริงค่อยเปลี่ยนเป็น URL server
             const queryParam = (isAutoRefresh ? '?source=autoRefresh' : '?source=initialLoad') + '&months=4';
-            const API_BASE = (location.protocol === 'file:') 
-                ? 'http://localhost:3000'
-                : (location.protocol.startsWith('http') && !location.hostname.endsWith('github.io') && !location.hostname.endsWith('pages.dev') && !location.hostname.endsWith('workers.dev'))
-                    ? location.origin
-                    : 'https://sysnect-ticket-main-dashboard-production.up.railway.app';
+            const PUBLIC_CONFIG = window.SYSNECT_CONFIG || {};
+            const API_BASE = getConfiguredApiBase();
             const API_URL = `${API_BASE}/api/tickets${queryParam}`;
-            const N8N_DIRECT_URL = `https://n8n.sysnect.co.th/webhook/48ec49ee-a4ca-4677-bad7-deb3c3ec341d${queryParam}`;
+            const N8N_DIRECT_URL = appendQueryParam(PUBLIC_CONFIG.N8N_DIRECT_URL || '', queryParam);
 
             let liveData = null;
             window.dataSourceGlobal = null;   // 'n8n' | 'postgres' | 'n8n_direct' | 'none'
@@ -463,14 +514,22 @@
                 window.isFallbackGlobal = false;
             } catch (apiError) {
                 // token หมดอายุ/ใช้ไม่ได้ → ล้างแล้ว reload ให้ด่าน SSO พาไป login ใหม่ (flag กันลูป ครั้งเดียวต่อ session)
-                if (String(apiError && apiError.message).indexOf('401') !== -1 && !sessionStorage.getItem('sysnect_tickets_401_retry')) {
+                if ((apiError?.httpStatus === 401 || String(apiError && apiError.message).indexOf('401') !== -1) && !sessionStorage.getItem('sysnect_tickets_401_retry')) {
                     sessionStorage.setItem('sysnect_tickets_401_retry', '1');
                     sessionStorage.removeItem('sysnect_sso_token');
                     location.reload();
                     return;
                 }
-                console.warn("Backend ไม่พร้อม → ยิงตรง n8n แทน...", apiError);
-                if(loaderMessage) loaderMessage.innerText = "ฐานข้อมูลไม่พร้อม กำลังดึงข้อมูลตรงจาก n8n...";
+                console.warn("Backend ไม่พร้อม", apiError);
+                if (!N8N_DIRECT_URL) {
+                    window.dataSourceGlobal = 'none';
+                    if(loaderMessage) {
+                        loaderMessage.innerText = "ระบบไม่พร้อม — Backend ตอบกลับไม่ได้";
+                        loaderMessage.style.color = "#ef4444";
+                    }
+                    throw apiError;
+                }
+                if(loaderMessage) loaderMessage.innerText = "ฐานข้อมูลไม่พร้อม กำลังดึงข้อมูลจากช่องทางสำรอง...";
 
                 try {
                     liveData = await fetchWithTimeout(N8N_DIRECT_URL, 30000);
@@ -480,7 +539,7 @@
                     // ✅ บันทึกลง Railway PostgreSQL เมื่อได้ข้อมูลตรงจาก n8n (fire-and-forget)
                     (async () => {
                         try {
-                            const snapshotUrl = 'https://sysnect-ticket-main-dashboard-production.up.railway.app/api/snapshot';
+                            const snapshotUrl = `${API_BASE}/api/snapshot`;
                             const tok = sessionStorage.getItem('sysnect_sso_token');
                             const r = await fetch(snapshotUrl, {
                                 method: 'POST',
@@ -641,6 +700,9 @@
             mockDataRaw["pending"] = liveData["pending"] || [];
             mockDataRaw["solved"] = liveData["solved"] || [];
             mockDataRaw["closed"] = liveData["closed"] || [];
+            window.sysnectTicketsLoaded = true;
+            window.sysnectLoadedTicketTotal = ['new', 'assigned', 'pending', 'solved', 'closed']
+                .reduce((sum, key) => sum + (mockDataRaw[key] || []).length, 0);
 
             // 🛡️ กันวันที่เพี้ยนจากต้นทาง — n8n เคยส่ง "=2026-07-01" (มี = นำหน้าจาก expression หลุด)
             // ทำให้ new Date() เป็น Invalid ทุกใบ → กราฟ/ตัวกรองเป็น 0 ทั้งระบบ จึง strip ก่อนใช้เสมอ
@@ -675,13 +737,33 @@
             
         } catch (error) {
             console.error("เกิดข้อผิดพลาดในการดึงข้อมูลจาก Backend:", error);
-            updateConnectionStatus(); // ไฟสถานะแดงทั้ง n8n + PostgreSQL
-            
+            let health = null;
+            let healthHasStoredTickets = false;
+            try {
+                health = await readBackendHealth(5000);
+                healthHasStoredTickets = applyHealthCounts(health);
+                if (healthHasStoredTickets) {
+                    const counts = health.database.counts;
+                    const total = Number(counts.total || 0);
+                    const clockEl = document.getElementById('lastUpdateText');
+                    if (clockEl) clockEl.innerText = `ฐานข้อมูลสำรองพร้อม: ${total} tickets · รายการยังโหลดไม่ได้`;
+                    if (typeof window.showToast === 'function') {
+                        window.showToast(`ฐานข้อมูลสำรองยังมี ${total} tickets แต่ยังดึงรายละเอียดไม่ได้ โปรดตรวจ SSO/Backend`, 'warning');
+                    }
+                }
+            } catch (_) { /* health endpoint may be down too */ }
+            updateConnectionStatus();
+
             if (!isAutoRefresh && loader) loader.classList.add('hidden');
             if (!isAutoRefresh && skeleton) skeleton.classList.add('hidden');
             initChart();
-            
-            alert("⚠️ ดึงข้อมูลล้มเหลว!\nสาเหตุ: " + error.message + "\n\n(ไม่สามารถเชื่อมต่อกับ Backend ได้)");
+            if (healthHasStoredTickets) applyHealthCounts(health);
+
+            if (typeof window.showToast === 'function') {
+                window.showToast("ยังโหลดรายการ Ticket ไม่สำเร็จ แต่จะไม่ล้างข้อมูลเป็น 0 โดยไม่ตรวจฐานข้อมูล", 'error');
+            } else {
+                alert("ดึงข้อมูลล้มเหลว\nสาเหตุ: " + error.message);
+            }
         }
     }
 
@@ -1594,6 +1676,7 @@
         };
 
         const source = window.dataSourceGlobal;
+        const pgServingTickets = source === 'postgres' && window.sysnectTicketsLoaded === true;
 
         // ── n8n ──
         const n8nUp = (source === 'n8n' || source === 'n8n_direct');
@@ -1604,22 +1687,17 @@
         let pgUp = (source === 'postgres');
         let pgTimeLabel = '';
         try {
-            const healthUrl = (location.protocol === 'file:')
-                ? 'http://localhost:3000/api/health'
-                : (location.protocol.startsWith('http') && !location.hostname.endsWith('github.io') && !location.hostname.endsWith('pages.dev') && !location.hostname.endsWith('workers.dev'))
-                    ? `${location.origin}/api/health`
-                    : 'https://sysnect-ticket-main-dashboard-production.up.railway.app/api/health';
-            const ssoTokenH = sessionStorage.getItem('sysnect_sso_token');
-            const res = await fetch(healthUrl, { signal: AbortSignal.timeout(5000), headers: ssoTokenH ? { 'Authorization': `Bearer ${ssoTokenH}` } : {} });
-            if (res.ok) {
-                const json = await res.json();
-                if (json?.database?.connected) pgUp = true;
-                const rawTime = json?.last_sync_result?.at || json?.database?.sync_state?.last_sync;
-                if (rawTime) {
-                    const d = new Date(rawTime);
-                    pgTimeLabel = d.toLocaleDateString('th-TH', { day: '2-digit', month: 'short' })
-                                + ' ' + d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-                }
+            const json = await readBackendHealth(5000);
+            if (json?.database?.connected) pgUp = true;
+            if (json?.database?.counts) {
+                window.sysnectStoredCounts = json.database.counts;
+                updateDatabaseCountBadge(json.database.counts);
+            }
+            const rawTime = json?.last_sync_result?.at || json?.database?.sync_state?.last_sync || json?.database?.sync_state?.last_run_at;
+            if (rawTime) {
+                const d = new Date(rawTime);
+                pgTimeLabel = d.toLocaleDateString('th-TH', { day: '2-digit', month: 'short' })
+                            + ' ' + d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
             }
         } catch (_) { /* Node ไม่ตอบ → ถ้า source ไม่ใช่ postgres ก็ถือว่า PG เข้าไม่ถึง */ }
 
@@ -1666,7 +1744,9 @@
                 banner.style.backgroundColor = '#f59e0b'; // สีเหลือง
                 banner.style.color = '#fff';
                 let timeText = pgTimeLabel ? ` (อัปเดตล่าสุด: ${pgTimeLabel})` : '';
-                banner.innerHTML = `<span class="material-symbols-outlined" style="font-size: 18px;">cloud_off</span> n8n ขัดข้อง ขณะนี้กำลังแสดงข้อมูลล่าสุดจากฐานข้อมูลสำรอง${timeText}`;
+                banner.innerHTML = pgServingTickets
+                    ? `<span class="material-symbols-outlined" style="font-size: 18px;">cloud_off</span> n8n ขัดข้อง ขณะนี้กำลังแสดงข้อมูลล่าสุดจากฐานข้อมูลสำรอง${timeText}`
+                    : `<span class="material-symbols-outlined" style="font-size: 18px;">warning</span> PostgreSQL เชื่อมต่อได้ แต่หน้าเว็บยังโหลดรายการ Ticket ไม่สำเร็จ${timeText}`;
             }
         } else if (n8nUp && pgUp && banner) {
             banner.style.display = 'none';
@@ -1680,7 +1760,8 @@
 
         const hasData = data.values.some(v => v > 0);
         const totalTickets = data.values.reduce((sum, val) => sum + val, 0);
-        
+        const storedTotal = Number(window.sysnectStoredCounts?.total || 0);
+
         // อัพเดทตัวเลข Total Tickets บนหน้าจอ
         const totalDisplay = document.getElementById('totalTicketsCount');
         if (totalDisplay) {
@@ -1720,7 +1801,9 @@
                 const d = now.getDate();
                 const m = thaiMonths[now.getMonth()];
                 const y = now.getFullYear() + 543;
-                chartSub.innerText = `แสดงเฉพาะวันนี้: ${d} ${m} ${y}`;
+                chartSub.innerText = storedTotal > 0 && totalTickets === 0
+                    ? `วันนี้ยังไม่มี Ticket · PostgreSQL มีข้อมูลรวม ${storedTotal} ใบ`
+                    : `แสดงเฉพาะวันนี้: ${d} ${m} ${y}`;
             } else {
                 chartSub.innerText = "Real-time Ticket Tracking & Analysis";
             }
@@ -2468,7 +2551,7 @@
     // Advanced Export System
     // ==============================================
     let currentExportFormat = null; // ค่าเริ่มต้นไม่เลือก — ผู้ใช้ต้องกดเลือกเองก่อนดาวน์โหลด
-    const EXPORT_WEBHOOK = 'https://n8n.sysnect.co.th/webhook/ticket-history';
+    const EXPORT_WEBHOOK = (window.SYSNECT_CONFIG && window.SYSNECT_CONFIG.EXPORT_WEBHOOK) || '';
     window.isExportingSelection = false;
 
     function computeExportDateRange(dateRange) {
@@ -2563,6 +2646,14 @@
         }
 
         const dateRange = document.getElementById('exportDateRange').value || 'all';
+        if (!EXPORT_WEBHOOK) {
+            const dataObj = getFilteredData().project_breakdown;
+            const tickets = [];
+            Object.keys(dataObj).forEach(key => {
+                dataObj[key].forEach(t => tickets.push({ ...t, status_name: key.toUpperCase() }));
+            });
+            return { tickets, dateText: 'ข้อมูลที่แสดงอยู่ใน Dashboard' };
+        }
         const { from, to } = computeExportDateRange(dateRange);
         const params = new URLSearchParams({ source: 'export' });
         if (from) params.append('from', from);

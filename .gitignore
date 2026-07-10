@@ -1,5 +1,8 @@
 node_modules/
+.npm-cache*/
 .env
+config.js
+config.local.js
 .DS_Store
 .vscode/
 *.code-workspace

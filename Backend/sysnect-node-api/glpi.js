@@ -7,12 +7,14 @@ const {
     statusFromId, priorityFromId, toNumericId, parseGlpiDate, cleanHtml,
 } = require('./util');
 
-// ---------- CONFIG (อ่านจาก ENV ได้, มี default ตามระบบจริง) ----------
-const GLPI_BASE_URL = process.env.GLPI_BASE_URL || 'https://itservicedesk.sysnect.co.th/apirest.php';
+// ---------- CONFIG (อ่านจาก ENV เท่านั้นสำหรับค่าที่เป็น secret / endpoint ภายใน) ----------
+const GLPI_BASE_URL = process.env.GLPI_BASE_URL || '';
+const GLPI_USER = process.env.GLPI_USER || '';
+const GLPI_PASS = process.env.GLPI_PASS || '';
 const GLPI_AUTH = process.env.GLPI_AUTH
-    || Buffer.from(`${process.env.GLPI_USER || 'admin_sysnect'}:${process.env.GLPI_PASS || '!P@ssw0rd##'}`).toString('base64');
-// App-Token ดึงมาจาก n8n workflow (จำเป็นถ้า GLPI เปิดใช้ App-Token)
-const GLPI_APP_TOKEN = process.env.GLPI_APP_TOKEN || 'Cxhq0afuuU5qsChRdAqpZHWOEQowqXYr6Cz8nl81';
+    || ((GLPI_USER && GLPI_PASS) ? Buffer.from(`${GLPI_USER}:${GLPI_PASS}`).toString('base64') : '');
+// App-Token จำเป็นถ้า GLPI เปิดใช้ App-Token
+const GLPI_APP_TOKEN = process.env.GLPI_APP_TOKEN || '';
 const GLPI_TIMEOUT = parseInt(process.env.GLPI_TIMEOUT || '30000', 10);
 const PAGE_SIZE = parseInt(process.env.GLPI_PAGE_SIZE || '1000', 10);
 
@@ -65,6 +67,9 @@ function glpiDateString(date) {
 
 // ---------- login / logout ----------
 async function login() {
+    if (!GLPI_BASE_URL || !GLPI_AUTH || !GLPI_APP_TOKEN) {
+        throw new Error('ยังไม่ได้ตั้งค่า GLPI_BASE_URL / GLPI credential / GLPI_APP_TOKEN ให้ครบ');
+    }
     const res = await httpsRequest(`${GLPI_BASE_URL}/initSession`, {
         headers: {
             'Authorization': `Basic ${GLPI_AUTH}`,
