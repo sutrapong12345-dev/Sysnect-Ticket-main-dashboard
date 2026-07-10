@@ -1714,13 +1714,22 @@
             dot.style.boxShadow  = `0 0 6px ${up ? 'rgba(16,185,129,.7)' : 'rgba(239,68,68,.7)'}`;
         };
 
+        const formatThaiDateTime = (rawTime) => {
+            if (!rawTime) return '';
+            const d = new Date(rawTime);
+            if (Number.isNaN(d.getTime())) return '';
+            return d.toLocaleDateString('th-TH', { day: '2-digit', month: 'short' })
+                + ' ' + d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+        };
+
         const source = window.dataSourceGlobal;
         const pgServingTickets = source === 'postgres' && window.sysnectTicketsLoaded === true;
 
         // ── n8n ──
-        const n8nUp = (source === 'n8n' || source === 'n8n_direct');
-        setDot(n8nDot, n8nUp);
-        if (n8nText) n8nText.innerText = 'n8n';
+        // source='postgres' แปลว่า dashboard กำลังอ่านจากฐานสำรอง ไม่ได้แปลว่า n8n ล่ม
+        let n8nUp = (source === 'n8n' || source === 'n8n_direct');
+        let n8nTimeLabel = '';
+        let n8nErrorText = '';
 
         // ── PostgreSQL (ถาม /api/health) ──
         let pgUp = (source === 'postgres');
@@ -1732,13 +1741,29 @@
                 window.sysnectStoredCounts = json.database.counts;
                 updateDatabaseCountBadge(json.database.counts);
             }
-            const rawTime = json?.last_sync_result?.at || json?.database?.sync_state?.last_sync || json?.database?.sync_state?.last_run_at;
-            if (rawTime) {
-                const d = new Date(rawTime);
-                pgTimeLabel = d.toLocaleDateString('th-TH', { day: '2-digit', month: 'short' })
-                            + ' ' + d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+            const lastResult = json?.last_sync_result;
+            const syncState = json?.database?.sync_state;
+            const syncTime = lastResult?.at || syncState?.last_sync || syncState?.last_run_at;
+            pgTimeLabel = formatThaiDateTime(syncTime);
+            n8nTimeLabel = formatThaiDateTime(syncTime);
+
+            if (lastResult?.source === 'n8n' && lastResult?.ok === true) {
+                n8nUp = true;
+            } else if (lastResult && lastResult.ok === false) {
+                n8nUp = false;
+                n8nErrorText = lastResult.error || 'sync ล่าสุดไม่สำเร็จ';
+            } else if (syncState?.last_source === 'n8n' && !syncState?.last_error) {
+                n8nUp = true;
+            } else if (syncState?.last_error) {
+                n8nUp = false;
+                n8nErrorText = syncState.last_error;
             }
         } catch (_) { /* Node ไม่ตอบ → ถ้า source ไม่ใช่ postgres ก็ถือว่า PG เข้าไม่ถึง */ }
+
+        setDot(n8nDot, n8nUp);
+        if (n8nText) n8nText.innerText = n8nUp && n8nTimeLabel
+            ? ('n8n · ' + n8nTimeLabel)
+            : 'n8n';
 
         setDot(pgDot, pgUp);
         if (pgText) pgText.innerText = pgUp && pgTimeLabel
@@ -1784,7 +1809,7 @@
                 banner.style.color = '#fff';
                 let timeText = pgTimeLabel ? ` (อัปเดตล่าสุด: ${pgTimeLabel})` : '';
                 banner.innerHTML = pgServingTickets
-                    ? `<span class="material-symbols-outlined" style="font-size: 18px;">cloud_off</span> n8n ขัดข้อง ขณะนี้กำลังแสดงข้อมูลล่าสุดจากฐานข้อมูลสำรอง${timeText}`
+                    ? `<span class="material-symbols-outlined" style="font-size: 18px;">cloud_off</span> n8n sync ล่าสุดไม่สำเร็จ ขณะนี้กำลังแสดงข้อมูลจาก PostgreSQL${timeText}${n8nErrorText ? ` · ${escapeHtml(n8nErrorText)}` : ''}`
                     : `<span class="material-symbols-outlined" style="font-size: 18px;">warning</span> PostgreSQL เชื่อมต่อได้ แต่หน้าเว็บยังโหลดรายการ Ticket ไม่สำเร็จ${timeText}`;
             }
         } else if (n8nUp && pgUp && banner) {
