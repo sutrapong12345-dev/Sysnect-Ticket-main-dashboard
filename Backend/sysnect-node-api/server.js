@@ -429,6 +429,10 @@ app.get('/api/health', async (req, res) => {
         uptime: process.uptime(),
         cache_available: cacheExists,
         cache_last_updated: cacheAge,
+        n8n: {
+            webhook_configured: !!N8N_WEBHOOK,
+            basic_auth_configured: !!(N8N_BASIC_AUTH_USER && N8N_BASIC_AUTH_PASSWORD),
+        },
         database,
         last_sync_result: sync.getLastResult(),
         sync_running: sync.isRunning(),
