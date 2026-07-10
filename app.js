@@ -396,7 +396,7 @@
             return;
         }
         const redirectUri = window.location.origin + window.location.pathname;
-        window.location.href = `https://auth.sysnect.co.th/?redirect_uri=${redirectUri}`;
+        window.location.assign(`https://auth.sysnect.co.th/?redirect_uri=${encodeURIComponent(redirectUri)}`);
     }
 
     function getConfiguredApiBase() {
