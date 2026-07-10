@@ -29,6 +29,8 @@ app.use('/api/', generalLimiter);
 const N8N_WEBHOOK = process.env.N8N_WEBHOOK || '';
 const CACHE_FILE = path.join(__dirname, 'tickets_cached.json');
 const N8N_TIMEOUT = parseInt(process.env.N8N_TIMEOUT || '45000', 10);
+const N8N_BASIC_AUTH_USER = process.env.N8N_BASIC_AUTH_USER || '';
+const N8N_BASIC_AUTH_PASSWORD = process.env.N8N_BASIC_AUTH_PASSWORD || '';
 
 if (!N8N_WEBHOOK) {
     console.warn('[CONFIG] ⚠️ ไม่ได้ตั้ง N8N_WEBHOOK → ช่องทาง n8n จะใช้ไม่ได้จนกว่าจะตั้ง ENV');
@@ -86,6 +88,25 @@ function httpsRequest(url, options = {}, timeoutMs = 30000) {
         }
         req.end();
     });
+}
+
+function getN8nHeaders() {
+    const headers = {};
+    if (N8N_BASIC_AUTH_USER && N8N_BASIC_AUTH_PASSWORD) {
+        const token = Buffer.from(`${N8N_BASIC_AUTH_USER}:${N8N_BASIC_AUTH_PASSWORD}`).toString('base64');
+        headers.Authorization = `Basic ${token}`;
+    }
+    return headers;
+}
+
+function appendQueryParams(baseUrl, query = {}) {
+    const urlObj = new URL(baseUrl);
+    for (const [key, value] of Object.entries(query || {})) {
+        if (value !== undefined && value !== null && value !== '') {
+            urlObj.searchParams.set(key, String(value));
+        }
+    }
+    return urlObj.toString();
 }
 
 // ============================================================
@@ -164,9 +185,8 @@ async function fetchFromN8N(query = {}) {
         throw new Error('ยังไม่ได้ตั้งค่า N8N_WEBHOOK');
     }
     console.log(`[N8N] 🔄 กำลังดึงข้อมูลจาก n8n...`);
-    const qs = new URLSearchParams(query).toString();
-    const url = qs ? `${N8N_WEBHOOK}?${qs}` : N8N_WEBHOOK;
-    const response = await httpsRequest(url, {}, N8N_TIMEOUT);
+    const url = appendQueryParams(N8N_WEBHOOK, query);
+    const response = await httpsRequest(url, { headers: getN8nHeaders() }, N8N_TIMEOUT);
     
     if (response.status !== 200) {
         throw new Error(`n8n returned status ${response.status}`);
@@ -303,11 +323,12 @@ app.get('/api/n8n-proxy', (req, res) => {
     const options = {
         hostname: urlObj.hostname,
         port: 443,
-        path: urlObj.pathname,
+        path: urlObj.pathname + urlObj.search,
         method: 'GET',
         headers: {
             'User-Agent': 'Sysnect-Dashboard/2.0',
-            'Accept': 'application/json'
+            'Accept': 'application/json',
+            ...getN8nHeaders()
         }
     };
 
