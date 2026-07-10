@@ -27,7 +27,7 @@
     <link rel="preconnect" href="https://auth.sysnect.co.th" crossorigin>
 
     <!-- Security Policy -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://auth.sysnect.co.th https://n8n.sysnect.co.th https://itservicedesk.sysnect.co.th https://sysnect-ticket-main-dashboard-production.up.railway.app http://127.0.0.1:1880 http://localhost:5678 http://localhost:3000 https://*.trycloudflare.com; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://auth.sysnect.co.th https://n8n.sysnect.co.th https://sysnect-ticket-main-dashboard-production.up.railway.app http://127.0.0.1:1880 http://localhost:5678 http://localhost:3000 https://*.trycloudflare.com; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:;">
     
     <!-- SSO Authentication Check -->
     <script>
@@ -75,13 +75,13 @@
             
             // 3. ตรวจสอบความถูกต้องของ Token กับ API
             try {
-                const backendHealthUrl = (location.protocol === 'file:')
-                    ? 'http://localhost:3000/api/health'
+                const backendValidateUrl = (location.protocol === 'file:')
+                    ? 'http://localhost:3000/api/validate-sso'
                     : (location.protocol.startsWith('http') && !location.hostname.endsWith('github.io') && !location.hostname.endsWith('pages.dev') && !location.hostname.endsWith('workers.dev'))
-                        ? `${location.origin}/api/health`
-                        : 'https://sysnect-ticket-main-dashboard-production.up.railway.app/api/health';
+                        ? `${location.origin}/api/validate-sso`
+                        : 'https://sysnect-ticket-main-dashboard-production.up.railway.app/api/validate-sso';
 
-                const response = await fetch(backendHealthUrl, {
+                const response = await fetch(backendValidateUrl, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     },
@@ -1117,7 +1117,7 @@ input:checked + .slider:before { transform: translateX(20px); }
 })();
 </script>
 
-<script src="app.js?v=35" defer></script>
+<script src="app.js?v=36" defer></script>
 
 <!-- ═══ ปฏิทินภาษาไทย (flatpickr) บน date inputs ทั้ง 4 จุด ═══
      คงค่า .value เป็น Y-m-d ตามที่ logic กรอง/export ใช้อยู่เดิม

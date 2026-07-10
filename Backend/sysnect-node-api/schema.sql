@@ -8,13 +8,13 @@
 
 CREATE TABLE IF NOT EXISTS tickets (
     uid            TEXT PRIMARY KEY,          -- กุญแจหลักแบบ stable (numeric id ถ้ามี ไม่งั้นใช้ id ดิบ)
-    glpi_id        BIGINT,                    -- เลข Ticket ในระบบ GLPI (สำหรับ Deep Link)
+    glpi_id        BIGINT,                    -- เลข ticket ดั้งเดิมจาก n8n ถ้ามี
     ticket_number  TEXT,                      -- เลข/รหัสที่ใช้แสดงผล (เช่น C25-00123)
     title          TEXT,                      -- หัวข้อ Ticket
     status         TEXT NOT NULL DEFAULT 'new', -- new | assigned | pending | solved | closed
-    status_id      INTEGER,                   -- GLPI status code 1-6
+    status_id      INTEGER,                   -- status code จากต้นทางถ้ามี
     priority       TEXT,                      -- ข้อความระดับความสำคัญ (ปานกลาง/สูง/...)
-    priority_id    INTEGER,                   -- GLPI priority code 1-6
+    priority_id    INTEGER,                   -- priority code จากต้นทางถ้ามี
     project        TEXT,                      -- ชื่อโครงการ
     detail         TEXT,                      -- รายละเอียด/เนื้อหา
     location       TEXT,                      -- สถานที่/Entity
@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS sync_state (
     id           INTEGER PRIMARY KEY DEFAULT 1,
     last_sync    TIMESTAMPTZ,               -- จุดเวลา date_mod ล่าสุดที่ sync ไปแล้ว (cursor ของ Delta)
     last_run_at  TIMESTAMPTZ,              -- เวลาที่รัน sync รอบล่าสุด
-    last_source  TEXT,                     -- n8n | glpi_direct
+    last_source  TEXT,                     -- n8n
     last_count   INTEGER DEFAULT 0,        -- จำนวน ticket ที่ upsert รอบล่าสุด
     last_error   TEXT,                     -- ข้อความ error รอบล่าสุด (ถ้ามี)
     CONSTRAINT sync_state_singleton CHECK (id = 1)

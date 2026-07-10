@@ -102,7 +102,7 @@ function requireSyncAuth(req, res, next) {
         if (token === SYNC_TOKEN) return next();
         return res.status(401).json({ error: 'UNAUTHORIZED', message: 'ต้องใช้ X-Sync-Token ที่ถูกต้อง' });
     }
-    // ไม่ได้ตั้ง SYNC_TOKEN → อนุญาตเฉพาะ localhost (กันคนภายนอกสั่ง sync ถล่ม GLPI)
+    // ไม่ได้ตั้ง SYNC_TOKEN → อนุญาตเฉพาะ localhost (กันคนภายนอกสั่ง sync ถี่เกิน)
     if (isLocalRequest(req)) return next();
     return res.status(401).json({
         error: 'UNAUTHORIZED',

@@ -1,7 +1,7 @@
 {
   "name": "sysnect-node-api",
   "version": "1.0.0",
-  "description": "Fallback API for fetching GLPI tickets",
+  "description": "SYSNECT ticket dashboard API with n8n sync and PostgreSQL backup",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

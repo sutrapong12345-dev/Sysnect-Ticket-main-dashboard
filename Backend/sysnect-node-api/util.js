@@ -1,8 +1,8 @@
 // ============================================================
-// util.js — ฟังก์ชันแปลง/ทำความสะอาดข้อมูล ใช้ร่วมกันทั้ง n8n และ GLPI
+// util.js — ฟังก์ชันแปลง/ทำความสะอาดข้อมูลจาก n8n ก่อนบันทึกลง PostgreSQL
 // ============================================================
 
-// แปลง GLPI status code (1-6) → key ที่หน้าเว็บใช้
+// แปลง status code (1-6) → key ที่หน้าเว็บใช้
 // อิงตามตรรกะใน n8n workflow: 2,3 = assigned / 4 = pending
 function statusFromId(code) {
     switch (String(code == null ? '' : code).trim()) {
@@ -31,7 +31,7 @@ function normalizeStatusKey(value, fallback = 'new') {
     return fallback;
 }
 
-// แปลง GLPI priority code (1-6) → ข้อความไทย
+// แปลง priority code (1-6) → ข้อความไทย
 function priorityFromId(code) {
     switch (String(code == null ? '' : code).trim()) {
         case '1': return 'ต่ำมาก';
@@ -60,7 +60,7 @@ function toNumericId(...candidates) {
     return null;
 }
 
-// แปลง date string ของ GLPI ("YYYY-MM-DD HH:mm:ss") → ISO หรือ null
+// แปลง date string ("YYYY-MM-DD HH:mm:ss") → ISO หรือ null
 function parseGlpiDate(value) {
     if (!value || value === '-' || value === 'null') return null;
     const s = String(value).replace(' ', 'T');

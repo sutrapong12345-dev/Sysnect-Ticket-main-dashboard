@@ -507,16 +507,16 @@
 
             try {
                 if(loaderMessage) loaderMessage.innerText = "กำลังดึงข้อมูลจากฐานข้อมูล (PostgreSQL)...";
-                // ⚡ Backend ก่อนเสมอ (Postgres ตอบ <50ms และฝั่ง server มี fallback n8n→GLPI→cache ในตัว)
+                // ⚡ Backend ก่อนเสมอ (ฝั่ง server อ่าน PostgreSQL ก่อน แล้วใช้ n8n เฉพาะตอน DB ยังว่าง)
                 //    — เดิมยิง n8n ตรงก่อน (payload 5MB+, รอได้ถึง 45 วิ) ทำให้ n8n ล้มแล้วทั้งเว็บมืดทั้งที่ Postgres ออนอยู่
                 liveData = await fetchWithTimeout(API_URL, 8000, authHeaders);
                 window.dataSourceGlobal = (liveData && liveData._meta && liveData._meta.source) || 'postgres';
                 window.isFallbackGlobal = false;
             } catch (apiError) {
-                // token หมดอายุ/ใช้ไม่ได้ → ล้างแล้ว reload ให้ด่าน SSO พาไป login ใหม่ (flag กันลูป ครั้งเดียวต่อ session)
-                if ((apiError?.httpStatus === 401 || String(apiError && apiError.message).indexOf('401') !== -1) && !sessionStorage.getItem('sysnect_tickets_401_retry')) {
-                    sessionStorage.setItem('sysnect_tickets_401_retry', '1');
+                // token หมดอายุ/ใช้ไม่ได้ → ล้างแล้ว reload ให้ด่าน SSO พาไป login ใหม่
+                if (apiError?.httpStatus === 401 || String(apiError && apiError.message).indexOf('401') !== -1) {
                     sessionStorage.removeItem('sysnect_sso_token');
+                    sessionStorage.removeItem('sysnect_tickets_401_retry');
                     location.reload();
                     return;
                 }
@@ -891,8 +891,6 @@
 
     let chartInstance = null;
     let currentStatus = null;
-    const GLPI_BASE_URL = 'https://itservicedesk.sysnect.co.th';
-
     // สีตามสถานะ ใช้ร่วมกันทุกจุดที่ render ticket (list, ค้นหา, accordion โครงการ/ทีมงาน)
     const STATUS_COLOR_MAP = { 'new': '#3b82f6', 'assigned': '#f59e0b', 'pending': '#ef4444', 'solved': '#10b981', 'closed': '#64748b' };
 
@@ -2174,11 +2172,9 @@
                                     <div style="display:flex;align-items:center;gap:6px;min-width:0;">
                                         <span class="material-symbols-outlined" style="font-size:17px;color:#f59e0b;flex-shrink:0;">folder</span>
                                         <span style="color:var(--text-sub,#64748b);font-size:12px;flex-shrink:0;">โครงการ:</span>
-                                        <a href="${GLPI_BASE_URL}/index.php?redirect=ticket_${getNumericTicketId(ticket)}" target="_blank" rel="noopener noreferrer"
-                                            style="color:#2563eb;text-decoration:none;font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
-                                            onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">
-                                            ${escapeHtml(ticket.project)}<span class="material-symbols-outlined" style="font-size:13px;vertical-align:text-bottom;margin-left:3px;">open_in_new</span>
-                                        </a>
+                                        <span style="color:#2563eb;font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                                            ${escapeHtml(ticket.project)}
+                                        </span>
                                     </div>
                                     <button onclick="toggleDetail(this)" style="flex-shrink:0;background:none;border:1px solid #cbd5e1;padding:4px 12px;border-radius:20px;color:#475569;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:4px;transition:all 0.2s;margin-left:8px;">
                                         <span class="material-symbols-outlined" style="font-size:14px;">expand_more</span>รายละเอียด
@@ -2358,11 +2354,9 @@
                                         <div style="display:flex;align-items:center;gap:6px;min-width:0;">
                                             <span class="material-symbols-outlined" style="font-size:17px;color:#f59e0b;flex-shrink:0;">folder</span>
                                             <span style="color:var(--text-sub,#64748b);font-size:12px;flex-shrink:0;">โครงการ:</span>
-                                            <a href="${GLPI_BASE_URL}/index.php?redirect=ticket_${getNumericTicketId(ticket)}" target="_blank" rel="noopener noreferrer"
-                                                style="color:#2563eb;text-decoration:none;font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
-                                                onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">
-                                                ${escapeHtml(ticket.project)}<span class="material-symbols-outlined" style="font-size:13px;vertical-align:text-bottom;margin-left:3px;">open_in_new</span>
-                                            </a>
+                                            <span style="color:#2563eb;font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                                                ${escapeHtml(ticket.project)}
+                                            </span>
                                         </div>
                                         <button onclick="toggleDetail(this)" style="flex-shrink:0;background:none;border:1px solid #cbd5e1;padding:4px 12px;border-radius:20px;color:#475569;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:4px;transition:all 0.2s;margin-left:8px;">
                                             <span class="material-symbols-outlined" style="font-size:14px;">expand_more</span>รายละเอียด

@@ -36,7 +36,7 @@ services:
     volumes:
       - n8n_data:/home/node/.n8n
 
-  # Node.js API + Delta Sync (Postgres ← n8n/GLPI)
+  # Node.js API + Delta Sync (Postgres ← n8n)
   sysnect-node-api:
     build: ./sysnect-node-api
     restart: always
@@ -54,11 +54,6 @@ services:
       - N8N_WEBHOOK=${N8N_WEBHOOK:?Set N8N_WEBHOOK before running docker compose}
       - BACKFILL_DAYS=120
       - SYNC_INTERVAL_MS=300000
-      # ----- GLPI (ช่องทางสำรอง) -----
-      - GLPI_BASE_URL=${GLPI_BASE_URL:?Set GLPI_BASE_URL before running docker compose}
-      - GLPI_USER=${GLPI_USER:?Set GLPI_USER before running docker compose}
-      - GLPI_PASS=${GLPI_PASS:?Set GLPI_PASS before running docker compose}
-      - GLPI_APP_TOKEN=${GLPI_APP_TOKEN:?Set GLPI_APP_TOKEN before running docker compose}
     depends_on:
       - postgres
 

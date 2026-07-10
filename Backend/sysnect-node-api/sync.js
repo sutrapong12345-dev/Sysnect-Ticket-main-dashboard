@@ -1,13 +1,11 @@
 // ============================================================
 // sync.js — ตัวควบคุม Incremental Sync (Delta) ลง PostgreSQL
-//   ลำดับ: n8n (หลัก) → GLPI direct (สำรอง) → UPSERT → อัปเดต cursor
-//   + Backfill ครั้งแรก 120 วัน ผ่าน GLPI direct
+//   ลำดับ: n8n → UPSERT → อัปเดตสถานะ sync
 //   + ตั้งเวลา sync อัตโนมัติทุก SYNC_INTERVAL_MS
 // ============================================================
 const https = require('https');
 const http = require('http');
 const db = require('./db');
-const glpi = require('./glpi');
 const {
     STATUS_KEYS, normalizeStatusKey, priorityFromId,
     toNumericId, parseGlpiDate, cleanHtml,
@@ -16,9 +14,7 @@ const {
 // ---------- CONFIG ----------
 const N8N_WEBHOOK = process.env.N8N_WEBHOOK || '';
 const N8N_TIMEOUT = parseInt(process.env.N8N_TIMEOUT || '45000', 10);
-const BACKFILL_DAYS = parseInt(process.env.BACKFILL_DAYS || '120', 10);
 const SYNC_INTERVAL_MS = parseInt(process.env.SYNC_INTERVAL_MS || '300000', 10); // 5 นาที
-const DAY_MS = 86400000;
 
 let running = false;          // กันรัน sync ซ้อนกัน
 let timer = null;
@@ -141,15 +137,6 @@ async function syncViaN8n() {
 }
 
 // ============================================================
-// ช่องทางที่ 2: sync ตรงจาก GLPI (Delta ตาม date_mod)
-// ============================================================
-async function syncViaGlpi(since) {
-    const { rows, maxDateMod } = await glpi.fetchDelta(since);
-    const written = await db.upsertTickets(rows);
-    return { source: 'glpi_direct', count: written, fetched: rows.length, cursor: maxDateMod };
-}
-
-// ============================================================
 // runSync — รัน 1 รอบ (จัดการเลือกช่องทาง + อัปเดต cursor)
 // ============================================================
 async function runSync(trigger = 'interval') {
@@ -162,37 +149,11 @@ async function runSync(trigger = 'interval') {
     console.log(`\n[SYNC] 🔄 เริ่ม sync (trigger=${trigger}) ${startedAt.toISOString()}`);
 
     try {
-        const state = await db.getSyncState();
-        const counts = await db.getCounts();
-        const isEmpty = counts.total === 0 && !(state && state.last_sync);
+        const result = await syncViaN8n();
 
-        let result;
-        if (isEmpty) {
-            // ---------- BACKFILL ครั้งแรก: GLPI direct ย้อนหลัง BACKFILL_DAYS ----------
-            const since = new Date(startedAt.getTime() - BACKFILL_DAYS * DAY_MS);
-            console.log(`[SYNC] 📦 Backfill ครั้งแรกย้อนหลัง ${BACKFILL_DAYS} วัน ผ่าน GLPI direct`);
-            try {
-                result = await syncViaGlpi(since);
-            } catch (glpiErr) {
-                console.warn(`[SYNC] ⚠️ Backfill GLPI ล้มเหลว (${glpiErr.message}) → ลอง n8n แทน`);
-                result = await syncViaN8n();
-            }
-        } else {
-            // ---------- ปกติ: n8n เป็นหลัก, GLPI เป็นสำรอง ----------
-            try {
-                result = await syncViaN8n();
-            } catch (n8nErr) {
-                const since = (state && state.last_sync)
-                    ? new Date(state.last_sync)
-                    : new Date(startedAt.getTime() - BACKFILL_DAYS * DAY_MS);
-                console.warn(`[SYNC] ⚠️ n8n ล้มเหลว (${n8nErr.message}) → สำรองด้วย GLPI direct (since=${since.toISOString()})`);
-                result = await syncViaGlpi(since);
-            }
-        }
-
-        // อัปเดต cursor: GLPI ใช้ maxDateMod / n8n ไม่ขยับ last_sync (ปล่อยให้ GLPI fallback ตามเก็บได้)
+        // n8n เป็นแหล่ง sync เดียว ส่วน PostgreSQL เป็นฐานข้อมูลสำรองสำหรับอ่านตอน n8n ล่ม
         await db.setSyncState({
-            last_sync: result.cursor || null,
+            last_sync: null,
             last_source: result.source,
             last_count: result.count,
             last_error: null,
@@ -248,4 +209,4 @@ async function upsertFromN8nGrouped(grouped) {
 function getLastResult() { return lastResult; }
 function isRunning() { return running; }
 
-module.exports = { runSync, startScheduler, getLastResult, isRunning, upsertFromN8nGrouped, BACKFILL_DAYS, SYNC_INTERVAL_MS };
+module.exports = { runSync, startScheduler, getLastResult, isRunning, upsertFromN8nGrouped, SYNC_INTERVAL_MS };
