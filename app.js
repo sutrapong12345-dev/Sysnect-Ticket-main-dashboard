@@ -357,6 +357,7 @@
 
         // รอ SSO precheck ให้จบก่อนเริ่มดึง ticket เพื่อกัน reload loop จาก token ที่ยังตรวจไม่เสร็จ
         await waitForAuthReady();
+        if (window.SYSNECT_AUTH_BLOCKED) return;
 
         // ดึงข้อมูลจริงผ่าน Backend หลัก (มี PostgreSQL เป็นข้อมูลสำรอง)
         fetchLiveTickets();
@@ -390,6 +391,10 @@
     function redirectToSsoLogin() {
         clearSsoTokenFromUrl();
         if (location.protocol === 'file:') return;
+        if (typeof window.SYSNECT_SHOW_AUTH_REQUIRED === 'function') {
+            window.SYSNECT_SHOW_AUTH_REQUIRED('สิทธิ์เข้าใช้งานหมดอายุ ระบบหยุดไว้เพื่อป้องกันการ Reload วน');
+            return;
+        }
         const redirectUri = window.location.origin + window.location.pathname;
         window.location.href = `https://auth.sysnect.co.th/?redirect_uri=${redirectUri}`;
     }
