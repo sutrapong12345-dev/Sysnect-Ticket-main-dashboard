@@ -192,13 +192,25 @@ async function fetchFromN8N(query = {}) {
     return { source: 'n8n', data };
 }
 
+function sanitizeSyncState(state) {
+    if (!state) return null;
+    const clean = { ...state };
+    if (clean.last_source && clean.last_source !== 'n8n') {
+        clean.last_source = 'legacy';
+    }
+    if (/session_token|app-token|credential|itsm/i.test(String(clean.last_error || ''))) {
+        clean.last_error = 'n8n sync ยังไม่สำเร็จ';
+    }
+    return clean;
+}
+
 async function readTicketsFromPostgres(startTime) {
     if (!db.isSchemaReady()) return null;
     const counts = await db.getCounts();
     if (counts.total <= 0) return null;
 
     const grouped = await db.getGroupedTickets();
-    const state = await db.getSyncState();
+    const state = sanitizeSyncState(await db.getSyncState());
     const elapsed = Date.now() - startTime;
     return {
         ...grouped,
@@ -392,7 +404,7 @@ app.get('/api/health', async (req, res) => {
         database = { connected, schema_ready: db.isSchemaReady() };
         if (connected && db.isSchemaReady()) {
             database.counts = await db.getCounts();
-            database.sync_state = await db.getSyncState();
+            database.sync_state = sanitizeSyncState(await db.getSyncState());
         }
     } catch (e) {
         database = { connected: false, error: e.message };
