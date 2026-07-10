@@ -351,14 +351,48 @@
     let previousNewTicketIds = new Set();
 
     // จัดการหน้าโหลด (Premium Loader)
-    window.addEventListener('load', () => {
+    window.addEventListener('load', async () => {
         loadSettings();
         renderUserPill();
+
+        // รอ SSO precheck ให้จบก่อนเริ่มดึง ticket เพื่อกัน reload loop จาก token ที่ยังตรวจไม่เสร็จ
+        await waitForAuthReady();
 
         // ดึงข้อมูลจริงผ่าน Backend หลัก (มี PostgreSQL เป็นข้อมูลสำรอง)
         fetchLiveTickets();
 
     });
+
+    async function waitForAuthReady(timeoutMs = 7000) {
+        if (!window.SYSNECT_AUTH_READY || location.protocol === 'file:') return;
+        try {
+            await Promise.race([
+                window.SYSNECT_AUTH_READY,
+                new Promise(resolve => setTimeout(resolve, timeoutMs))
+            ]);
+        } catch (err) {
+            console.warn('SSO precheck failed before ticket load', err);
+        }
+    }
+
+    function clearSsoTokenFromUrl() {
+        sessionStorage.removeItem('sysnect_sso_token');
+        sessionStorage.removeItem('sysnect_tickets_401_retry');
+        try {
+            const cleanUrl = new URL(window.location.href);
+            cleanUrl.searchParams.delete('access_token');
+            cleanUrl.searchParams.delete('token');
+            cleanUrl.hash = '';
+            window.history.replaceState({}, document.title, cleanUrl.pathname + cleanUrl.search + cleanUrl.hash);
+        } catch (_) { /* URL cleanup is best-effort */ }
+    }
+
+    function redirectToSsoLogin() {
+        clearSsoTokenFromUrl();
+        if (location.protocol === 'file:') return;
+        const redirectUri = window.location.origin + window.location.pathname;
+        window.location.href = `https://auth.sysnect.co.th/?redirect_uri=${redirectUri}`;
+    }
 
     function getConfiguredApiBase() {
         const cfg = window.SYSNECT_CONFIG || {};
@@ -513,11 +547,13 @@
                 window.dataSourceGlobal = (liveData && liveData._meta && liveData._meta.source) || 'postgres';
                 window.isFallbackGlobal = false;
             } catch (apiError) {
-                // token หมดอายุ/ใช้ไม่ได้ → ล้างแล้ว reload ให้ด่าน SSO พาไป login ใหม่
+                // token หมดอายุ/ใช้ไม่ได้ → ล้าง token แล้วส่งกลับหน้า SSO โดยไม่ reload วน
                 if (apiError?.httpStatus === 401 || String(apiError && apiError.message).indexOf('401') !== -1) {
-                    sessionStorage.removeItem('sysnect_sso_token');
-                    sessionStorage.removeItem('sysnect_tickets_401_retry');
-                    location.reload();
+                    if(loaderMessage) {
+                        loaderMessage.innerText = "สิทธิ์เข้าใช้งานหมดอายุ กำลังไปหน้า SSO...";
+                        loaderMessage.style.color = "#f59e0b";
+                    }
+                    redirectToSsoLogin();
                     return;
                 }
                 console.warn("Backend ไม่พร้อม", apiError);

@@ -4,7 +4,7 @@
  *          ปล่อย cross-origin (n8n / auth SSO / CDN) ผ่านตรงๆ ไม่แตะ
  * ⚠️ bump CACHE version ทุกครั้งที่แก้ asset หลัก เพื่อล้าง cache เก่า
  */
-const CACHE = 'sysnect-v5';
+const CACHE = 'sysnect-v6';
 const APP_SHELL = [
   './',
   './index.html',

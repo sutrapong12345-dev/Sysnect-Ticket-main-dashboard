@@ -31,7 +31,7 @@
     
     <!-- SSO Authentication Check -->
     <script>
-        (async function() {
+        window.SYSNECT_AUTH_READY = (async function() {
             // Bypass SSO check if opened directly as local file (file://) to prevent browser ERR_UNSAFE_REDIRECT
             if (window.location.protocol === 'file:') {
                 console.warn('Running locally via file:// scheme. SSO authentication check bypassed.');
@@ -1117,7 +1117,7 @@ input:checked + .slider:before { transform: translateX(20px); }
 })();
 </script>
 
-<script src="app.js?v=36" defer></script>
+<script src="app.js?v=37" defer></script>
 
 <!-- ═══ ปฏิทินภาษาไทย (flatpickr) บน date inputs ทั้ง 4 จุด ═══
      คงค่า .value เป็น Y-m-d ตามที่ logic กรอง/export ใช้อยู่เดิม
