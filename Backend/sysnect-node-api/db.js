@@ -90,11 +90,11 @@ async function setSyncState({ last_sync, last_source, last_count, last_error }) 
 // rows = array ของ canonical ticket (ดู normalizeTicket ใน sync.js)
 // คืนค่า: จำนวนแถวที่เขียน
 // ============================================================
-async function upsertTickets(rows) {
-    if (!rows || rows.length === 0) return 0;
-
+async function writeTickets(rows, { pruneMissing = false } = {}) {
+    if (!rows || rows.length === 0) return { written: 0, pruned: 0 };
     const client = await pool.connect();
     let written = 0;
+    let pruned = 0;
     try {
         await client.query('BEGIN');
 
@@ -147,6 +147,17 @@ async function upsertTickets(rows) {
             written += res.rowCount || slice.length;
         }
 
+        if (pruneMissing) {
+            const uids = rows.map(t => String(t.uid)).filter(Boolean);
+            if (uids.length > 0) {
+                const del = await client.query(
+                    'DELETE FROM tickets WHERE NOT (uid = ANY($1::text[]))',
+                    [uids]
+                );
+                pruned = del.rowCount || 0;
+            }
+        }
+
         await client.query('COMMIT');
     } catch (err) {
         await client.query('ROLLBACK');
@@ -154,7 +165,16 @@ async function upsertTickets(rows) {
     } finally {
         client.release();
     }
-    return written;
+    return { written, pruned };
+}
+
+async function upsertTickets(rows) {
+    const result = await writeTickets(rows, { pruneMissing: false });
+    return result.written;
+}
+
+async function replaceTicketsSnapshot(rows) {
+    return await writeTickets(rows, { pruneMissing: true });
 }
 
 // ============================================================
@@ -216,6 +236,7 @@ module.exports = {
     getSyncState,
     setSyncState,
     upsertTickets,
+    replaceTicketsSnapshot,
     getGroupedTickets,
     getCounts,
     isSchemaReady: () => schemaReady,

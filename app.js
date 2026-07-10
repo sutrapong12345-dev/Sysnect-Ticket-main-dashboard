@@ -531,7 +531,7 @@
             const ssoToken = sessionStorage.getItem('sysnect_sso_token');
             const authHeaders = ssoToken ? { 'Authorization': `Bearer ${ssoToken}` } : {};
 
-            // 🆕 ระบบเดียวกับ BASE (backend-driven): Node /api/tickets (n8n→PostgreSQL) เป็นหลัก
+            // Backend-driven: Node /api/tickets ใช้ n8n เป็นหลัก แล้ว mirror ลง PostgreSQL
             //    → ถ้า n8n ล่ม Node ส่งข้อมูลจาก PostgreSQL แทน (_meta.source='postgres')
             //    → ทางสุดท้าย ยิง n8n ตรง (เผื่อ Node server เองล่ม)
             const queryParam = (isAutoRefresh ? '?source=autoRefresh' : '?source=initialLoad') + '&months=4';
@@ -545,10 +545,8 @@
             window.isFallbackGlobal = false;
 
             try {
-                if(loaderMessage) loaderMessage.innerText = "กำลังดึงข้อมูลจากฐานข้อมูล (PostgreSQL)...";
-                // ⚡ Backend ก่อนเสมอ (ฝั่ง server อ่าน PostgreSQL ก่อน แล้วใช้ n8n เฉพาะตอน DB ยังว่าง)
-                //    — เดิมยิง n8n ตรงก่อน (payload 5MB+, รอได้ถึง 45 วิ) ทำให้ n8n ล้มแล้วทั้งเว็บมืดทั้งที่ Postgres ออนอยู่
-                liveData = await fetchWithTimeout(API_URL, 8000, authHeaders);
+                if(loaderMessage) loaderMessage.innerText = "กำลังดึงข้อมูลจาก n8n และอัปเดต PostgreSQL...";
+                liveData = await fetchWithTimeout(API_URL, 20000, authHeaders);
                 window.dataSourceGlobal = (liveData && liveData._meta && liveData._meta.source) || 'postgres';
                 window.isFallbackGlobal = false;
             } catch (apiError) {
@@ -570,7 +568,7 @@
                     }
                     throw apiError;
                 }
-                if(loaderMessage) loaderMessage.innerText = "ฐานข้อมูลไม่พร้อม กำลังดึงข้อมูลจากช่องทางสำรอง...";
+                if(loaderMessage) loaderMessage.innerText = "Backend ไม่พร้อม กำลังดึงข้อมูลจากช่องทางสำรอง...";
 
                 try {
                     liveData = await fetchWithTimeout(N8N_DIRECT_URL, 30000);

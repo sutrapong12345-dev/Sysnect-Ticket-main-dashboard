@@ -231,10 +231,10 @@ async function readTicketsFromPostgres(startTime) {
 
 // ============================================================
 // MAIN API ENDPOINT — /api/tickets
-// อ่านข้อมูลจาก PostgreSQL ก่อนเสมอ:
-//   1. PostgreSQL (หลักสำหรับ dashboard) → ตอบเร็ว แม้ n8n ล่ม
-//   2. ถ้า PostgreSQL ยังว่าง → ลอง n8n แล้ว upsert ลง PostgreSQL
-//   3. ตายทั้งคู่ → 503 "ฐานข้อมูลไม่พร้อม"
+// อ่านข้อมูลจาก n8n ก่อนเสมอ:
+//   1. n8n = แหล่งข้อมูลหลักเมื่อออนไลน์
+//   2. เขียน snapshot ล่าสุดลง PostgreSQL ทันที เพื่อให้ DB เป็น backup สด
+//   3. ถ้า n8n ล่ม → ใช้ PostgreSQL snapshot ล่าสุดแทน
 // ============================================================
 app.get('/api/tickets', requireSso, async (req, res) => {
     const startTime = Date.now();
@@ -242,41 +242,33 @@ app.get('/api/tickets', requireSso, async (req, res) => {
     console.log(`[API] 📡 /api/tickets — ${new Date().toISOString()}`);
     console.log(`${'='.repeat(60)}`);
 
-    // ======== STEP 1: PostgreSQL ก่อนเสมอ — dashboard ต้องใช้งานได้ตอน n8n ล่ม ========
-    try {
-        const postgresData = await readTicketsFromPostgres(startTime);
-        if (postgresData) {
-            console.log(`[API] 📦 ส่งข้อมูลจาก PostgreSQL (${postgresData._meta.total} ตั๋ว, ${postgresData._meta.response_time_ms}ms)`);
-            return res.json(postgresData);
-        }
-        console.log(`[API] ℹ️ PostgreSQL พร้อมแต่ยังไม่มีข้อมูล → ลองดึงจาก n8n`);
-    } catch (dbErr) {
-        console.warn(`[API] ⚠️ อ่าน PostgreSQL ล้มเหลว: ${dbErr.message} → ลองดึงจาก n8n`);
-    }
-
-    // ======== STEP 2: n8n — ใช้เมื่อ DB ยังไม่มีข้อมูลเท่านั้น ========
+    // ======== STEP 1: n8n ก่อนเสมอ — source of truth ตอนออนไลน์ ========
     try {
         const result = await fetchFromN8N(req.query);
         saveCache(result.data); // เก็บแคชไฟล์ไว้เผื่อ debug
 
         const elapsed = Date.now() - startTime;
-        console.log(`[API] ✅ ส่งข้อมูลจาก n8n (${elapsed}ms) — กำลัง upsert ลง PostgreSQL เบื้องหลัง`);
+        console.log(`[API] ✅ ส่งข้อมูลจาก n8n (${elapsed}ms) — กำลัง mirror ลง PostgreSQL`);
 
-        // upsert ลง PostgreSQL แบบไม่บล็อกการตอบเว็บ (fire-and-forget)
-        sync.upsertFromN8nGrouped(result.data)
-            .then(r => console.log(`[API] 💾 อัปเดต PostgreSQL จาก n8n สำเร็จ: ${r.written}/${r.fetched} ตั๋ว`))
-            .catch(e => console.warn(`[API] ⚠️ upsert PostgreSQL จาก n8n ล้มเหลว: ${e.message}`));
+        let pgMirror = null;
+        try {
+            pgMirror = await sync.upsertFromN8nGrouped(result.data);
+            console.log(`[API] 💾 Mirror PostgreSQL จาก n8n สำเร็จ: ${pgMirror.written}/${pgMirror.fetched} ตั๋ว, prune ${pgMirror.pruned || 0}`);
+        } catch (mirrorErr) {
+            console.warn(`[API] ⚠️ Mirror PostgreSQL จาก n8n ล้มเหลว: ${mirrorErr.message}`);
+        }
 
         return res.json({
             ...result.data,
             _meta: {
                 source: 'n8n',
                 fetched_at: new Date().toISOString(),
-                response_time_ms: elapsed
+                response_time_ms: elapsed,
+                postgres_mirror: pgMirror
             }
         });
     } catch (n8nError) {
-        console.warn(`[API] ⚠️ n8n ล้มเหลว: ${n8nError.message} → ตรวจ PostgreSQL อีกครั้ง`);
+        console.warn(`[API] ⚠️ n8n ล้มเหลว: ${n8nError.message} → ใช้ PostgreSQL snapshot ล่าสุด`);
         try {
             const postgresData = await readTicketsFromPostgres(startTime);
             if (postgresData) {
@@ -458,7 +450,7 @@ app.listen(PORT, () => {
     console.log(`${'='.repeat(50)}`);
     console.log(`📂 Serving Beta Dashboard at:`);
     console.log(`   http://localhost:${PORT}`);
-    console.log(`⚡ Tickets API (Postgres→n8n):`);
+    console.log(`⚡ Tickets API (n8n→PostgreSQL fallback):`);
     console.log(`   http://localhost:${PORT}/api/tickets`);
     console.log(`🔄 Manual Delta Sync (POST):`);
     console.log(`   http://localhost:${PORT}/api/sync`);

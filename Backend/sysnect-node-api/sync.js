@@ -128,12 +128,13 @@ async function syncViaN8n() {
     if (!N8N_WEBHOOK) {
         throw new Error('ยังไม่ได้ตั้งค่า N8N_WEBHOOK');
     }
-    const url = N8N_WEBHOOK.includes('?') ? `${N8N_WEBHOOK}&source=autoRefresh` : `${N8N_WEBHOOK}?source=autoRefresh`;
+    const query = 'source=autoRefresh&months=4';
+    const url = N8N_WEBHOOK.includes('?') ? `${N8N_WEBHOOK}&${query}` : `${N8N_WEBHOOK}?${query}`;
     const raw = await httpGet(url, N8N_TIMEOUT);
     const grouped = unwrapN8n(raw);
     const rows = normalizeN8nPayload(grouped);
-    const written = await db.upsertTickets(rows);
-    return { source: 'n8n', count: written, fetched: rows.length, cursor: null };
+    const result = await db.replaceTicketsSnapshot(rows);
+    return { source: 'n8n', count: result.written, fetched: rows.length, pruned: result.pruned, cursor: null };
 }
 
 // ============================================================
@@ -162,9 +163,10 @@ async function runSync(trigger = 'interval') {
         const elapsed = Date.now() - startedAt.getTime();
         lastResult = {
             ok: true, source: result.source, written: result.count,
-            fetched: result.fetched, elapsed_ms: elapsed, at: new Date().toISOString(), trigger,
+            fetched: result.fetched, pruned: result.pruned || 0,
+            elapsed_ms: elapsed, at: new Date().toISOString(), trigger,
         };
-        console.log(`[SYNC] ✅ สำเร็จ [${result.source}] upsert ${result.count}/${result.fetched} ตั๋ว (${elapsed}ms)`);
+        console.log(`[SYNC] ✅ สำเร็จ [${result.source}] mirror ${result.count}/${result.fetched} ตั๋ว, prune ${result.pruned || 0} (${elapsed}ms)`);
         return lastResult;
 
     } catch (err) {
@@ -193,17 +195,17 @@ function startScheduler() {
 // ============================================================
 async function upsertFromN8nGrouped(grouped) {
     const rows = normalizeN8nPayload(grouped);
-    const written = await db.upsertTickets(rows);
+    const result = await db.replaceTicketsSnapshot(rows);
     await db.setSyncState({
         last_source: 'n8n',
-        last_count: written,
+        last_count: result.written,
         last_error: null,
     });
     lastResult = {
-        ok: true, source: 'n8n', written, fetched: rows.length,
+        ok: true, source: 'n8n', written: result.written, fetched: rows.length, pruned: result.pruned || 0,
         at: new Date().toISOString(), trigger: 'web',
     };
-    return { written, fetched: rows.length };
+    return { written: result.written, fetched: rows.length, pruned: result.pruned || 0 };
 }
 
 function getLastResult() { return lastResult; }
